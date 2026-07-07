@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ProductCategory {
+  KIRAR
+  BEGENA
+  MESENKO
+  OTHER
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  FAILED
+  EXPIRED
+  REFUNDED
+}
+
+enum OrderType {
+  PRODUCT
+  COURSE
+  SUBSCRIPTION
+}
+
+enum ContactStatus {
+  NEW
+  READ
+  RESPONDED
+}
+
+model Product {
+  id                    String          @id @default(cuid())
+  slug                  String          @unique
+  name                  String
+  category              ProductCategory
+  description           String
+  basePrice             Int
+  images                Json
+  customizationOptions  Json
+  isActive              Boolean         @default(true)
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  orderItems            OrderItem[]
+}
+
+model Order {
+  id                      String      @id @default(cuid())
+  stripeCheckoutSessionId String?     @unique
+  stripePaymentIntentId   String?
+  status                  OrderStatus @default(PENDING)
+  orderType               OrderType   @default(PRODUCT)
+  customerEmail           String?
+  customerName            String?
+  shippingAddress         Json?
+  currency                String      @default("usd")
+  subtotal                Int
+  total                   Int
+  createdAt               DateTime    @default(now())
+  updatedAt               DateTime    @updatedAt
+
+  items                   OrderItem[]
+}
+
+model OrderItem {
+  id                    String   @id @default(cuid())
+  orderId               String
+  order                 Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId             String?
+  product                Product? @relation(fields: [productId], references: [id])
+  selectedCustomization Json
+  unitPrice             Int
+  quantity              Int      @default(1)
+  productNameSnapshot   String
+  productImageSnapshot  String?
+}
+
+model ContactSubmission {
+  id        String        @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  topic     String?
+  message   String
+  status    ContactStatus @default(NEW)
+  createdAt DateTime      @default(now())
+}
+
+model NewsletterSubscriber {
+  id                 String    @id @default(cuid())
+  email              String    @unique
+  name               String?
+  confirmed          Boolean   @default(false)
+  unsubscribeToken   String    @unique @default(cuid())
+  source             String?
+  subscribedAt       DateTime  @default(now())
+  unsubscribedAt     DateTime?
+}
