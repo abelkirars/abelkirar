@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import { Container } from "@/components/marketing/container";
 import { CrossPattern } from "@/components/marketing/cross-pattern";
 import { ProductCard } from "@/components/store/product-card";
+import { categoryLabel } from "@/lib/category-gradients";
+import type { Product } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -12,18 +14,83 @@ export const metadata: Metadata = {
     "Handmade Kirar, Begena, and Masenqo, customizable in shape, finish, and size — shipped to the US, UK, and Europe.",
 };
 
+type ProductCardData = {
+  key: string;
+  href: string;
+  name: string;
+  category: string;
+  description: string;
+  basePrice: number;
+  images: string[];
+};
+
+// When browsing the full store (no category filter), categories with more
+// than one product collapse into a single card that links to the filtered
+// view — that filtered view is what lets a customer choose between options
+// like the three Kirar builds instead of landing straight on a checkout page.
+function groupIntoCards(products: Product[]): ProductCardData[] {
+  const byCategory = new Map<string, Product[]>();
+  for (const product of products) {
+    const group = byCategory.get(product.category) ?? [];
+    group.push(product);
+    byCategory.set(product.category, group);
+  }
+
+  return Array.from(byCategory.entries()).map(([category, group]) => {
+    if (group.length === 1) {
+      const product = group[0];
+      return {
+        key: product.id,
+        href: `/store/${product.slug}`,
+        name: product.name,
+        category: product.category,
+        description: product.description,
+        basePrice: product.basePrice,
+        images: product.images as string[],
+      };
+    }
+
+    const basePrice = Math.min(...group.map((p) => p.basePrice));
+    const withImage = group.find((p) => (p.images as string[]).length > 0);
+    const label = categoryLabel(category);
+
+    return {
+      key: category,
+      href: `/store?category=${category}`,
+      name: label,
+      category,
+      description: `Choose from ${group.length} ${label} options, each handcrafted and customizable.`,
+      basePrice,
+      images: (withImage?.images as string[]) ?? [],
+    };
+  });
+}
+
 export default async function StorePage({
   searchParams,
 }: PageProps<"/store">) {
   const { category } = await searchParams;
+  const categoryFilter = typeof category === "string" ? category : undefined;
 
   const products = await prisma.product.findMany({
     where: {
       isActive: true,
-      ...(typeof category === "string" ? { category: category as never } : {}),
+      ...(categoryFilter ? { category: categoryFilter as never } : {}),
     },
-    orderBy: { createdAt: "asc" },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
   });
+
+  const cards: ProductCardData[] = categoryFilter
+    ? products.map((product) => ({
+        key: product.id,
+        href: `/store/${product.slug}`,
+        name: product.name,
+        category: product.category,
+        description: product.description,
+        basePrice: product.basePrice,
+        images: product.images as string[],
+      }))
+    : groupIntoCards(products);
 
   return (
     <>
@@ -46,21 +113,21 @@ export default async function StorePage({
 
       <section className="py-20 sm:py-28">
         <Container>
-          {products.length === 0 ? (
+          {cards.length === 0 ? (
             <p className="text-center text-muted-foreground">
               New instruments are being added soon — check back shortly.
             </p>
           ) : (
             <div className="grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
-              {products.map((product) => (
+              {cards.map((card) => (
                 <ProductCard
-                  key={product.id}
-                  slug={product.slug}
-                  name={product.name}
-                  category={product.category}
-                  description={product.description}
-                  basePrice={product.basePrice}
-                  images={product.images as string[]}
+                  key={card.key}
+                  href={card.href}
+                  name={card.name}
+                  category={card.category}
+                  description={card.description}
+                  basePrice={card.basePrice}
+                  images={card.images}
                 />
               ))}
             </div>

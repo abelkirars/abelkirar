@@ -3,14 +3,14 @@ import { ArrowRight } from "lucide-react";
 import { ProductVisual } from "@/components/store/product-visual";
 
 export function ProductCard({
-  slug,
+  href,
   name,
   category,
   description,
   basePrice,
   images,
 }: {
-  slug: string;
+  href: string;
   name: string;
   category: string;
   description: string;
@@ -18,7 +18,7 @@ export function ProductCard({
   images: string[];
 }) {
   return (
-    <Link href={`/store/${slug}`} className="group">
+    <Link href={href} className="group">
       <ProductVisual
         images={images}
         category={category}

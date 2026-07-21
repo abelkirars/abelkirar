@@ -8,3 +8,18 @@ const GRADIENTS: Record<string, string> = {
 export function categoryGradient(category: string): string {
   return GRADIENTS[category] ?? GRADIENTS.OTHER;
 }
+
+const LABELS: Record<string, string> = {
+  KIRAR: "Kirar",
+  BEGENA: "Begena",
+  MESENKO: "Masenqo",
+  TSENATSL: "Tsenatsl",
+  MEKWAMIYA: "Mekwamiya",
+  PICK_UPS: "Pick Ups",
+  KABA: "Kaba",
+  OTHER: "Other",
+};
+
+export function categoryLabel(category: string): string {
+  return LABELS[category] ?? category;
+}

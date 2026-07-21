@@ -1,6 +1,5 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -11,6 +10,10 @@ enum ProductCategory {
   KIRAR
   BEGENA
   MESENKO
+  TSENATSL
+  MEKWAMIYA
+  PICK_UPS
+  KABA
   OTHER
 }
 
@@ -42,6 +45,7 @@ model Product {
   description           String
   basePrice             Int
   images                Json
+  variants              Json            @default("[]")
   customizationOptions  Json
   isActive              Boolean         @default(true)
   createdAt             DateTime        @default(now())

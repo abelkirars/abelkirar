@@ -1,17 +1,10 @@
-import { config } from "dotenv";
-import { PrismaClient, type Prisma } from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
-import type { ProductCustomizationOptions } from "../src/types/customization";
-
-// Load environment variables
-config({ path: ".env.local" });
+import { prisma } from "@/lib/db";
+import type { ProductCustomizationOptions } from "@/types/customization";
+import type { Prisma } from "@prisma/client";
 
 function asJson(value: ProductCustomizationOptions): Prisma.InputJsonValue {
   return value as unknown as Prisma.InputJsonValue;
 }
-
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
-const prisma = new PrismaClient({ adapter });
 
 const woodFinishOptions: ProductCustomizationOptions = [
   {
@@ -55,17 +48,14 @@ const woodFinishOptions: ProductCustomizationOptions = [
   },
 ];
 
-async function main() {
+export async function POST() {
   try {
-    console.log("[SEED] Starting seed process...");
-    
-    // Clear existing products
-    console.log("[SEED] Deleting existing products...");
-    const deletedCount = await prisma.product.deleteMany();
-    console.log(`[SEED] Deleted ${deletedCount.count} existing products`);
+    // Delete existing products
+    const deleted = await prisma.product.deleteMany();
+    console.log(`Deleted ${deleted.count} products`);
 
-    console.log("[SEED] Creating new products...");
-    const created = await prisma.product.createMany({
+    // Create all 7 products
+    const products = await prisma.product.createMany({
       data: [
         {
           slug: "normal-kirar",
@@ -130,7 +120,7 @@ async function main() {
         {
           slug: "tsenatsl",
           name: "Tsenatsl",
-          category: "TSENATSL",
+          category: "OTHER",  // Using OTHER temporarily
           description: "Tsenatsl - traditional Ethiopian percussion instrument.",
           basePrice: 20000,
           images: [
@@ -141,7 +131,7 @@ async function main() {
         {
           slug: "mekwamiya",
           name: "Mekwamiya",
-          category: "MEKWAMIYA",
+          category: "OTHER",  // Using OTHER temporarily
           description: "Mekwamiya - spiritual Ethiopian wind instrument.",
           basePrice: 20000,
           images: [
@@ -152,7 +142,7 @@ async function main() {
         {
           slug: "pick-ups",
           name: "Pick Ups",
-          category: "PICK_UPS",
+          category: "OTHER",  // Using OTHER temporarily
           description: "Pick Ups - essential accessory for string instruments.",
           basePrice: 10000,
           images: [
@@ -163,7 +153,7 @@ async function main() {
         {
           slug: "kaba",
           name: "Kaba",
-          category: "KABA",
+          category: "OTHER",  // Using OTHER temporarily
           description: "Kaba - traditional Ethiopian drum instrument.",
           basePrice: 20000,
           images: [
@@ -174,28 +164,41 @@ async function main() {
       ],
     });
 
-    console.log(`[SEED] Created ${created} new products`);
+    const total = await prisma.product.count();
 
-    const count = await prisma.product.count();
-    console.log(`[SEED] ✓ Successfully seeded database. Total products: ${count}`);
-    console.log("[SEED] Listing all products:");
-    
-    const products = await prisma.product.findMany({
-      orderBy: { createdAt: "asc" },
+    return Response.json({
+      success: true,
+      message: `Created products. Total now: ${total}`,
+      deleted: deleted.count,
+      created: products.count,
+      total,
     });
-    products.forEach((p) => {
-      console.log(`  - ${p.slug}: ${p.name} ($${(p.basePrice / 100).toFixed(2)})`);
-    });
-  } catch (err) {
-    console.error("[SEED] Error:", err);
-    throw err;
+  } catch (error) {
+    console.error("[SEED API] Error:", error);
+    return Response.json(
+      { success: false, error: String(error) },
+      { status: 500 }
+    );
   }
 }
 
-main()
-  .then(() => prisma.$disconnect())
-  .catch(async (err) => {
-    console.error("Seed failed:", err);
-    await prisma.$disconnect();
-    process.exit(1);
-  });
+export async function GET() {
+  try {
+    const products = await prisma.product.findMany({
+      select: { slug: true, name: true, category: true, basePrice: true },
+      orderBy: { createdAt: "asc" },
+    });
+
+    return Response.json({
+      success: true,
+      count: products.length,
+      products,
+    });
+  } catch (error) {
+    console.error(error);
+    return Response.json(
+      { success: false, error: String(error) },
+      { status: 500 }
+    );
+  }
+}
