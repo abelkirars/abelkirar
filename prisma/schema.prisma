@@ -19,9 +19,11 @@ enum ProductCategory {
 
 enum OrderStatus {
   PENDING
+  PROCESSING
   PAID
   FAILED
   EXPIRED
+  CANCELLED
   REFUNDED
 }
 
@@ -37,39 +39,118 @@ enum ContactStatus {
   RESPONDED
 }
 
-model Product {
-  id                    String          @id @default(cuid())
-  slug                  String          @unique
-  name                  String
-  category              ProductCategory
-  description           String
-  basePrice             Int
-  images                Json
-  variants              Json            @default("[]")
-  customizationOptions  Json
-  isActive              Boolean         @default(true)
-  createdAt             DateTime        @default(now())
-  updatedAt             DateTime        @updatedAt
+enum PaymentMethod {
+  ZELLE
+  CASH_APP
+  EUR_BANK_TRANSFER
+  STRIPE_LEGACY
+}
 
-  orderItems            OrderItem[]
+enum PaymentStatus {
+  PENDING_VERIFICATION
+  PAID
+  PAYMENT_NOT_FOUND
+  REFUNDED
+}
+
+enum PaymentRegion {
+  US
+  EUROZONE
+}
+
+model Product {
+  id                   String          @id @default(cuid())
+  slug                 String          @unique
+  name                 String
+  category             ProductCategory
+  description          String
+  basePrice            Int
+  images               Json
+  variants             Json            @default("[]")
+  customizationOptions Json
+  isActive             Boolean         @default(true)
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+
+  orderItems OrderItem[]
 }
 
 model Order {
-  id                      String      @id @default(cuid())
-  stripeCheckoutSessionId String?     @unique
+  id                      String         @id @default(cuid())
+  orderNumber             String?        @unique
+  // Legacy Stripe fields — no longer written by new orders, kept so
+  // historical Stripe orders remain intact. See PaymentMethod.STRIPE_LEGACY.
+  stripeCheckoutSessionId String?        @unique
   stripePaymentIntentId   String?
-  status                  OrderStatus @default(PENDING)
-  orderType               OrderType   @default(PRODUCT)
+  status                  OrderStatus    @default(PENDING)
+  orderType               OrderType      @default(PRODUCT)
+  paymentMethod           PaymentMethod?
+  paymentRegion           PaymentRegion?
+  paymentStatus           PaymentStatus  @default(PENDING_VERIFICATION)
   customerEmail           String?
   customerName            String?
+  customerPhone           String?
   shippingAddress         Json?
-  currency                String      @default("usd")
+  currency                String         @default("usd")
   subtotal                Int
   total                   Int
-  createdAt               DateTime    @default(now())
-  updatedAt               DateTime    @updatedAt
+  paymentConfirmedById    String?
+  paymentConfirmedBy      Admin?         @relation("PaymentConfirmedBy", fields: [paymentConfirmedById], references: [id])
+  paymentConfirmedAt      DateTime?
+  createdAt               DateTime       @default(now())
+  updatedAt               DateTime       @updatedAt
 
-  items                   OrderItem[]
+  items                OrderItem[]
+  paymentConfirmations PaymentConfirmation[]
+  notes                OrderNote[]
+}
+
+model Admin {
+  id           String    @id @default(cuid())
+  username     String    @unique
+  passwordHash String
+  displayName  String
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  lastLoginAt  DateTime?
+
+  confirmedOrders Order[]     @relation("PaymentConfirmedBy")
+  notes           OrderNote[]
+}
+
+/// Customer-submitted proof of a Zelle/Cash App payment. Submitting one does
+/// NOT mark the order as paid — an admin must still confirm it manually.
+model PaymentConfirmation {
+  id                   String   @id @default(cuid())
+  orderId              String
+  order                Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  senderName           String
+  amountSent           Int
+  sentAt               DateTime
+  transactionReference String?
+  /// Object path in the private payment-screenshots bucket, not a public URL.
+  screenshotPath       String?
+  createdAt            DateTime @default(now())
+}
+
+model OrderNote {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  adminId   String
+  admin     Admin    @relation(fields: [adminId], references: [id])
+  body      String
+  createdAt DateTime @default(now())
+}
+
+/// Simple DB-backed rate limiter (no Redis in this project). Rows older than
+/// the relevant window are opportunistically deleted by the caller.
+model RateLimitHit {
+  id        String   @id @default(cuid())
+  key       String
+  createdAt DateTime @default(now())
+
+  @@index([key, createdAt])
 }
 
 model OrderItem {
@@ -77,7 +158,7 @@ model OrderItem {
   orderId               String
   order                 Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   productId             String?
-  product                Product? @relation(fields: [productId], references: [id])
+  product               Product? @relation(fields: [productId], references: [id])
   selectedCustomization Json
   unitPrice             Int
   quantity              Int      @default(1)
@@ -97,12 +178,12 @@ model ContactSubmission {
 }
 
 model NewsletterSubscriber {
-  id                 String    @id @default(cuid())
-  email              String    @unique
-  name               String?
-  confirmed          Boolean   @default(false)
-  unsubscribeToken   String    @unique @default(cuid())
-  source             String?
-  subscribedAt       DateTime  @default(now())
-  unsubscribedAt     DateTime?
+  id               String    @id @default(cuid())
+  email            String    @unique
+  name             String?
+  confirmed        Boolean   @default(false)
+  unsubscribeToken String    @unique @default(cuid())
+  source           String?
+  subscribedAt     DateTime  @default(now())
+  unsubscribedAt   DateTime?
 }

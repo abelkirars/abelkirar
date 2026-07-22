@@ -11,14 +11,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
-type PaymentMethod = "ZELLE" | "CASH_APP";
+type PaymentRegion = "US" | "EUROZONE";
+type UsPaymentMethod = "ZELLE" | "CASH_APP";
 
 export default function CartPage() {
   const { items, removeItem, setQuantity } = useCartStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("ZELLE");
+  const [paymentRegion, setPaymentRegion] = useState<PaymentRegion>("US");
+  const [usPaymentMethod, setUsPaymentMethod] = useState<UsPaymentMethod>("ZELLE");
   const router = useRouter();
+
+  // Eurozone has exactly one method today, so it's implied by region rather
+  // than user-selectable — this is the value actually submitted.
+  const paymentMethod = paymentRegion === "US" ? usPaymentMethod : "EUR_BANK_TRANSFER";
 
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
@@ -39,6 +45,7 @@ export default function CartPage() {
             customization: i.customization,
             quantity: i.quantity,
           })),
+          paymentRegion,
           paymentMethod,
           customerName,
           customerEmail,
@@ -146,29 +153,64 @@ export default function CartPage() {
           </div>
 
           <div className="space-y-3 border-t border-border pt-6">
-            <Label>Payment method</Label>
-            <p className="text-xs text-muted-foreground">
-              We currently accept Zelle and Cash App. Payments are verified
-              manually by our team — your order won&rsquo;t be processed
-              until we&rsquo;ve confirmed your payment.
-            </p>
+            <Label>Payment region</Label>
             <div className="flex gap-2">
-              {(["ZELLE", "CASH_APP"] as const).map((method) => (
+              {(["US", "EUROZONE"] as const).map((region) => (
                 <button
-                  key={method}
+                  key={region}
                   type="button"
-                  onClick={() => setPaymentMethod(method)}
+                  onClick={() => setPaymentRegion(region)}
                   className={cn(
                     "flex-1 rounded-md border px-3 py-2 text-sm transition-colors",
-                    paymentMethod === method
+                    paymentRegion === region
                       ? "border-primary bg-primary/10 text-foreground"
                       : "border-border text-muted-foreground hover:border-primary/50"
                   )}
                 >
-                  {method === "ZELLE" ? "Zelle" : "Cash App"}
+                  {region === "US" ? "United States — USD" : "Eurozone — EUR"}
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className="space-y-3 border-t border-border pt-6">
+            <Label>Payment method</Label>
+            {paymentRegion === "US" ? (
+              <>
+                <p className="text-xs text-muted-foreground">
+                  We currently accept Zelle and Cash App. Payments are
+                  verified manually by our team — your order won&rsquo;t be
+                  processed until we&rsquo;ve confirmed your payment.
+                </p>
+                <div className="flex gap-2">
+                  {(["ZELLE", "CASH_APP"] as const).map((method) => (
+                    <button
+                      key={method}
+                      type="button"
+                      onClick={() => setUsPaymentMethod(method)}
+                      className={cn(
+                        "flex-1 rounded-md border px-3 py-2 text-sm transition-colors",
+                        usPaymentMethod === method
+                          ? "border-primary bg-primary/10 text-foreground"
+                          : "border-border text-muted-foreground hover:border-primary/50"
+                      )}
+                    >
+                      {method === "ZELLE" ? "Zelle" : "Cash App"}
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="rounded-md border border-primary bg-primary/10 px-3 py-2 text-sm font-medium text-foreground">
+                  Euro Bank Transfer
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  EUR payment details will be provided after the order is
+                  placed.
+                </p>
+              </>
+            )}
           </div>
 
           {error && <p className="text-sm text-destructive">{error}</p>}

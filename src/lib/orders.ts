@@ -40,6 +40,11 @@ export async function createManualOrder(input: CreateOrderInput) {
     0
   );
 
+  // No automatic currency conversion — the numeric total is always the
+  // product's base price; selecting Eurozone only changes which currency
+  // label it's tagged and displayed with, not the amount charged.
+  const currency = input.paymentRegion === "EUROZONE" ? "eur" : "usd";
+
   for (let attempt = 0; attempt < MAX_ORDER_NUMBER_ATTEMPTS; attempt++) {
     const orderNumber = generateOrderNumber();
     try {
@@ -48,6 +53,7 @@ export async function createManualOrder(input: CreateOrderInput) {
           orderNumber,
           orderType: "PRODUCT",
           status: "PENDING",
+          paymentRegion: input.paymentRegion,
           paymentMethod: input.paymentMethod,
           paymentStatus: "PENDING_VERIFICATION",
           customerName: input.customerName,
@@ -55,7 +61,7 @@ export async function createManualOrder(input: CreateOrderInput) {
           customerPhone: input.customerPhone,
           subtotal,
           total: subtotal,
-          currency: "usd",
+          currency,
           items: {
             create: lineItems.map(({ product, item, unitPrice }) => ({
               productId: product.id,
@@ -91,6 +97,7 @@ export function toNotificationData(
     total: number;
     currency: string;
     paymentMethod: string | null;
+    paymentRegion: string | null;
     paymentStatus: string;
     status: string;
     createdAt: Date;
@@ -105,7 +112,8 @@ export function toNotificationData(
     customerPhone: order.customerPhone ?? "",
     total: order.total,
     currency: order.currency,
-    paymentMethod: (order.paymentMethod as "ZELLE" | "CASH_APP") ?? "ZELLE",
+    paymentMethod: (order.paymentMethod as "ZELLE" | "CASH_APP" | "EUR_BANK_TRANSFER") ?? "ZELLE",
+    paymentRegion: (order.paymentRegion as "US" | "EUROZONE" | null) ?? "US",
     paymentStatus: order.paymentStatus,
     orderStatus: order.status,
     createdAt: order.createdAt,
