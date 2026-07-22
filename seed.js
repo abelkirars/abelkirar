@@ -83,7 +83,7 @@ async function main() {
           category: "MESENKO",
           description: "A single-string bowed Masenqo, compact and durable, built for musicians who travel between congregations and communities.",
           basePrice: 26000,
-          images: [],
+          images: ["/products-to-upload/travelers-masenqo.png"],
           customizationOptions: woodFinishOptions,
         },
         {
