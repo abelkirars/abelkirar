@@ -1,13 +1,17 @@
 import { prisma } from "@/lib/db";
+import { requireAdminApi } from "@/lib/admin/dal";
 
 export async function POST(request: Request) {
+  const auth = await requireAdminApi();
+  if ("response" in auth) return auth.response;
+
   try {
     const { images } = await request.json();
 
     // Update the three original products with new image URLs
     const updates = [
       {
-        slug: "heritage-kirar",
+        slug: "normal-kirar",
         imageUrl: images.kirar,
       },
       {

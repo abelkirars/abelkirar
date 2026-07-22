@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { requireAdminApi } from "@/lib/admin/dal";
 import type { ProductCustomizationOptions } from "@/types/customization";
 import type { Prisma } from "@prisma/client";
 
@@ -49,6 +50,9 @@ const woodFinishOptions: ProductCustomizationOptions = [
 ];
 
 export async function POST() {
+  const auth = await requireAdminApi();
+  if ("response" in auth) return auth.response;
+
   try {
     // Delete existing products
     const deleted = await prisma.product.deleteMany();

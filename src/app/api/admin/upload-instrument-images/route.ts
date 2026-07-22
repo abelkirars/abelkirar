@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { prisma } from "@/lib/db";
+import { requireAdminApi } from "@/lib/admin/dal";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -7,12 +8,15 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 export async function POST(request: Request) {
+  const auth = await requireAdminApi();
+  if ("response" in auth) return auth.response;
+
   try {
     const formData = await request.formData();
-    
+
     const uploads: Record<string, string> = {};
     const filesToProcess = [
-      { field: "kirar", productSlug: "heritage-kirar", filename: "kirar.png" },
+      { field: "kirar", productSlug: "normal-kirar", filename: "kirar.png" },
       { field: "begena", productSlug: "processional-begena", filename: "begena.png" },
       { field: "masenqo", productSlug: "travelers-masenqo", filename: "masenqo.png" },
     ];
