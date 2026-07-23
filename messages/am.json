@@ -46,22 +46,22 @@
   "courseLevels": {
     "exploreCurriculum": "የትምህርት ይዘቱን ይመልከቱ",
     "beginner": {
-      "level": "[AM] Level 1",
-      "title": "[AM] Beginner",
-      "tagline": "[AM] Start from silence",
-      "description": "[AM] Build the foundation: how the Kirar is held, tuned, and played, and how it carries Ethiopian Orthodox worship."
+      "level": "ደረጃ 1",
+      "title": "ጀማሪ",
+      "tagline": "ከመጀመሪያው ይጀምሩ",
+      "description": "መሠረቱን ይገንቡ፦ ክራር አያያዝን፣ አቀኛኘትን፣ አጫወትን እና የኢትዮጵያ ኦርቶዶክስ ተዋሕዶ አምልኮን በዜማ እንዴት እንደሚደግፍ ይማሩ።"
     },
     "intermediate": {
-      "level": "[AM] Level 2",
-      "title": "[AM] Intermediate",
-      "tagline": "[AM] Find your voice",
-      "description": "[AM] Sharpen technique and rhythm, and begin playing alongside singers with a tone and style of your own."
+      "level": "ደረጃ 2",
+      "title": "መካከለኛ",
+      "tagline": "የራስዎን የዜማ ስልት ያግኙ",
+      "description": "የመጫወት ክህሎትዎንና ምትዎን ያዳብሩ፤ ከዘማሪዎች ጋር የራስዎ በሆነ የዜማ ቅኝትና ስልት መጫወት ይጀምሩ።"
     },
     "advanced": {
-      "level": "[AM] Level 3",
-      "title": "[AM] Advanced",
-      "tagline": "[AM] Lead worship",
-      "description": "[AM] Professional technique, complex rhythm and arrangement, and the performance skills to lead in church."
+      "level": "ደረጃ 3",
+      "title": "የላቀ",
+      "tagline": "አገልግሎቱን ይመሩ",
+      "description": "የበሰለ የመጫወት ጥበብ፣ ረቂቅ ምትና የዜማ ቅንብር፣ እንዲሁም በቤተ ክርስቲያን ውስጥ አገልግሎትን ለማቅረብ የሚያስችል ብቃት።"
     }
   },
   "instrumentCategories": {
@@ -163,9 +163,9 @@
     "description": "ስለ ትምህርቶች፣ ስለሚበጁ የሙዚቃ መሣሪያዎች ወይም ማንኛውም ጥያቄ ካለዎት — ከእርስዎ መስማት ደስ ይለናል።"
   },
   "courses": {
-    "eyebrow": "[AM] Online Kirar Courses",
-    "title": "[AM] From your first scale to leading worship",
-    "description": "[AM] Three structured levels, built for kids and adults, Ethiopian and Eritrean diaspora, and anyone drawn to the Kirar."
+    "eyebrow": "የኦንላይን የክራር ትምህርቶች",
+    "title": "ከመጀመሪያው ልምምድ እስከ አገልግሎት መሪነት",
+    "description": "ለታዳጊዎችና አዋቂዎች፣ በውጭ ሀገር ለሚኖሩ የኢትዮጵያና ኤርትራ ምእመናን፣ እና ክራርን ለሚወዱ ሁሉ የተዘጋጁ ሶስት የተዋቀሩ የትምህርት ደረጃዎች።"
   },
   "contactForm": {
     "name": "ስም",
