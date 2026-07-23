@@ -3,20 +3,29 @@ export interface PaymentInstructions {
   lines: string[];
 }
 
+type PaymentInstructionsTranslator = (
+  key: string,
+  values?: Record<string, string | number>
+) => string;
+
 /**
  * Zelle/Cash App recipient details, read from env so they never need to be
  * hard-coded in frontend/public code. Configure these in .env.local.
+ * `t` must resolve keys from the "paymentInstructions" message namespace —
+ * pass a translator from either `getTranslations` (RSC) or `createTranslator`
+ * (email templates, outside of React).
  */
 export function getPaymentInstructions(
+  t: PaymentInstructionsTranslator,
   method: "ZELLE" | "CASH_APP" | "EUR_BANK_TRANSFER",
   orderNumber: string
 ): PaymentInstructions {
   if (method === "EUR_BANK_TRANSFER") {
     return {
-      heading: "Euro Bank Transfer",
+      heading: t("eurHeading"),
       lines: [
-        "EUR payment details will be provided after the order is placed.",
-        `Include your order number ${orderNumber} in the payment reference once you receive those details.`,
+        t("eurDetailsLater"),
+        t("eurIncludeOrderNumber", { orderNumber }),
       ],
     };
   }
@@ -26,10 +35,10 @@ export function getPaymentInstructions(
     const target = process.env.ZELLE_RECIPIENT_EMAIL_OR_PHONE || "(not configured)";
     const extra = process.env.ZELLE_ADDITIONAL_INSTRUCTIONS?.trim();
     return {
-      heading: "Pay with Zelle",
+      heading: t("zelleHeading"),
       lines: [
-        `Send payment via Zelle to: ${name} (${target})`,
-        `Include your order number ${orderNumber} in the payment note/memo.`,
+        t("zelleSendTo", { name, target }),
+        t("includeOrderNumberInNote", { orderNumber }),
         ...(extra ? [extra] : []),
       ],
     };
@@ -38,10 +47,10 @@ export function getPaymentInstructions(
   const cashtag = process.env.CASHAPP_CASHTAG || "(Cash App $cashtag not configured)";
   const extra = process.env.CASHAPP_ADDITIONAL_INSTRUCTIONS?.trim();
   return {
-    heading: "Pay with Cash App",
+    heading: t("cashAppHeading"),
     lines: [
-      `Send payment via Cash App to: ${cashtag}`,
-      `Include your order number ${orderNumber} in the payment note.`,
+      t("cashAppSendTo", { cashtag }),
+      t("includeOrderNumberInMemo", { orderNumber }),
       ...(extra ? [extra] : []),
     ],
   };

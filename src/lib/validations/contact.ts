@@ -1,11 +1,15 @@
 import { z } from "zod";
 
-export const contactSchema = z.object({
-  name: z.string().min(1, "Enter your name"),
-  email: z.email("Enter a valid email address"),
-  phone: z.string().optional(),
-  topic: z.string().optional(),
-  message: z.string().min(1, "Tell us a little about what you need"),
-});
+type Translator = (key: string) => string;
 
-export type ContactInput = z.infer<typeof contactSchema>;
+export function createContactSchema(t: Translator) {
+  return z.object({
+    name: z.string().min(1, t("enterName")),
+    email: z.email(t("enterValidEmail")),
+    phone: z.string().optional(),
+    topic: z.string().optional(),
+    message: z.string().min(1, t("enterMessage")),
+  });
+}
+
+export type ContactInput = z.infer<ReturnType<typeof createContactSchema>>;

@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { Hero } from "@/components/marketing/hero";
 import { MissionSection } from "@/components/marketing/mission-section";
 import { CourseLevelCards } from "@/components/marketing/course-level-cards";
@@ -6,7 +7,9 @@ import { CommunityCta } from "@/components/marketing/community-cta";
 import { Container } from "@/components/marketing/container";
 import { SectionHeading } from "@/components/marketing/section-heading";
 
-export default function Home() {
+export default async function Home() {
+  const t = await getTranslations("home");
+
   return (
     <>
       <Hero />
@@ -15,9 +18,9 @@ export default function Home() {
       <section className="bg-muted/40 py-20 sm:py-28">
         <Container>
           <SectionHeading
-            eyebrow="Online Courses"
-            title="A curriculum built for every stage"
-            description="From your first scale to leading worship, structured for the Ethiopian and Eritrean diaspora — kids and adults alike."
+            eyebrow={t("coursesEyebrow")}
+            title={t("coursesTitle")}
+            description={t("coursesDescription")}
             align="center"
             className="mx-auto"
           />
@@ -30,9 +33,9 @@ export default function Home() {
       <section className="py-20 sm:py-28">
         <Container>
           <SectionHeading
-            eyebrow="Handmade Instruments"
-            title="Instruments built for worship, made to order"
-            description="Kirar, Begena, and Masenqo, customized in shape, finish, and size, and shipped to the US, UK, and Europe."
+            eyebrow={t("instrumentsEyebrow")}
+            title={t("instrumentsTitle")}
+            description={t("instrumentsDescription")}
             align="center"
             className="mx-auto"
           />

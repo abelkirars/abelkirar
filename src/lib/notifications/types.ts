@@ -49,3 +49,41 @@ const PAYMENT_STATUS_LABELS: Record<string, string> = {
 export function paymentStatusLabel(status: string): string {
   return PAYMENT_STATUS_LABELS[status] ?? status;
 }
+
+type PaymentLabelTranslator = (key: string) => string;
+
+/**
+ * Customer-facing equivalents of the label helpers above, translated via the
+ * "paymentLabels" message namespace. The admin dashboard and admin
+ * notifications intentionally keep using the English-only helpers above.
+ */
+export function translatedPaymentMethodLabel(
+  t: PaymentLabelTranslator,
+  method: PaymentMethodValue
+): string {
+  if (method === "ZELLE") return t("zelle");
+  if (method === "CASH_APP") return t("cashApp");
+  return t("eurBankTransfer");
+}
+
+export function translatedPaymentRegionLabel(
+  t: PaymentLabelTranslator,
+  region: PaymentRegionValue
+): string {
+  return region === "US" ? t("us") : t("eurozone");
+}
+
+const PAYMENT_STATUS_KEYS: Record<string, string> = {
+  PENDING_VERIFICATION: "pendingVerification",
+  PAID: "paid",
+  PAYMENT_NOT_FOUND: "paymentNotFound",
+  REFUNDED: "refunded",
+};
+
+export function translatedPaymentStatusLabel(
+  t: PaymentLabelTranslator,
+  status: string
+): string {
+  const key = PAYMENT_STATUS_KEYS[status];
+  return key ? t(key) : status;
+}

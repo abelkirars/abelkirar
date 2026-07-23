@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/db";
 import { getPaymentInstructions } from "@/lib/notifications/payment-instructions";
 
@@ -25,7 +26,11 @@ export async function GET(
 
   const instructions =
     order.paymentMethod === "ZELLE" || order.paymentMethod === "CASH_APP"
-      ? getPaymentInstructions(order.paymentMethod, order.orderNumber ?? "")
+      ? getPaymentInstructions(
+          await getTranslations("paymentInstructions"),
+          order.paymentMethod,
+          order.orderNumber ?? ""
+        )
       : null;
 
   return NextResponse.json({

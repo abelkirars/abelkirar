@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/db";
-import { paymentConfirmationSchema } from "@/lib/validations/payment-confirmation";
+import { createPaymentConfirmationSchema } from "@/lib/validations/payment-confirmation";
 import { uploadPaymentScreenshot, InvalidScreenshotError } from "@/lib/payment-screenshots";
 import { checkRateLimit, clientIpFrom } from "@/lib/rate-limit";
 import { notificationService } from "@/lib/notifications";
@@ -51,7 +52,8 @@ export async function POST(
   }
 
   const amountSentRaw = formData.get("amountSent");
-  const parsed = paymentConfirmationSchema.safeParse({
+  const t = await getTranslations("validation");
+  const parsed = createPaymentConfirmationSchema(t).safeParse({
     senderName: formData.get("senderName"),
     amountSent: typeof amountSentRaw === "string" ? Number(amountSentRaw) : NaN,
     sentAt: formData.get("sentAt"),

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { createOrderSchema } from "@/lib/validations/order";
 import { createManualOrder, toNotificationData, OrderCreationError } from "@/lib/orders";
 import { notificationService } from "@/lib/notifications";
@@ -24,7 +25,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  const parsed = createOrderSchema.safeParse(body);
+  const t = await getTranslations("validation");
+  const parsed = createOrderSchema(t).safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       { error: parsed.error.issues[0]?.message ?? "Invalid input" },

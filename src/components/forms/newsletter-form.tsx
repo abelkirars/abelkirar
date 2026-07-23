@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { newsletterSchema, type NewsletterInput } from "@/lib/validations/newsletter";
+import { useTranslations } from "next-intl";
+import { createNewsletterSchema, type NewsletterInput } from "@/lib/validations/newsletter";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError } from "@/components/ui/field";
@@ -15,6 +16,8 @@ export function NewsletterForm({
   source?: string;
   className?: string;
 }) {
+  const t = useTranslations("newsletterForm");
+  const tValidation = useTranslations("validation");
   const [status, setStatus] = useState<"idle" | "success">("idle");
   const {
     register,
@@ -22,7 +25,7 @@ export function NewsletterForm({
     reset,
     formState: { errors, isSubmitting },
   } = useForm<NewsletterInput>({
-    resolver: zodResolver(newsletterSchema),
+    resolver: zodResolver(createNewsletterSchema(tValidation)),
     defaultValues: { source },
   });
 
@@ -39,9 +42,7 @@ export function NewsletterForm({
   }
 
   if (status === "success") {
-    return (
-      <p className={className}>Thank you — check your inbox for a welcome note.</p>
-    );
+    return <p className={className}>{t("success")}</p>;
   }
 
   return (
@@ -49,12 +50,12 @@ export function NewsletterForm({
       <Field orientation="responsive">
         <Input
           type="email"
-          placeholder="you@email.com"
-          aria-label="Email address"
+          placeholder={t("emailPlaceholder")}
+          aria-label={t("emailLabel")}
           {...register("email")}
         />
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Joining…" : "Join the community"}
+          {isSubmitting ? t("joining") : t("join")}
         </Button>
       </Field>
       <FieldError errors={[errors.email]} />

@@ -3,12 +3,12 @@ import {
   paymentMethodLabel,
   paymentRegionLabel,
   paymentStatusLabel,
+  translatedPaymentMethodLabel,
   type OrderNotificationData,
 } from "@/lib/notifications/types";
 import { getPaymentInstructions } from "@/lib/notifications/payment-instructions";
 
-const MANUAL_VERIFICATION_NOTICE =
-  "Zelle and Cash App payments are verified manually by our team. Your order will not be processed until we've confirmed your payment — this is not automatic.";
+type EmailTranslator = (key: string, values?: Record<string, string | number>) => string;
 
 /**
  * Shared field block for every admin-facing order email: order number,
@@ -36,35 +36,55 @@ function adminOrderSummaryHtml(order: OrderNotificationData): string {
   `;
 }
 
-export function customerOrderPendingEmail(order: OrderNotificationData) {
-  const instructions = getPaymentInstructions(order.paymentMethod, order.orderNumber);
+/**
+ * Customer-facing — translated per the recipient's locale. `t` resolves
+ * "emails.orderPending" keys, `tPaymentLabels` resolves "paymentLabels",
+ * and `tInstructions` resolves "paymentInstructions" (passed through to
+ * `getPaymentInstructions`). Admin emails below intentionally stay English,
+ * matching the English-only admin dashboard.
+ */
+export function customerOrderPendingEmail(
+  order: OrderNotificationData,
+  t: EmailTranslator,
+  tPaymentLabels: EmailTranslator,
+  tInstructions: EmailTranslator
+) {
+  const instructions = getPaymentInstructions(tInstructions, order.paymentMethod, order.orderNumber);
   const itemsHtml = order.items
     .map((i) => `<li>${i.quantity} × ${i.name}</li>`)
     .join("");
 
   return {
-    subject: `Order ${order.orderNumber} received — payment pending verification`,
+    subject: t("subject", { orderNumber: order.orderNumber }),
     html: `
-      <p>Thank you for your order, ${order.customerName}.</p>
-      <p><strong>Order number:</strong> ${order.orderNumber}</p>
-      <p><strong>Total:</strong> ${formatMoney(order.total, order.currency)}</p>
-      <p><strong>Payment method:</strong> ${paymentMethodLabel(order.paymentMethod)}</p>
+      <p>${t("thankYou", { customerName: order.customerName })}</p>
+      <p><strong>${t("orderNumber")}:</strong> ${order.orderNumber}</p>
+      <p><strong>${t("total")}:</strong> ${formatMoney(order.total, order.currency)}</p>
+      <p><strong>${t("paymentMethod")}:</strong> ${translatedPaymentMethodLabel(tPaymentLabels, order.paymentMethod)}</p>
       <ul>${itemsHtml}</ul>
       <h3>${instructions.heading}</h3>
       <ul>${instructions.lines.map((l) => `<li>${l}</li>`).join("")}</ul>
-      <p><strong>Important:</strong> ${MANUAL_VERIFICATION_NOTICE}</p>
-      <p>Once you've sent payment, please submit your payment confirmation details (sender name, amount, date/time, and optionally a screenshot) on your order confirmation page so we can verify it faster.</p>
+      <p><strong>${t("important")}:</strong> ${t("manualVerificationNotice")}</p>
+      <p>${t("submitConfirmationNotice")}</p>
     `,
   };
 }
 
-export function customerPaymentConfirmedEmail(order: OrderNotificationData) {
+export function customerPaymentConfirmedEmail(
+  order: OrderNotificationData,
+  t: EmailTranslator,
+  tPaymentLabels: EmailTranslator
+) {
   return {
-    subject: `Payment confirmed for order ${order.orderNumber}`,
+    subject: t("subject", { orderNumber: order.orderNumber }),
     html: `
-      <p>Hi ${order.customerName},</p>
-      <p>We've manually verified your ${paymentMethodLabel(order.paymentMethod)} payment for order <strong>${order.orderNumber}</strong> (${formatMoney(order.total, order.currency)}).</p>
-      <p>Your order is now being processed. We'll be in touch with next steps and a timeline as your instrument is prepared.</p>
+      <p>${t("greeting", { customerName: order.customerName })}</p>
+      <p>${t("body", {
+        paymentMethod: translatedPaymentMethodLabel(tPaymentLabels, order.paymentMethod),
+        orderNumber: order.orderNumber,
+        total: formatMoney(order.total, order.currency),
+      })}</p>
+      <p>${t("nextSteps")}</p>
     `,
   };
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import type {
   ProductCustomizationOptions,
   SelectedCustomization,
@@ -23,6 +24,7 @@ interface Props {
 }
 
 export function CustomizationForm({ product }: Props) {
+  const t = useTranslations("product");
   const addItem = useCartStore((s) => s.addItem);
   const [selected, setSelected] = useState<SelectedCustomization>(() => {
     const defaults: SelectedCustomization = {};
@@ -154,7 +156,7 @@ export function CustomizationForm({ product }: Props) {
 
       <div className="flex items-center gap-4 border-t border-border pt-6">
         <label className="text-sm font-medium" htmlFor="quantity">
-          Qty
+          {t("qty")}
         </label>
         <Input
           id="quantity"
@@ -176,7 +178,7 @@ export function CustomizationForm({ product }: Props) {
         disabled={missingRequired}
         onClick={handleAddToCart}
       >
-        {added ? "Added to cart" : "Add to cart"}
+        {added ? t("addedToCart") : t("addToCart")}
       </Button>
     </div>
   );

@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { sendEmail, adminEmailRecipients } from "@/lib/notifications/email";
 import { sendSmsToRecipients } from "@/lib/notifications/sms";
 import { sendWhatsAppToRecipients } from "@/lib/notifications/whatsapp";
@@ -48,13 +49,33 @@ async function sendToTwilioChannels(eventLabel: string, order: OrderNotification
  * is "true" — see notifications/twilio-client.ts.
  */
 export const notificationService = {
+  /**
+   * Sent synchronously as part of the order-creation request, so the
+   * customer's own locale cookie is in scope here — the email matches
+   * whatever language they were checking out in.
+   */
   async notifyCustomerOrderPending(order: OrderNotificationData) {
-    const { subject, html } = customerOrderPendingEmail(order);
+    const [t, tPaymentLabels, tInstructions] = await Promise.all([
+      getTranslations("emails.orderPending"),
+      getTranslations("paymentLabels"),
+      getTranslations("paymentInstructions"),
+    ]);
+    const { subject, html } = customerOrderPendingEmail(order, t, tPaymentLabels, tInstructions);
     await sendEmail({ to: order.customerEmail, subject, html });
   },
 
+  /**
+   * Triggered later by an admin marking an order as paid — there's no
+   * request-scoped customer locale at that point (the order doesn't persist
+   * the customer's original language choice), so this email is always sent
+   * in English until that's tracked.
+   */
   async notifyCustomerPaymentConfirmed(order: OrderNotificationData) {
-    const { subject, html } = customerPaymentConfirmedEmail(order);
+    const [t, tPaymentLabels] = await Promise.all([
+      getTranslations({ locale: "en", namespace: "emails.paymentConfirmed" }),
+      getTranslations({ locale: "en", namespace: "paymentLabels" }),
+    ]);
+    const { subject, html } = customerPaymentConfirmedEmail(order, t, tPaymentLabels);
     await sendEmail({ to: order.customerEmail, subject, html });
   },
 

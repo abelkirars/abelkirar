@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export function PaymentConfirmationForm({ orderNumber }: { orderNumber: string }) {
+  const t = useTranslations("paymentConfirmationForm");
   const [senderName, setSenderName] = useState("");
   const [amountSent, setAmountSent] = useState("");
   const [sentAt, setSentAt] = useState("");
@@ -33,12 +35,12 @@ export function PaymentConfirmationForm({ orderNumber }: { orderNumber: string }
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Something went wrong. Please try again.");
+        setError(data.error ?? t("genericError"));
         return;
       }
       setSubmitted(true);
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError(t("genericError"));
     } finally {
       setLoading(false);
     }
@@ -47,22 +49,16 @@ export function PaymentConfirmationForm({ orderNumber }: { orderNumber: string }
   if (submitted) {
     return (
       <p className="rounded-lg bg-accent/10 p-4 text-sm text-foreground">
-        Thanks — we&rsquo;ve received your payment details. Our team will
-        manually verify your payment and update your order status. This is
-        not automatic; a screenshot alone does not mark your order as paid.
+        {t("thanksMessage")}
       </p>
     );
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
-      <p className="text-sm text-muted-foreground">
-        Already sent payment? Let us know the details below so we can verify
-        it faster. Submitting this does not automatically mark your order as
-        paid — an administrator must confirm it manually.
-      </p>
+      <p className="text-sm text-muted-foreground">{t("notice")}</p>
       <div>
-        <Label htmlFor="senderName">Sender&rsquo;s name</Label>
+        <Label htmlFor="senderName">{t("senderName")}</Label>
         <Input
           id="senderName"
           className="mt-1"
@@ -73,7 +69,7 @@ export function PaymentConfirmationForm({ orderNumber }: { orderNumber: string }
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <Label htmlFor="amountSent">Amount sent ($)</Label>
+          <Label htmlFor="amountSent">{t("amountSent")}</Label>
           <Input
             id="amountSent"
             type="number"
@@ -86,7 +82,7 @@ export function PaymentConfirmationForm({ orderNumber }: { orderNumber: string }
           />
         </div>
         <div>
-          <Label htmlFor="sentAt">Date &amp; time sent</Label>
+          <Label htmlFor="sentAt">{t("dateTimeSent")}</Label>
           <Input
             id="sentAt"
             type="datetime-local"
@@ -98,7 +94,7 @@ export function PaymentConfirmationForm({ orderNumber }: { orderNumber: string }
         </div>
       </div>
       <div>
-        <Label htmlFor="transactionReference">Transaction reference (optional)</Label>
+        <Label htmlFor="transactionReference">{t("transactionReference")}</Label>
         <Input
           id="transactionReference"
           className="mt-1"
@@ -107,7 +103,7 @@ export function PaymentConfirmationForm({ orderNumber }: { orderNumber: string }
         />
       </div>
       <div>
-        <Label htmlFor="screenshot">Payment screenshot or receipt PDF (optional)</Label>
+        <Label htmlFor="screenshot">{t("screenshot")}</Label>
         <input
           id="screenshot"
           type="file"
@@ -120,7 +116,7 @@ export function PaymentConfirmationForm({ orderNumber }: { orderNumber: string }
       {error && <p className="text-sm text-destructive">{error}</p>}
 
       <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? "Submitting…" : "Submit payment details"}
+        {loading ? t("submitting") : t("submit")}
       </Button>
     </form>
   );

@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { contactSchema, type ContactInput } from "@/lib/validations/contact";
+import { useTranslations } from "next-intl";
+import { createContactSchema, type ContactInput } from "@/lib/validations/contact";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -16,9 +17,9 @@ import {
 
 export function ContactForm({
   topic,
-  messagePlaceholder = "Tell us a bit about what you're looking for…",
-  submitLabel = "Send",
-  successMessage = "Thank you — we'll be in touch soon.",
+  messagePlaceholder,
+  submitLabel,
+  successMessage,
   showMessageField = true,
 }: {
   topic?: string;
@@ -27,13 +28,15 @@ export function ContactForm({
   successMessage?: string;
   showMessageField?: boolean;
 }) {
+  const t = useTranslations("contactForm");
+  const tValidation = useTranslations("validation");
   const [status, setStatus] = useState<"idle" | "success">("idle");
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<ContactInput>({
-    resolver: zodResolver(contactSchema),
+    resolver: zodResolver(createContactSchema(tValidation)),
     defaultValues: {
       topic,
       message: showMessageField ? "" : `I'd like to be notified about ${topic ?? "this"}.`,
@@ -50,35 +53,35 @@ export function ContactForm({
   }
 
   if (status === "success") {
-    return <p className="text-muted-foreground">{successMessage}</p>;
+    return <p className="text-muted-foreground">{successMessage ?? t("successMessage")}</p>;
   }
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate>
       <FieldGroup>
         <Field>
-          <FieldLabel htmlFor="name">Name</FieldLabel>
+          <FieldLabel htmlFor="name">{t("name")}</FieldLabel>
           <Input id="name" {...register("name")} />
           <FieldError errors={[errors.name]} />
         </Field>
 
         <Field>
-          <FieldLabel htmlFor="email">Email</FieldLabel>
+          <FieldLabel htmlFor="email">{t("email")}</FieldLabel>
           <Input id="email" type="email" {...register("email")} />
           <FieldError errors={[errors.email]} />
         </Field>
 
         <Field>
-          <FieldLabel htmlFor="phone">Phone (optional)</FieldLabel>
+          <FieldLabel htmlFor="phone">{t("phone")}</FieldLabel>
           <Input id="phone" type="tel" {...register("phone")} />
         </Field>
 
         {showMessageField && (
           <Field>
-            <FieldLabel htmlFor="message">Message</FieldLabel>
+            <FieldLabel htmlFor="message">{t("message")}</FieldLabel>
             <Textarea
               id="message"
-              placeholder={messagePlaceholder}
+              placeholder={messagePlaceholder ?? t("messagePlaceholder")}
               rows={4}
               {...register("message")}
             />
@@ -87,7 +90,7 @@ export function ContactForm({
         )}
 
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Sending…" : submitLabel}
+          {isSubmitting ? t("sending") : (submitLabel ?? t("send"))}
         </Button>
       </FieldGroup>
     </form>

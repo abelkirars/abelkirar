@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import { Fraunces, Inter } from "next/font/google";
+import { Fraunces, Inter, Noto_Sans_Ethiopic } from "next/font/google";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages } from "next-intl/server";
 import "./globals.css";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
@@ -15,6 +17,12 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
+const notoSansEthiopic = Noto_Sans_Ethiopic({
+  variable: "--font-ethiopic",
+  subsets: ["ethiopic"],
+  weight: ["400", "500", "600", "700"],
+});
+
 export const metadata: Metadata = {
   title: {
     default: "Abelkirar — Ethiopian Kirar Education & Instruments",
@@ -24,20 +32,25 @@ export const metadata: Metadata = {
     "Learn the Kirar and bring Ethiopian Orthodox spiritual music to life. Online courses, handmade instruments, and a global diaspora community.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await getLocale();
+  const messages = await getMessages();
+
   return (
     <html
-      lang="en"
-      className={`${fraunces.variable} ${inter.variable} h-full antialiased`}
+      lang={locale}
+      className={`${fraunces.variable} ${inter.variable} ${notoSansEthiopic.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
-        <SiteHeader />
-        <main className="flex-1">{children}</main>
-        <SiteFooter />
+        <NextIntlClientProvider messages={messages}>
+          <SiteHeader />
+          <main className="flex-1">{children}</main>
+          <SiteFooter />
+        </NextIntlClientProvider>
       </body>
     </html>
   );

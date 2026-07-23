@@ -1,0 +1,213 @@
+{
+  "nav": {
+    "about": "[AM] About",
+    "courses": "[AM] Courses",
+    "store": "[AM] Store",
+    "community": "[AM] Community",
+    "blog": "[AM] Blog",
+    "contact": "[AM] Contact"
+  },
+  "header": {
+    "brand": "[AM] Abelkirar",
+    "startLearning": "[AM] Start Learning",
+    "viewCart": "[AM] View cart",
+    "openMenu": "[AM] Open menu"
+  },
+  "footer": {
+    "tagline": "[AM] Preserving and teaching Ethiopian Orthodox spiritual music for the diaspora, one Kirar at a time.",
+    "joinCommunity": "[AM] Join the community",
+    "joinCommunityDescription": "[AM] Lessons, new instruments, and gathering invitations — a few times a month.",
+    "copyright": "[AM] © {year} Abelkirar. All rights reserved."
+  },
+  "hero": {
+    "eyebrow": "[AM] Ethiopian Orthodox Spiritual Music",
+    "title": "[AM] Learn the Kirar. Carry the tradition forward.",
+    "description": "[AM] Abelkirar trains the Ethiopian and Eritrean Orthodox diaspora to play the Kirar with skill and reverence — so worship sounds the way it was always meant to.",
+    "startLearning": "[AM] Start Learning",
+    "buyInstruments": "[AM] Buy Instruments",
+    "joinCommunity": "[AM] Join Community"
+  },
+  "mission": {
+    "eyebrow": "[AM] Our Mission",
+    "title": "[AM] Preserving Ethiopian spiritual music, one musician at a time",
+    "paragraph1": "[AM] Abelkirar exists to train Kirar players wherever the Ethiopian and Eritrean Orthodox diaspora has gathered — so that worship in churches across the United States, the United Kingdom, and Europe is carried by musicians who play with real skill and understanding.",
+    "paragraph2": "[AM] Abelkirar is led by a Kirar musician and Ethiopian Orthodox Church Deacon, teaching the instrument the way it has always been taught — by ear, by tradition, and in service of the liturgy — combined with structured, modern online lessons.",
+    "readOurStory": "[AM] Read our story",
+    "quote": "[AM] “Music that carries the liturgy shouldn’t be left to chance.”"
+  },
+  "home": {
+    "coursesEyebrow": "[AM] Online Courses",
+    "coursesTitle": "[AM] A curriculum built for every stage",
+    "coursesDescription": "[AM] From your first scale to leading worship, structured for the Ethiopian and Eritrean diaspora — kids and adults alike.",
+    "instrumentsEyebrow": "[AM] Handmade Instruments",
+    "instrumentsTitle": "[AM] Instruments built for worship, made to order",
+    "instrumentsDescription": "[AM] Kirar, Begena, and Masenqo, customized in shape, finish, and size, and shipped to the US, UK, and Europe."
+  },
+  "courseLevels": {
+    "exploreCurriculum": "[AM] Explore curriculum"
+  },
+  "instrumentCategories": {
+    "shopCategory": "[AM] Shop {category}"
+  },
+  "community": {
+    "title": "[AM] A community for Kirar players, wherever they live",
+    "description": "[AM] Monthly online gatherings, student performances, and workshops with guest Ethiopian musicians — built for a diaspora scattered across continents but united in worship.",
+    "cta": "[AM] Explore the community"
+  },
+  "store": {
+    "eyebrow": "[AM] The Store",
+    "title": "[AM] Handmade instruments, built for worship",
+    "description": "[AM] Every instrument is made to order and customizable in shape, finish, and size. We ship to the United States, United Kingdom, and Europe.",
+    "empty": "[AM] New instruments are being added soon — check back shortly.",
+    "from": "[AM] From ${price}",
+    "view": "[AM] View",
+    "chooseOptions": "[AM] Choose from {count} {label} options, each handcrafted and customizable."
+  },
+  "product": {
+    "qty": "[AM] Qty",
+    "addToCart": "[AM] Add to cart",
+    "addedToCart": "[AM] Added to cart"
+  },
+  "cart": {
+    "title": "[AM] Your cart",
+    "empty": "[AM] Your cart is empty",
+    "emptyDescription": "[AM] Browse handmade Kirar, Begena, and Masenqo instruments.",
+    "visitStore": "[AM] Visit the store",
+    "remove": "[AM] Remove",
+    "total": "[AM] Total",
+    "contactDetails": "[AM] Contact details",
+    "fullName": "[AM] Full name",
+    "emailAddress": "[AM] Email address",
+    "phoneNumber": "[AM] Phone number",
+    "paymentRegion": "[AM] Payment region",
+    "usRegion": "[AM] United States — USD",
+    "eurozoneRegion": "[AM] Eurozone — EUR",
+    "paymentMethod": "[AM] Payment method",
+    "usMethodNotice": "[AM] We currently accept Zelle and Cash App. Payments are verified manually by our team — your order won’t be processed until we’ve confirmed your payment.",
+    "zelle": "[AM] Zelle",
+    "cashApp": "[AM] Cash App",
+    "eurBankTransfer": "[AM] Euro Bank Transfer",
+    "eurNotice": "[AM] EUR payment details will be provided after the order is placed.",
+    "placeOrder": "[AM] Place order",
+    "placingOrder": "[AM] Placing order…",
+    "genericError": "[AM] Something went wrong. Please try again."
+  },
+  "orderConfirmation": {
+    "paymentConfirmed": "[AM] Payment confirmed",
+    "orderReceived": "[AM] Order received",
+    "orderNumber": "[AM] Order number",
+    "total": "[AM] Total",
+    "paymentRegion": "[AM] Payment region",
+    "paymentMethod": "[AM] Payment method",
+    "status": "[AM] Status",
+    "paidProcessing": "[AM] Paid — processing",
+    "pendingVerification": "[AM] Pending payment verification",
+    "importantNotice": "[AM] Important: include order number {orderNumber} in your payment note so we can match your payment to this order.",
+    "manualVerificationNotice": "[AM] Payments are verified manually by our team. Your order will not be processed until we’ve confirmed your payment — this does not happen automatically."
+  },
+  "paymentLabels": {
+    "us": "[AM] United States",
+    "eurozone": "[AM] Eurozone",
+    "zelle": "[AM] Zelle",
+    "cashApp": "[AM] Cash App",
+    "eurBankTransfer": "[AM] Euro Bank Transfer",
+    "pendingVerification": "[AM] Pending verification",
+    "paid": "[AM] Paid",
+    "paymentNotFound": "[AM] Payment not found",
+    "refunded": "[AM] Refunded"
+  },
+  "paymentInstructions": {
+    "zelleHeading": "[AM] Pay with Zelle",
+    "zelleSendTo": "[AM] Send payment via Zelle to: {name} ({target})",
+    "cashAppHeading": "[AM] Pay with Cash App",
+    "cashAppSendTo": "[AM] Send payment via Cash App to: {cashtag}",
+    "eurHeading": "[AM] Euro Bank Transfer",
+    "eurDetailsLater": "[AM] EUR payment details will be provided after the order is placed.",
+    "eurIncludeOrderNumber": "[AM] Include your order number {orderNumber} in the payment reference once you receive those details.",
+    "includeOrderNumberInNote": "[AM] Include your order number {orderNumber} in the payment note/memo.",
+    "includeOrderNumberInMemo": "[AM] Include your order number {orderNumber} in the payment note."
+  },
+  "paymentConfirmationForm": {
+    "notice": "[AM] Already sent payment? Let us know the details below so we can verify it faster. Submitting this does not automatically mark your order as paid — an administrator must confirm it manually.",
+    "senderName": "[AM] Sender’s name",
+    "amountSent": "[AM] Amount sent ($)",
+    "dateTimeSent": "[AM] Date & time sent",
+    "transactionReference": "[AM] Transaction reference (optional)",
+    "screenshot": "[AM] Payment screenshot or receipt PDF (optional)",
+    "submit": "[AM] Submit payment details",
+    "submitting": "[AM] Submitting…",
+    "genericError": "[AM] Something went wrong. Please try again.",
+    "thanksMessage": "[AM] Thanks — we’ve received your payment details. Our team will manually verify your payment and update your order status. This is not automatic; a screenshot alone does not mark your order as paid."
+  },
+  "contact": {
+    "eyebrow": "[AM] Contact",
+    "title": "[AM] Get in touch",
+    "description": "[AM] Questions about courses, custom instruments, or anything else — we’d love to hear from you."
+  },
+  "contactForm": {
+    "name": "[AM] Name",
+    "email": "[AM] Email",
+    "phone": "[AM] Phone (optional)",
+    "message": "[AM] Message",
+    "messagePlaceholder": "[AM] Tell us a bit about what you're looking for…",
+    "send": "[AM] Send",
+    "sending": "[AM] Sending…",
+    "successMessage": "[AM] Thank you — we'll be in touch soon."
+  },
+  "newsletterForm": {
+    "emailPlaceholder": "[AM] you@email.com",
+    "emailLabel": "[AM] Email address",
+    "join": "[AM] Join the community",
+    "joining": "[AM] Joining…",
+    "success": "[AM] Thank you — check your inbox for a welcome note."
+  },
+  "about": {
+    "eyebrow": "[AM] About Abelkirar",
+    "title": "[AM] A Deacon, a Kirar player, and a tradition worth carrying forward",
+    "paragraph1": "[AM] Abelkirar is led by an Ethiopian Orthodox Church Deacon and Kirar musician.",
+    "paragraph2": "[AM] Serving the church revealed a gap that shaped Abelkirar’s mission: too many congregations, especially in the diaspora, lack musicians trained to play the Kirar well. Hymns that should lift a service often fall flat — not from a lack of devotion, but from a lack of structured teaching.",
+    "paragraph3": "[AM] Abelkirar was built to close that gap: rigorous, structured Kirar education, delivered online, for Ethiopian and Eritrean Orthodox communities wherever they’ve settled — from parish halls in Addis Ababa to living rooms in the United States and United Kingdom.",
+    "whyEyebrow": "[AM] Why It Matters",
+    "whyTitle": "[AM] Preservation is an active choice, not a memory",
+    "whyDescription": "[AM] Ethiopian Orthodox spiritual music has survived centuries. It survives the next century only if it's taught deliberately — to the diaspora, to the next generation, and to anyone drawn to it.",
+    "preserve": "[AM] Preserve",
+    "preserveDescription": "[AM] Keep the traditional playing techniques, scales, and church repertoire intact and accurately taught.",
+    "teach": "[AM] Teach",
+    "teachDescription": "[AM] Structured, level-based online courses that take a student from silence to leading worship.",
+    "modernize": "[AM] Modernize",
+    "modernizeDescription": "[AM] Bring the Kirar to a global, digitally-connected diaspora without losing what makes it sacred."
+  },
+  "validation": {
+    "cartEmpty": "[AM] Your cart is empty",
+    "enterFullName": "[AM] Enter your full name",
+    "enterValidEmail": "[AM] Enter a valid email address",
+    "enterValidPhone": "[AM] Enter a valid phone number",
+    "paymentMethodMismatch": "[AM] Payment method does not match the selected payment region",
+    "enterSenderName": "[AM] Enter the name the payment was sent from",
+    "enterAmountSent": "[AM] Enter the amount you sent",
+    "enterName": "[AM] Enter your name",
+    "enterMessage": "[AM] Tell us a little about what you need"
+  },
+  "emails": {
+    "orderPending": {
+      "subject": "[AM] Order {orderNumber} received — payment pending verification",
+      "thankYou": "[AM] Thank you for your order, {customerName}.",
+      "orderNumber": "[AM] Order number",
+      "total": "[AM] Total",
+      "paymentMethod": "[AM] Payment method",
+      "manualVerificationNotice": "[AM] Zelle and Cash App payments are verified manually by our team. Your order will not be processed until we've confirmed your payment — this is not automatic.",
+      "important": "[AM] Important",
+      "submitConfirmationNotice": "[AM] Once you've sent payment, please submit your payment confirmation details (sender name, amount, date/time, and optionally a screenshot) on your order confirmation page so we can verify it faster."
+    },
+    "paymentConfirmed": {
+      "subject": "[AM] Payment confirmed for order {orderNumber}",
+      "greeting": "[AM] Hi {customerName},",
+      "body": "[AM] We've manually verified your {paymentMethod} payment for order {orderNumber} ({total}).",
+      "nextSteps": "[AM] Your order is now being processed. We'll be in touch with next steps and a timeline as your instrument is prepared."
+    },
+    "newsletterWelcome": {
+      "subject": "[AM] Welcome to Abelkirar",
+      "body": "[AM] Thank you for joining the Abelkirar community. You'll hear from us with Kirar lessons, new instruments, and community events."
+    }
+  }
+}

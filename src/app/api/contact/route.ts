@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/db";
 import { resend } from "@/lib/resend";
-import { contactSchema } from "@/lib/validations/contact";
+import { createContactSchema } from "@/lib/validations/contact";
 
 export async function POST(request: Request) {
   const body = await request.json();
-  const parsed = contactSchema.safeParse(body);
+  const t = await getTranslations("validation");
+  const parsed = createContactSchema(t).safeParse(body);
 
   if (!parsed.success) {
     return NextResponse.json(

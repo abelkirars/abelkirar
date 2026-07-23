@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { INSTRUMENT_CATEGORIES } from "@/lib/instrument-categories";
 import { categoryGradient } from "@/lib/category-gradients";
 import { CrossPattern } from "@/components/marketing/cross-pattern";
 
 export function InstrumentCategoryCards() {
+  const t = useTranslations("instrumentCategories");
+
   return (
     <div className="grid gap-6 sm:grid-cols-3">
       {INSTRUMENT_CATEGORIES.map((category) => (
@@ -21,7 +24,7 @@ export function InstrumentCategoryCards() {
             <h3 className="font-heading text-2xl font-semibold">{category.name}</h3>
             <p className="mt-2 text-sm text-[#f3e9d2]/80">{category.description}</p>
             <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium">
-              Shop {category.name}
+              {t("shopCategory", { category: category.name })}
               <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
             </span>
           </div>

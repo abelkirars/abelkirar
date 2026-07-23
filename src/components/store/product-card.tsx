@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { ProductVisual } from "@/components/store/product-visual";
 
 export function ProductCard({
@@ -17,6 +18,8 @@ export function ProductCard({
   basePrice: number;
   images: string[];
 }) {
+  const t = useTranslations("store");
+
   return (
     <Link href={href} className="group">
       <ProductVisual
@@ -32,10 +35,10 @@ export function ProductCard({
         </p>
         <div className="mt-3 flex items-center justify-between">
           <span className="font-medium">
-            From ${(basePrice / 100).toFixed(0)}
+            {t("from", { price: (basePrice / 100).toFixed(0) })}
           </span>
           <span className="inline-flex items-center gap-1 text-sm font-medium text-accent">
-            View
+            {t("view")}
             <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
           </span>
         </div>

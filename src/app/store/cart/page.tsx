@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useCartStore, cartTotalPrice } from "@/store/cart-store";
 import { Container } from "@/components/marketing/container";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ type PaymentRegion = "US" | "EUROZONE";
 type UsPaymentMethod = "ZELLE" | "CASH_APP";
 
 export default function CartPage() {
+  const t = useTranslations("cart");
   const { items, removeItem, setQuantity } = useCartStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,12 +56,12 @@ export default function CartPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Something went wrong. Please try again.");
+        setError(data.error ?? t("genericError"));
         return;
       }
       router.push(`/store/order/${data.orderNumber}`);
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError(t("genericError"));
     } finally {
       setLoading(false);
     }
@@ -69,12 +71,10 @@ export default function CartPage() {
     return (
       <section className="py-24">
         <Container className="text-center">
-          <h1 className="font-heading text-3xl font-semibold">Your cart is empty</h1>
-          <p className="mt-3 text-muted-foreground">
-            Browse handmade Kirar, Begena, and Masenqo instruments.
-          </p>
+          <h1 className="font-heading text-3xl font-semibold">{t("empty")}</h1>
+          <p className="mt-3 text-muted-foreground">{t("emptyDescription")}</p>
           <Button className="mt-6" nativeButton={false} render={<Link href="/store" />}>
-            Visit the store
+            {t("visitStore")}
           </Button>
         </Container>
       </section>
@@ -85,7 +85,7 @@ export default function CartPage() {
     <section className="py-16 sm:py-20">
       <Container className="grid gap-12 lg:grid-cols-[1fr_400px]">
         <div>
-          <h1 className="font-heading text-3xl font-semibold">Your cart</h1>
+          <h1 className="font-heading text-3xl font-semibold">{t("title")}</h1>
           <ul className="mt-8 divide-y divide-border">
             {items.map((item) => (
               <li key={item.lineId} className="flex gap-4 py-6">
@@ -113,7 +113,7 @@ export default function CartPage() {
                       className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-destructive"
                     >
                       <Trash2 className="size-4" />
-                      Remove
+                      {t("remove")}
                     </button>
                   </div>
                 </div>
@@ -127,33 +127,33 @@ export default function CartPage() {
 
         <div className="h-fit space-y-6 rounded-2xl bg-card p-8 ring-1 ring-foreground/10">
           <div className="flex items-center justify-between text-lg font-medium">
-            <span>Total</span>
+            <span>{t("total")}</span>
             <span>${(total / 100).toFixed(0)}</span>
           </div>
 
           <div className="space-y-3 border-t border-border pt-6">
-            <Label>Contact details</Label>
+            <Label>{t("contactDetails")}</Label>
             <Input
-              placeholder="Full name"
+              placeholder={t("fullName")}
               value={customerName}
               onChange={(e) => setCustomerName(e.target.value)}
             />
             <Input
               type="email"
-              placeholder="Email address"
+              placeholder={t("emailAddress")}
               value={customerEmail}
               onChange={(e) => setCustomerEmail(e.target.value)}
             />
             <Input
               type="tel"
-              placeholder="Phone number"
+              placeholder={t("phoneNumber")}
               value={customerPhone}
               onChange={(e) => setCustomerPhone(e.target.value)}
             />
           </div>
 
           <div className="space-y-3 border-t border-border pt-6">
-            <Label>Payment region</Label>
+            <Label>{t("paymentRegion")}</Label>
             <div className="flex gap-2">
               {(["US", "EUROZONE"] as const).map((region) => (
                 <button
@@ -167,21 +167,17 @@ export default function CartPage() {
                       : "border-border text-muted-foreground hover:border-primary/50"
                   )}
                 >
-                  {region === "US" ? "United States — USD" : "Eurozone — EUR"}
+                  {region === "US" ? t("usRegion") : t("eurozoneRegion")}
                 </button>
               ))}
             </div>
           </div>
 
           <div className="space-y-3 border-t border-border pt-6">
-            <Label>Payment method</Label>
+            <Label>{t("paymentMethod")}</Label>
             {paymentRegion === "US" ? (
               <>
-                <p className="text-xs text-muted-foreground">
-                  We currently accept Zelle and Cash App. Payments are
-                  verified manually by our team — your order won&rsquo;t be
-                  processed until we&rsquo;ve confirmed your payment.
-                </p>
+                <p className="text-xs text-muted-foreground">{t("usMethodNotice")}</p>
                 <div className="flex gap-2">
                   {(["ZELLE", "CASH_APP"] as const).map((method) => (
                     <button
@@ -195,7 +191,7 @@ export default function CartPage() {
                           : "border-border text-muted-foreground hover:border-primary/50"
                       )}
                     >
-                      {method === "ZELLE" ? "Zelle" : "Cash App"}
+                      {method === "ZELLE" ? t("zelle") : t("cashApp")}
                     </button>
                   ))}
                 </div>
@@ -203,12 +199,9 @@ export default function CartPage() {
             ) : (
               <>
                 <div className="rounded-md border border-primary bg-primary/10 px-3 py-2 text-sm font-medium text-foreground">
-                  Euro Bank Transfer
+                  {t("eurBankTransfer")}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  EUR payment details will be provided after the order is
-                  placed.
-                </p>
+                <p className="text-xs text-muted-foreground">{t("eurNotice")}</p>
               </>
             )}
           </div>
@@ -221,7 +214,7 @@ export default function CartPage() {
             onClick={handleSubmitOrder}
             disabled={loading || !customerName || !customerEmail || !customerPhone}
           >
-            {loading ? "Placing order…" : "Place order"}
+            {loading ? t("placingOrder") : t("placeOrder")}
           </Button>
         </div>
       </Container>

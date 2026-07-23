@@ -2,11 +2,14 @@
 
 import Link from "next/link";
 import { motion } from "motion/react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/marketing/container";
 import { CrossPattern } from "@/components/marketing/cross-pattern";
 
 export function Hero() {
+  const t = useTranslations("hero");
+
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-[#241b12] to-[#1b140d] text-[#f3e9d2]">
       <CrossPattern className="text-[#d4a84b] opacity-[0.08]" />
@@ -18,7 +21,7 @@ export function Hero() {
           transition={{ duration: 0.6 }}
           className="text-sm font-medium tracking-[0.25em] text-[#d4a84b] uppercase"
         >
-          Ethiopian Orthodox Spiritual Music
+          {t("eyebrow")}
         </motion.p>
 
         <motion.h1
@@ -27,7 +30,7 @@ export function Hero() {
           transition={{ duration: 0.7, delay: 0.1 }}
           className="max-w-3xl font-heading text-5xl font-semibold tracking-tight text-balance sm:text-6xl lg:text-7xl"
         >
-          Learn the Kirar. Carry the tradition forward.
+          {t("title")}
         </motion.h1>
 
         <motion.p
@@ -36,9 +39,7 @@ export function Hero() {
           transition={{ duration: 0.7, delay: 0.2 }}
           className="max-w-xl text-lg text-[#f3e9d2]/80 text-pretty"
         >
-          Abelkirar trains the Ethiopian and Eritrean Orthodox diaspora to
-          play the Kirar with skill and reverence — so worship sounds the
-          way it was always meant to.
+          {t("description")}
         </motion.p>
 
         <motion.div
@@ -48,7 +49,7 @@ export function Hero() {
           className="flex flex-wrap items-center gap-4 pt-2"
         >
           <Button size="lg" nativeButton={false} render={<Link href="/courses" />}>
-            Start Learning
+            {t("startLearning")}
           </Button>
           <Button
             size="lg"
@@ -56,7 +57,7 @@ export function Hero() {
             className="border-[#f3e9d2]/25 bg-transparent text-[#f3e9d2] hover:bg-[#f3e9d2]/10"
             render={<Link href="/store" />}
           >
-            Buy Instruments
+            {t("buyInstruments")}
           </Button>
           <Button
             size="lg"
@@ -65,7 +66,7 @@ export function Hero() {
             className="text-[#f3e9d2] hover:bg-[#f3e9d2]/10 hover:text-[#f3e9d2]"
             render={<Link href="/community" />}
           >
-            Join Community
+            {t("joinCommunity")}
           </Button>
         </motion.div>
       </Container>

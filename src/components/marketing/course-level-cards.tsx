@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { COURSE_LEVELS } from "@/lib/courses-data";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 export function CourseLevelCards() {
+  const t = useTranslations("courseLevels");
+
   return (
     <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
       {COURSE_LEVELS.map((course) => (
@@ -22,7 +25,7 @@ export function CourseLevelCards() {
             <CardContent className="flex h-full flex-col justify-between gap-6">
               <p className="text-muted-foreground">{course.description}</p>
               <span className="inline-flex items-center gap-1 text-sm font-medium text-foreground">
-                Explore curriculum
+                {t("exploreCurriculum")}
                 <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
               </span>
             </CardContent>

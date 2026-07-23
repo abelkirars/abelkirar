@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/db";
 import { Container } from "@/components/marketing/container";
 import { CrossPattern } from "@/components/marketing/cross-pattern";
@@ -28,7 +29,10 @@ type ProductCardData = {
 // than one product collapse into a single card that links to the filtered
 // view — that filtered view is what lets a customer choose between options
 // like the three Kirar builds instead of landing straight on a checkout page.
-function groupIntoCards(products: Product[]): ProductCardData[] {
+function groupIntoCards(
+  products: Product[],
+  t: Awaited<ReturnType<typeof getTranslations<"store">>>
+): ProductCardData[] {
   const byCategory = new Map<string, Product[]>();
   for (const product of products) {
     const group = byCategory.get(product.category) ?? [];
@@ -59,7 +63,7 @@ function groupIntoCards(products: Product[]): ProductCardData[] {
       href: `/store?category=${category}`,
       name: label,
       category,
-      description: `Choose from ${group.length} ${label} options, each handcrafted and customizable.`,
+      description: t("chooseOptions", { count: group.length, label }),
       basePrice,
       images: (withImage?.images as string[]) ?? [],
     };
@@ -71,6 +75,7 @@ export default async function StorePage({
 }: PageProps<"/store">) {
   const { category } = await searchParams;
   const categoryFilter = typeof category === "string" ? category : undefined;
+  const t = await getTranslations("store");
 
   const products = await prisma.product.findMany({
     where: {
@@ -90,7 +95,7 @@ export default async function StorePage({
         basePrice: product.basePrice,
         images: product.images as string[],
       }))
-    : groupIntoCards(products);
+    : groupIntoCards(products, t);
 
   return (
     <>
@@ -98,15 +103,13 @@ export default async function StorePage({
         <CrossPattern className="text-[#d4a84b] opacity-[0.08]" />
         <Container className="relative">
           <p className="text-sm font-medium tracking-[0.25em] text-[#d4a84b] uppercase">
-            The Store
+            {t("eyebrow")}
           </p>
           <h1 className="mt-4 max-w-2xl font-heading text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
-            Handmade instruments, built for worship
+            {t("title")}
           </h1>
           <p className="mt-6 max-w-xl text-lg text-[#f3e9d2]/80 text-pretty">
-            Every instrument is made to order and customizable in shape,
-            finish, and size. We ship to the United States, United Kingdom,
-            and Europe.
+            {t("description")}
           </p>
         </Container>
       </section>
@@ -114,9 +117,7 @@ export default async function StorePage({
       <section className="py-20 sm:py-28">
         <Container>
           {cards.length === 0 ? (
-            <p className="text-center text-muted-foreground">
-              New instruments are being added soon — check back shortly.
-            </p>
+            <p className="text-center text-muted-foreground">{t("empty")}</p>
           ) : (
             <div className="grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
               {cards.map((card) => (
