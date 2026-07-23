@@ -1,213 +1,213 @@
 {
   "nav": {
-    "about": "[AM] About",
-    "courses": "[AM] Courses",
-    "store": "[AM] Store",
-    "community": "[AM] Community",
-    "blog": "[AM] Blog",
-    "contact": "[AM] Contact"
+    "about": "ስለ እኛ",
+    "courses": "ትምህርቶች",
+    "store": "መደብር",
+    "community": "ማህበረሰብ",
+    "blog": "ብሎግ",
+    "contact": "ያግኙን"
   },
   "header": {
-    "brand": "[AM] Abelkirar",
-    "startLearning": "[AM] Start Learning",
-    "viewCart": "[AM] View cart",
-    "openMenu": "[AM] Open menu"
+    "brand": "Abelkirar",
+    "startLearning": "መማር ይጀምሩ",
+    "viewCart": "ቅርጫቱን ይመልከቱ",
+    "openMenu": "ማውጫን ክፈት"
   },
   "footer": {
-    "tagline": "[AM] Preserving and teaching Ethiopian Orthodox spiritual music for the diaspora, one Kirar at a time.",
-    "joinCommunity": "[AM] Join the community",
-    "joinCommunityDescription": "[AM] Lessons, new instruments, and gathering invitations — a few times a month.",
-    "copyright": "[AM] © {year} Abelkirar. All rights reserved."
+    "tagline": "የኢትዮጵያ ኦርቶዶክስ መንፈሳዊ ዜማን በውጭ ሀገር ለሚኖሩ ምእመናን በክራር አማካኝነት መጠበቅና ማስተማር።",
+    "joinCommunity": "ማህበረሰቡን ይቀላቀሉ",
+    "joinCommunityDescription": "ትምህርቶች፣ አዳዲስ የሙዚቃ መሣሪያዎች እና የስብሰባ ጥሪዎች — በወር ጥቂት ጊዜያት።",
+    "copyright": "© {year} Abelkirar. መብቱ በሕግ የተጠበቀ ነው።"
   },
   "hero": {
-    "eyebrow": "[AM] Ethiopian Orthodox Spiritual Music",
-    "title": "[AM] Learn the Kirar. Carry the tradition forward.",
-    "description": "[AM] Abelkirar trains the Ethiopian and Eritrean Orthodox diaspora to play the Kirar with skill and reverence — so worship sounds the way it was always meant to.",
-    "startLearning": "[AM] Start Learning",
-    "buyInstruments": "[AM] Buy Instruments",
-    "joinCommunity": "[AM] Join Community"
+    "eyebrow": "የኢትዮጵያ ኦርቶዶክስ መንፈሳዊ ዜማ",
+    "title": "ክራር መጫወትን ይማሩ፤ ባህሉንና ዜማውን ያስቀጥሉ።",
+    "description": "አቤል ክራር በውጭ ሀገር የሚኖሩ የኢትዮጵያና የኤርትራ ኦርቶዶክስ ምእመናንን ክራር በጥበብና በክብረት እንዲጫወቱ ያሰለጥናል — አምልኮና ምስጋና በተገባው መንገድ እንዲቀርብ።",
+    "startLearning": "መማር ይጀምሩ",
+    "buyInstruments": "የሙዚቃ መሣሪያዎችን ይግዙ",
+    "joinCommunity": "ማህበረሰቡን ይቀላቀሉ"
   },
   "mission": {
-    "eyebrow": "[AM] Our Mission",
-    "title": "[AM] Preserving Ethiopian spiritual music, one musician at a time",
-    "paragraph1": "[AM] Abelkirar exists to train Kirar players wherever the Ethiopian and Eritrean Orthodox diaspora has gathered — so that worship in churches across the United States, the United Kingdom, and Europe is carried by musicians who play with real skill and understanding.",
-    "paragraph2": "[AM] Abelkirar is led by a Kirar musician and Ethiopian Orthodox Church Deacon, teaching the instrument the way it has always been taught — by ear, by tradition, and in service of the liturgy — combined with structured, modern online lessons.",
-    "readOurStory": "[AM] Read our story",
-    "quote": "[AM] “Music that carries the liturgy shouldn’t be left to chance.”"
+    "eyebrow": "ዓላማችን",
+    "title": "የኢትዮጵያን መንፈሳዊ ዜማ መጠበቅና ማስቀጠል",
+    "paragraph1": "አቤል ክራር የተቋቋመው በዩናይትድ ስቴትስ፣ በዩናይትድ ኪንግደምና በአውሮፓ በሚገኙ አብያተ ክርስቲያናት ውስጥ የሚቀርበው ምስጋና በጥበብና በበሰለ እውቀት በተዘጋጁ ክራር ተጫዋቾች እንዲመራ የኢትዮጵያና የኤርትራ ኦርቶዶክስ ዳያስፖራዎችን ለማሰልጠን ነው።",
+    "paragraph2": "አቤል ክራር የሚመራው በክራር ተጫዋችና በኢትዮጵያ ኦርቶዶክስ ተዋሕዶ ቤተ ክርስቲያን ዲያቆን ሲሆን፣ ትምህርቱም ባህላዊውንና መንፈሳዊውን የትምህርት ዘይቤ (በጆሮ፣ በወግና በቅዳሴ አገልግሎት) በተዋቀረ ዘመናዊ የኦንላይን ትምህርት ጋር በማጣመር ይሰጣል።",
+    "readOurStory": "ታሪካችንን ያንብቡ",
+    "quote": "“አገልግሎቱንና ቅዳሴውን የሚደግፍ ዜማ በግምት ሊተው አይገባም።”"
   },
   "home": {
-    "coursesEyebrow": "[AM] Online Courses",
-    "coursesTitle": "[AM] A curriculum built for every stage",
-    "coursesDescription": "[AM] From your first scale to leading worship, structured for the Ethiopian and Eritrean diaspora — kids and adults alike.",
-    "instrumentsEyebrow": "[AM] Handmade Instruments",
-    "instrumentsTitle": "[AM] Instruments built for worship, made to order",
-    "instrumentsDescription": "[AM] Kirar, Begena, and Masenqo, customized in shape, finish, and size, and shipped to the US, UK, and Europe."
+    "coursesEyebrow": "የኦንላይን ትምህርቶች",
+    "coursesTitle": "ለእያንዳንዱ ደረጃ የተዘጋጀ የትምህርት ፕሮግራም",
+    "coursesDescription": "ከመጀመሪያው መሠረታዊ ልምምድ እስከ ቅዳሴና መዝሙር መምራት ድረስ — በውጭ ሀገር ለሚኖሩ የኢትዮጵያና ኤርትራ ታዳጊዎችና አዋቂዎች የተዘጋጀ።",
+    "instrumentsEyebrow": "በእጅ የተሰሩ የሙዚቃ መሣሪያዎች",
+    "instrumentsTitle": "ለአገልግሎት ተስፈቅደው በእጅ የተሰሩ የሙዚቃ መሣሪያዎች",
+    "instrumentsDescription": "ክራር፣ በገና እና ማሲንቆ በጥራት፣ በቅርጽና በልዩ ፍላጎትዎ ተበጅተው ወደ አሜሪካ፣ እንግሊዝ እና አውሮፓ ይላካሉ።"
   },
   "courseLevels": {
-    "exploreCurriculum": "[AM] Explore curriculum"
+    "exploreCurriculum": "የትምህርት ይዘቱን ይመልከቱ"
   },
   "instrumentCategories": {
-    "shopCategory": "[AM] Shop {category}"
+    "shopCategory": "የ{category} መሣሪያዎችን ይግዙ"
   },
   "community": {
-    "title": "[AM] A community for Kirar players, wherever they live",
-    "description": "[AM] Monthly online gatherings, student performances, and workshops with guest Ethiopian musicians — built for a diaspora scattered across continents but united in worship.",
-    "cta": "[AM] Explore the community"
+    "title": "በማንኛውም ቦታ ለሚኖሩ የክራር ተጫዋቾች የተዘጋጀ ማህበረሰብ",
+    "description": "የወርሃዊ የኦንላይን ስብሰባዎች፣ የተማሪዎች ዝግጅቶች እና ከታወቁ የኢትዮጵያ ባለሙያዎች ጋር የሚደረጉ አውደ ጥናቶች — በተለያዩ ሀገራት ለሚኖሩ ነገር ግን በዜማ ለተሳሰሩ ምእመናን የተዘጋጀ።",
+    "cta": "ማህበረሰቡን ይቀላቀሉ"
   },
   "store": {
-    "eyebrow": "[AM] The Store",
-    "title": "[AM] Handmade instruments, built for worship",
-    "description": "[AM] Every instrument is made to order and customizable in shape, finish, and size. We ship to the United States, United Kingdom, and Europe.",
-    "empty": "[AM] New instruments are being added soon — check back shortly.",
-    "from": "[AM] From ${price}",
-    "view": "[AM] View",
-    "chooseOptions": "[AM] Choose from {count} {label} options, each handcrafted and customizable."
+    "eyebrow": "መደብር",
+    "title": "በእጅ የተሰሩ፣ ለአገልግሎት የተዘጋጁ የሙዚቃ መሣሪያዎች",
+    "description": "እያንዳንዱ መሣሪያ በትእዛዝ መሠረት በእጅ የሚሰራና በቅርጽ፣ በወለል አጨራረስና በስፋት የሚበጀው ነው። ወደ አሜሪካ፣ እንግሊዝ እና አውሮፓ እንልካለን።",
+    "empty": "አዳዲስ መሣሪያዎች በቅርቡ ይጨመራሉ — እባክዎን ትንሽ ቆይተው ይመልከቱ።",
+    "from": "ከ ${price} ጀምሮ",
+    "view": "ይመልከቱ",
+    "chooseOptions": "በእጅ ከተሰሩና እንደፍላጎትዎ ከሚበጁ {count} የ{label} አማራጮች ይምረጡ።"
   },
   "product": {
-    "qty": "[AM] Qty",
-    "addToCart": "[AM] Add to cart",
-    "addedToCart": "[AM] Added to cart"
+    "qty": "ብዛት",
+    "addToCart": "ወደ ቅርጫት ጨምር",
+    "addedToCart": "ወደ ቅርጫት ተጨምሯል"
   },
   "cart": {
-    "title": "[AM] Your cart",
-    "empty": "[AM] Your cart is empty",
-    "emptyDescription": "[AM] Browse handmade Kirar, Begena, and Masenqo instruments.",
-    "visitStore": "[AM] Visit the store",
-    "remove": "[AM] Remove",
-    "total": "[AM] Total",
-    "contactDetails": "[AM] Contact details",
-    "fullName": "[AM] Full name",
-    "emailAddress": "[AM] Email address",
-    "phoneNumber": "[AM] Phone number",
-    "paymentRegion": "[AM] Payment region",
-    "usRegion": "[AM] United States — USD",
-    "eurozoneRegion": "[AM] Eurozone — EUR",
-    "paymentMethod": "[AM] Payment method",
-    "usMethodNotice": "[AM] We currently accept Zelle and Cash App. Payments are verified manually by our team — your order won’t be processed until we’ve confirmed your payment.",
-    "zelle": "[AM] Zelle",
-    "cashApp": "[AM] Cash App",
-    "eurBankTransfer": "[AM] Euro Bank Transfer",
-    "eurNotice": "[AM] EUR payment details will be provided after the order is placed.",
-    "placeOrder": "[AM] Place order",
-    "placingOrder": "[AM] Placing order…",
-    "genericError": "[AM] Something went wrong. Please try again."
+    "title": "የዕቃ ቅርጫትዎ",
+    "empty": "የዕቃ ቅርጫትዎ ባዶ ነው",
+    "emptyDescription": "በእጅ የተሰሩ ክራሮችን፣ በገናዎችንና ማሲንቆዎችን ይመልከቱ።",
+    "visitStore": "መደብሩን ይጎብኙ",
+    "remove": "አስወግድ",
+    "total": "ጠቅላላ ዋጋ",
+    "contactDetails": "የግንኙነት መረጃ",
+    "fullName": "ሙሉ ስም",
+    "emailAddress": "ኢሜይል አድራሻ",
+    "phoneNumber": "ስልክ ቁጥር",
+    "paymentRegion": "የክፍያ ክልል",
+    "usRegion": "አሜሪካ — USD",
+    "eurozoneRegion": "አውሮፓ — EUR",
+    "paymentMethod": "የክፍያ ዘዴ",
+    "usMethodNotice": "በአሁኑ ጊዜ Zelle እና Cash App እንቀበላለን። ክፍያዎች በቡድናችን በእጅ የሚረጋገጡ ናቸው — ክፍያዎ እስኪረጋገጥ ድረስ ትዕዛዝዎ አይከናወንም።",
+    "zelle": "Zelle",
+    "cashApp": "Cash App",
+    "eurBankTransfer": "የአውሮፓ ባንክ ሐዋላ",
+    "eurNotice": "የዩሮ (EUR) ክፍያ መረጃ ትዕዛዙ ከተፈጸመ በኋላ ይላክልዎታል።",
+    "placeOrder": "ትዕዛዝ ይላኩ",
+    "placingOrder": "ትዕዛዝ በመላክ ላይ…",
+    "genericError": "ስህተት ተከሰቷል። እባክዎን እንደገና ይሞክሩ።"
   },
   "orderConfirmation": {
-    "paymentConfirmed": "[AM] Payment confirmed",
-    "orderReceived": "[AM] Order received",
-    "orderNumber": "[AM] Order number",
-    "total": "[AM] Total",
-    "paymentRegion": "[AM] Payment region",
-    "paymentMethod": "[AM] Payment method",
-    "status": "[AM] Status",
-    "paidProcessing": "[AM] Paid — processing",
-    "pendingVerification": "[AM] Pending payment verification",
-    "importantNotice": "[AM] Important: include order number {orderNumber} in your payment note so we can match your payment to this order.",
-    "manualVerificationNotice": "[AM] Payments are verified manually by our team. Your order will not be processed until we’ve confirmed your payment — this does not happen automatically."
+    "paymentConfirmed": "ክፍያው ተረጋግጧል",
+    "orderReceived": "ትዕዛዝዎ ደርሶናል",
+    "orderNumber": "የትዕዛዝ ቁጥር",
+    "total": "ጠቅላላ",
+    "paymentRegion": "የክፍያ ክልል",
+    "paymentMethod": "የክፍያ ዘዴ",
+    "status": "ሁኔታ",
+    "paidProcessing": "ተከፍሏል — በሂደት ላይ",
+    "pendingVerification": "ክፍያው በመረጋገጥ ላይ",
+    "importantNotice": "አስፈላጊ፡ ክፍያዎን ከትዕዛዝዎ ጋር ማገናኘት እንድንችል በክፍያ ማስታወሻዎ ላይ የትዕዛዝ ቁጥር {orderNumber}ን ያካቱ።",
+    "manualVerificationNotice": "ክፍያዎች በቡድናችን በእጅ የሚረጋገጡ ናቸው። ክፍያዎን ሳናረጋግጥ ትዕዛዝዎ አይከናወንም — ይህም በራስ-ሰር የሚሰራ አይደለም።"
   },
   "paymentLabels": {
-    "us": "[AM] United States",
-    "eurozone": "[AM] Eurozone",
-    "zelle": "[AM] Zelle",
-    "cashApp": "[AM] Cash App",
-    "eurBankTransfer": "[AM] Euro Bank Transfer",
-    "pendingVerification": "[AM] Pending verification",
-    "paid": "[AM] Paid",
-    "paymentNotFound": "[AM] Payment not found",
-    "refunded": "[AM] Refunded"
+    "us": "አሜሪካ",
+    "eurozone": "አውሮፓ",
+    "zelle": "Zelle",
+    "cashApp": "Cash App",
+    "eurBankTransfer": "የአውሮፓ ባንክ ሐዋላ",
+    "pendingVerification": "በማረጋገጥ ላይ",
+    "paid": "ተከፍሏል",
+    "paymentNotFound": "ክፍያ አልተገኘም",
+    "refunded": "ተመላሽ ተደርጓል"
   },
   "paymentInstructions": {
-    "zelleHeading": "[AM] Pay with Zelle",
-    "zelleSendTo": "[AM] Send payment via Zelle to: {name} ({target})",
-    "cashAppHeading": "[AM] Pay with Cash App",
-    "cashAppSendTo": "[AM] Send payment via Cash App to: {cashtag}",
-    "eurHeading": "[AM] Euro Bank Transfer",
-    "eurDetailsLater": "[AM] EUR payment details will be provided after the order is placed.",
-    "eurIncludeOrderNumber": "[AM] Include your order number {orderNumber} in the payment reference once you receive those details.",
-    "includeOrderNumberInNote": "[AM] Include your order number {orderNumber} in the payment note/memo.",
-    "includeOrderNumberInMemo": "[AM] Include your order number {orderNumber} in the payment note."
+    "zelleHeading": "በ Zelle ይክፈሉ",
+    "zelleSendTo": "ክፍያውን በ Zelle ወደዚህ ይላኩ፡ {name} ({target})",
+    "cashAppHeading": "በ Cash App ይክፈሉ",
+    "cashAppSendTo": "ክፍያውን በ Cash App ወደዚህ ይላኩ፡ {cashtag}",
+    "eurHeading": "የአውሮፓ ባንክ ሐዋላ",
+    "eurDetailsLater": "የEUR ክፍያ መረጃ ትዕዛዙ ከተፈጸመ በኋላ ይላክልዎታል።",
+    "eurIncludeOrderNumber": "መረጃው ሲደርስዎ በክፍያ ማጣቀሻው ላይ የትዕዛዝ ቁጥር {orderNumber}ን ያካቱ።",
+    "includeOrderNumberInNote": "በክፍያ ማስታወሻዎ ላይ የትዕዛዝ ቁጥር {orderNumber}ን ያካቱ።",
+    "includeOrderNumberInMemo": "በክፍያ ማስታወሻዎ ላይ የትዕዛዝ ቁጥር {orderNumber}ን ያካቱ።"
   },
   "paymentConfirmationForm": {
-    "notice": "[AM] Already sent payment? Let us know the details below so we can verify it faster. Submitting this does not automatically mark your order as paid — an administrator must confirm it manually.",
-    "senderName": "[AM] Sender’s name",
-    "amountSent": "[AM] Amount sent ($)",
-    "dateTimeSent": "[AM] Date & time sent",
-    "transactionReference": "[AM] Transaction reference (optional)",
-    "screenshot": "[AM] Payment screenshot or receipt PDF (optional)",
-    "submit": "[AM] Submit payment details",
-    "submitting": "[AM] Submitting…",
-    "genericError": "[AM] Something went wrong. Please try again.",
-    "thanksMessage": "[AM] Thanks — we’ve received your payment details. Our team will manually verify your payment and update your order status. This is not automatic; a screenshot alone does not mark your order as paid."
+    "notice": "ክፍያ ልከዋል? ፈጥነን እንድናረጋግጥልዎት እባክዎን ዝርዝሩን ከታች ያስገቡ። ይህንን ማስገባትዎ ትዕዛዝዎ እንደተከፈለ በራስ-ሰር አያደርገውም — በአስተዳዳሪ በእጅ መረጋገጥ አለበት።",
+    "senderName": "የላኪው ስም",
+    "amountSent": "የተላከው መጠን ($)",
+    "dateTimeSent": "የተላከበት ቀን እና ሰዓት",
+    "transactionReference": "የግብይት ማጣቀሻ ቁጥር (አማራጭ)",
+    "screenshot": "የክፍያ ስክሪንሾት ወይም ደረሰኝ PDF (አማራጭ)",
+    "submit": "የክፍያ ዝርዝር ላክ",
+    "submitting": "በመላክ ላይ…",
+    "genericError": "ስህተት ተከሰቷል። እባክዎን እንደገና ይሞክሩ።",
+    "thanksMessage": "እናመሰግናለን — የክፍያ ዝርዝርዎ ደርሶናል። ቡድናችን ክፍያዎን በእጅ አረጋግጦ የትዕዛዝዎን ሁኔታ ያዘምናል። ይህ በራስ-ሰር የሚሆን አይደለም፤ ስክሪንሾት ብቻ መላክ ክፍያው እንደተፈጸመ አያደርገውም።"
   },
   "contact": {
-    "eyebrow": "[AM] Contact",
-    "title": "[AM] Get in touch",
-    "description": "[AM] Questions about courses, custom instruments, or anything else — we’d love to hear from you."
+    "eyebrow": "ግንኙነት",
+    "title": "ያግኙን",
+    "description": "ስለ ትምህርቶች፣ ስለሚበጁ የሙዚቃ መሣሪያዎች ወይም ማንኛውም ጥያቄ ካለዎት — ከእርስዎ መስማት ደስ ይለናል።"
   },
   "contactForm": {
-    "name": "[AM] Name",
-    "email": "[AM] Email",
-    "phone": "[AM] Phone (optional)",
-    "message": "[AM] Message",
-    "messagePlaceholder": "[AM] Tell us a bit about what you're looking for…",
-    "send": "[AM] Send",
-    "sending": "[AM] Sending…",
-    "successMessage": "[AM] Thank you — we'll be in touch soon."
+    "name": "ስም",
+    "email": "ኢሜይል",
+    "phone": "ስልክ ቁጥር (አማራጭ)",
+    "message": "መልእክት",
+    "messagePlaceholder": "የሚፈልጉትን ነገር በጥቂቱ ይንገሩን…",
+    "send": "ላክ",
+    "sending": "በመላክ ላይ…",
+    "successMessage": "እናመሰግናለን — በቅርቡ እናገኝዎታለን።"
   },
   "newsletterForm": {
-    "emailPlaceholder": "[AM] you@email.com",
-    "emailLabel": "[AM] Email address",
-    "join": "[AM] Join the community",
-    "joining": "[AM] Joining…",
-    "success": "[AM] Thank you — check your inbox for a welcome note."
+    "emailPlaceholder": "you@email.com",
+    "emailLabel": "የኢሜይል አድራሻ",
+    "join": "ማህበረሰቡን ይቀላቀሉ",
+    "joining": "በመቀላቀል ላይ…",
+    "success": "እናመሰግናለን — የእንኳን ደህና መጡ መልእክት በኢሜይልዎ ያገኙታል።"
   },
   "about": {
-    "eyebrow": "[AM] About Abelkirar",
-    "title": "[AM] A Deacon, a Kirar player, and a tradition worth carrying forward",
-    "paragraph1": "[AM] Abelkirar is led by an Ethiopian Orthodox Church Deacon and Kirar musician.",
-    "paragraph2": "[AM] Serving the church revealed a gap that shaped Abelkirar’s mission: too many congregations, especially in the diaspora, lack musicians trained to play the Kirar well. Hymns that should lift a service often fall flat — not from a lack of devotion, but from a lack of structured teaching.",
-    "paragraph3": "[AM] Abelkirar was built to close that gap: rigorous, structured Kirar education, delivered online, for Ethiopian and Eritrean Orthodox communities wherever they’ve settled — from parish halls in Addis Ababa to living rooms in the United States and United Kingdom.",
-    "whyEyebrow": "[AM] Why It Matters",
-    "whyTitle": "[AM] Preservation is an active choice, not a memory",
-    "whyDescription": "[AM] Ethiopian Orthodox spiritual music has survived centuries. It survives the next century only if it's taught deliberately — to the diaspora, to the next generation, and to anyone drawn to it.",
-    "preserve": "[AM] Preserve",
-    "preserveDescription": "[AM] Keep the traditional playing techniques, scales, and church repertoire intact and accurately taught.",
-    "teach": "[AM] Teach",
-    "teachDescription": "[AM] Structured, level-based online courses that take a student from silence to leading worship.",
-    "modernize": "[AM] Modernize",
-    "modernizeDescription": "[AM] Bring the Kirar to a global, digitally-connected diaspora without losing what makes it sacred."
+    "eyebrow": "ስለ አቤል ክራር",
+    "title": "ዲያቆን፣ የክራር ተጫዋች እና ሊጠበቅ የሚገባው ታላቅ ባህል",
+    "paragraph1": "አቤል ክራር የሚመራው በኢትዮጵያ ኦርቶዶክስ ተዋሕዶ ቤተ ክርስቲያን ዲያቆንና የክራር ተጫዋች ነው።",
+    "paragraph2": "ቤተ ክርስቲያንን ማገልገል የአቤል ክራርን ዓላማ የቃኘ አንድ ክፍተት እንዲታይ አድርጓል፡ በተለይም በውጭ ሀገር ባሉ አብያተ ክርስቲያናት ውስጥ ክራር በጥሩ ሁኔታ የሚጫወቱ አገልጋዮች እጥረት አለ። አገልግሎቱን ሊያደምቁ የሚገባቸው መዝሙራት አጥጋቢ ሆነው አይቀርቡም — ይህም ከእምነት ማነስ ሳይሆን ስልታዊ ትምህርት ባለመኖሩ ነው።",
+    "paragraph3": "አቤል ክራር ያንን ክፍተት ለመሙላት ተመሠረተ፡ ጥራት ያለውና የተዋቀረ የክራር ትምህርት በኦንላይን፣ በየትኛውም ሀገር ለሚኖሩ የኢትዮጵያና ኤርትራ ኦርቶዶክስ ማህበረሰቦች — ከአዲስ አበባ እስከ አሜሪካና እንግሊዝ ድረስ።",
+    "whyEyebrow": "ለምን አስፈላጊ ሆነ?",
+    "whyTitle": "ባህልንና ዜማን መጠበቅ ንቁ ውሳኔ እንጂ ትዝታ ብቻ አይደለም",
+    "whyDescription": "የኢትዮጵያ ኦርቶዶክስ መንፈሳዊ ዜማ ዘመናትን ተሻግሯል። ለቀጣዩ ዘመንም የሚሻገረው ሆነ ተብሎ በዓላማ ሲስተማር ብቻ ነው — ለዳያስፖራው፣ ለቀጣዩ ትውልድና ለሚወደው ሁሉ።",
+    "preserve": "መጠበቅ",
+    "preserveDescription": "ባህላዊ የአጫዋች ስልቶችን፣ ቅኝቶችንና የቤተ ክርስቲያን መዝሙራትን ሳይበላሹ በትክክል ማስተላለፍ።",
+    "teach": "ማስተማር",
+    "teachDescription": "ተማሪዎችን ከጀማሪነት እስከ መዝሙር መሪነት የሚያደርሱ ደረጃቸውን የጠበቁ የኦንላይን ኮርሶች።",
+    "modernize": "ማዘመን",
+    "modernizeDescription": "ተቀደሰውን መንፈሳዊ እሴት ሳያጣ ክራርን በዓለም ዙሪያ ለሚገኘው ዳያስፖራ በዲጂታል መንገድ ማድረስ።"
   },
   "validation": {
-    "cartEmpty": "[AM] Your cart is empty",
-    "enterFullName": "[AM] Enter your full name",
-    "enterValidEmail": "[AM] Enter a valid email address",
-    "enterValidPhone": "[AM] Enter a valid phone number",
-    "paymentMethodMismatch": "[AM] Payment method does not match the selected payment region",
-    "enterSenderName": "[AM] Enter the name the payment was sent from",
-    "enterAmountSent": "[AM] Enter the amount you sent",
-    "enterName": "[AM] Enter your name",
-    "enterMessage": "[AM] Tell us a little about what you need"
+    "cartEmpty": "የዕቃ ቅርጫትዎ ባዶ ነው",
+    "enterFullName": "ሙሉ ስምዎን ያስገቡ",
+    "enterValidEmail": "ትክክለኛ የኢሜይል አድራሻ ያስገቡ",
+    "enterValidPhone": "ትክክለኛ የስልክ ቁጥር ያስገቡ",
+    "paymentMethodMismatch": "የተመረጠው የክፍያ ዘዴ ከተመረጠው የክፍያ ክልል ጋር አይጣጣምም",
+    "enterSenderName": "ክፍያው የተላከበትን ስም ያስገቡ",
+    "enterAmountSent": "የላኩትን የገንዘብ መጠን ያስገቡ",
+    "enterName": "ስምዎን ያስገቡ",
+    "enterMessage": "የሚፈልጉትን ነገር በጥቂቱ ይንገሩን"
   },
   "emails": {
     "orderPending": {
-      "subject": "[AM] Order {orderNumber} received — payment pending verification",
-      "thankYou": "[AM] Thank you for your order, {customerName}.",
-      "orderNumber": "[AM] Order number",
-      "total": "[AM] Total",
-      "paymentMethod": "[AM] Payment method",
-      "manualVerificationNotice": "[AM] Zelle and Cash App payments are verified manually by our team. Your order will not be processed until we've confirmed your payment — this is not automatic.",
-      "important": "[AM] Important",
-      "submitConfirmationNotice": "[AM] Once you've sent payment, please submit your payment confirmation details (sender name, amount, date/time, and optionally a screenshot) on your order confirmation page so we can verify it faster."
+      "subject": "ትዕዛዝ ቁጥር {orderNumber} ደርሶናል — ክፍያው በማረጋገጥ ላይ ነው",
+      "thankYou": "ስለ ትዕዛዝዎ እናመሰግናለን፣ {customerName}።",
+      "orderNumber": "የትዕዛዝ ቁጥር",
+      "total": "ጠቅላላ",
+      "paymentMethod": "የክፍያ ዘዴ",
+      "manualVerificationNotice": "የ Zelle እና Cash App ክፍያዎች በቡድናችን በእጅ የሚረጋገጡ ናቸው። ክፍያዎ እስኪረጋገጥ ድረስ ትዕዛዝዎ አይከናወንም — ይህም በራስ-ሰር የሚሆን አይደለም።",
+      "important": "አስፈላጊ",
+      "submitConfirmationNotice": "ክፍያ ከላኩ በኋላ፣ በፍጥነት እንድናረጋግጥልዎት እባክዎን የትዕዛዝ ማረጋገጫ ገጽዎ ላይ የክፍያ ዝርዝሮችን (የላኪ ስም፣ መጠን፣ ቀን/ሰዓት እና አማራጭ ስክሪንሾት) ያስገቡ።"
     },
     "paymentConfirmed": {
-      "subject": "[AM] Payment confirmed for order {orderNumber}",
-      "greeting": "[AM] Hi {customerName},",
-      "body": "[AM] We've manually verified your {paymentMethod} payment for order {orderNumber} ({total}).",
-      "nextSteps": "[AM] Your order is now being processed. We'll be in touch with next steps and a timeline as your instrument is prepared."
+      "subject": "ለትዕዛዝ ቁጥር {orderNumber} ክፍያው ተረጋግጧል",
+      "greeting": "ሰላም {customerName}፣",
+      "body": "ለትዕዛዝ ቁጥር {orderNumber} ({total}) በ{paymentMethod} የላኩትን ክፍያ በእጅ አረጋግጠናል።",
+      "nextSteps": "ትዕዛዝዎ አሁን በመዘጋጀት ላይ ይገኛል። የሙዚቃ መሣሪያዎ ሲዘጋጅ የሚቀጥሉትን እርምጃዎችና ጊዜውን እናሳውቅዎታለን።"
     },
     "newsletterWelcome": {
-      "subject": "[AM] Welcome to Abelkirar",
-      "body": "[AM] Thank you for joining the Abelkirar community. You'll hear from us with Kirar lessons, new instruments, and community events."
+      "subject": "ወደ አቤል ክራር እንኳን ደህና መጡ",
+      "body": "የአቤል ክራር ማህበረሰብ አባል ስለሆኑ እናመሰግናለን። የክራር ትምህርቶችን፣ አዳዲስ መሣሪያዎችንና የማህበረሰብ ኩነቶችን በተመለከተ መረጃ እንልክልዎታለን።"
     }
   }
 }
