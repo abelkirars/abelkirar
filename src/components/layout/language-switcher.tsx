@@ -1,8 +1,7 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState } from "react";
 import { useLocale } from "next-intl";
-import { useRouter } from "next/navigation";
 import { setLocale } from "@/app/actions/set-locale";
 import { locales, type Locale } from "@/i18n/locale";
 import { cn } from "@/lib/utils";
@@ -14,15 +13,19 @@ const LOCALE_LABELS: Record<Locale, string> = {
 
 export function LanguageSwitcher({ className }: { className?: string }) {
   const locale = useLocale() as Locale;
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [isPending, setIsPending] = useState(false);
 
-  function handleSelect(next: Locale) {
+  async function handleSelect(next: Locale) {
     if (next === locale || isPending) return;
-    startTransition(async () => {
-      await setLocale(next);
-      router.refresh();
-    });
+    setIsPending(true);
+    await setLocale(next);
+    // A router.refresh() only busts the current route's cache entry — any
+    // other page the visitor navigates to next (e.g. via a nav Link that was
+    // prefetched under the old locale) would still be served from the
+    // client-side Router Cache with stale-language content. A full reload
+    // discards that cache entirely, so every subsequent navigation refetches
+    // fresh, correctly-localized server output.
+    window.location.reload();
   }
 
   return (
