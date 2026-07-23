@@ -144,6 +144,11 @@
     "title": "Get in touch",
     "description": "Questions about courses, custom instruments, or anything else — we’d love to hear from you."
   },
+  "courses": {
+    "eyebrow": "Online Kirar Courses",
+    "title": "From your first scale to leading worship",
+    "description": "Three structured levels, built for kids and adults, Ethiopian and Eritrean diaspora, and anyone drawn to the Kirar."
+  },
   "contactForm": {
     "name": "Name",
     "email": "Email",

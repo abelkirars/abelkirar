@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { Container } from "@/components/marketing/container";
 import { SectionHeading } from "@/components/marketing/section-heading";
 import { CrossPattern } from "@/components/marketing/cross-pattern";
@@ -11,21 +12,22 @@ export const metadata: Metadata = {
     "Structured Kirar courses from Beginner to Advanced, built for the Ethiopian and Eritrean Orthodox diaspora.",
 };
 
-export default function CoursesPage() {
+export default async function CoursesPage() {
+  const t = await getTranslations("courses");
+
   return (
     <>
       <section className="relative overflow-hidden bg-gradient-to-b from-[#241b12] to-[#1b140d] py-24 text-[#f3e9d2] sm:py-32">
         <CrossPattern className="text-[#d4a84b] opacity-[0.08]" />
         <Container className="relative">
           <p className="text-sm font-medium tracking-[0.25em] text-[#d4a84b] uppercase">
-            Online Kirar Courses
+            {t("eyebrow")}
           </p>
           <h1 className="mt-4 max-w-2xl font-heading text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
-            From your first scale to leading worship
+            {t("title")}
           </h1>
           <p className="mt-6 max-w-xl text-lg text-[#f3e9d2]/80 text-pretty">
-            Three structured levels, built for kids and adults, Ethiopian and
-            Eritrean diaspora, and anyone drawn to the Kirar.
+            {t("description")}
           </p>
         </Container>
       </section>
