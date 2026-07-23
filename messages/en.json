@@ -44,7 +44,25 @@
     "instrumentsDescription": "Kirar, Begena, and Masenqo, customized in shape, finish, and size, and shipped to the US, UK, and Europe."
   },
   "courseLevels": {
-    "exploreCurriculum": "Explore curriculum"
+    "exploreCurriculum": "Explore curriculum",
+    "beginner": {
+      "level": "Level 1",
+      "title": "Beginner",
+      "tagline": "Start from silence",
+      "description": "Build the foundation: how the Kirar is held, tuned, and played, and how it carries Ethiopian Orthodox worship."
+    },
+    "intermediate": {
+      "level": "Level 2",
+      "title": "Intermediate",
+      "tagline": "Find your voice",
+      "description": "Sharpen technique and rhythm, and begin playing alongside singers with a tone and style of your own."
+    },
+    "advanced": {
+      "level": "Level 3",
+      "title": "Advanced",
+      "tagline": "Lead worship",
+      "description": "Professional technique, complex rhythm and arrangement, and the performance skills to lead in church."
+    }
   },
   "instrumentCategories": {
     "shopCategory": "Shop {category}"

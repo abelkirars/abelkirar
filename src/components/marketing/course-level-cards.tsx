@@ -15,15 +15,15 @@ export function CourseLevelCards() {
           <Card className="h-full transition-shadow group-hover:shadow-lg">
             <CardHeader>
               <Badge variant="secondary" className="w-fit">
-                {course.level}
+                {t(`${course.slug}.level`)}
               </Badge>
               <h3 className="mt-3 font-heading text-2xl font-semibold">
-                {course.title}
+                {t(`${course.slug}.title`)}
               </h3>
-              <p className="text-sm font-medium text-accent">{course.tagline}</p>
+              <p className="text-sm font-medium text-accent">{t(`${course.slug}.tagline`)}</p>
             </CardHeader>
             <CardContent className="flex h-full flex-col justify-between gap-6">
-              <p className="text-muted-foreground">{course.description}</p>
+              <p className="text-muted-foreground">{t(`${course.slug}.description`)}</p>
               <span className="inline-flex items-center gap-1 text-sm font-medium text-foreground">
                 {t("exploreCurriculum")}
                 <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />

@@ -44,7 +44,25 @@
     "instrumentsDescription": "ክራር፣ በገና እና ማሲንቆ በጥራት፣ በቅርጽና በልዩ ፍላጎትዎ ተበጅተው ወደ አሜሪካ፣ እንግሊዝ እና አውሮፓ ይላካሉ።"
   },
   "courseLevels": {
-    "exploreCurriculum": "የትምህርት ይዘቱን ይመልከቱ"
+    "exploreCurriculum": "የትምህርት ይዘቱን ይመልከቱ",
+    "beginner": {
+      "level": "[AM] Level 1",
+      "title": "[AM] Beginner",
+      "tagline": "[AM] Start from silence",
+      "description": "[AM] Build the foundation: how the Kirar is held, tuned, and played, and how it carries Ethiopian Orthodox worship."
+    },
+    "intermediate": {
+      "level": "[AM] Level 2",
+      "title": "[AM] Intermediate",
+      "tagline": "[AM] Find your voice",
+      "description": "[AM] Sharpen technique and rhythm, and begin playing alongside singers with a tone and style of your own."
+    },
+    "advanced": {
+      "level": "[AM] Level 3",
+      "title": "[AM] Advanced",
+      "tagline": "[AM] Lead worship",
+      "description": "[AM] Professional technique, complex rhythm and arrangement, and the performance skills to lead in church."
+    }
   },
   "instrumentCategories": {
     "shopCategory": "የ{category} መሣሪያዎችን ይግዙ"
@@ -169,7 +187,7 @@
   "about": {
     "eyebrow": "ስለ አቤል ክራር",
     "title": "ዲያቆን፣ የክራር ተጫዋች እና ሊጠበቅ የሚገባው ታላቅ ባህል",
-    "paragraph1": "አቤል ክራር  በኢትዮጵያ ኦርቶዶክስ ተዋሕዶ ቤተ ክርስቲያን ዲያቆንና የክራር ተጫዋች ነው።",
+    "paragraph1": "አቤል ክራር በኢትዮጵያ ኦርቶዶክስ ተዋሕዶ ቤተ ክርስቲያን ዲያቆንና የክራር ተጫዋች ነው።",
     "paragraph2": "ቤተ ክርስቲያንን ማገልገል የአቤል ክራርን ዓላማ የቃኘ አንድ ክፍተት እንዲታይ አድርጓል፡ በተለይም በውጭ ሀገር ባሉ አብያተ ክርስቲያናት ውስጥ ክራር በጥሩ ሁኔታ የሚጫወቱ አገልጋዮች እጥረት አለ። አገልግሎቱን ሊያደምቁ የሚገባቸው መዝሙራት አጥጋቢ ሆነው አይቀርቡም — ይህም ከእምነት ማነስ ሳይሆን ስልታዊ ትምህርት ባለመኖሩ ነው።",
     "paragraph3": "አቤል ክራር ያንን ክፍተት ለመሙላት ተመሠረተ፡ ጥራት ያለውና የተዋቀረ የክራር ትምህርት በኦንላይን፣ በየትኛውም ሀገር ለሚኖሩ የኢትዮጵያና ኤርትራ ኦርቶዶክስ ማህበረሰቦች — ከአዲስ አበባ እስከ አሜሪካና እንግሊዝ ድረስ።",
     "whyEyebrow": "ለምን አስፈላጊ ሆነ?",
