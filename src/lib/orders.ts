@@ -4,6 +4,7 @@ import { computeUnitPrice } from "@/lib/pricing";
 import { generateOrderNumber } from "@/lib/order-number";
 import type { CreateOrderInput } from "@/lib/validations/order";
 import type { OrderNotificationData } from "@/lib/notifications/types";
+import type { Locale } from "@/i18n/locale";
 
 export class OrderCreationError extends Error {
   constructor(
@@ -21,7 +22,7 @@ const MAX_ORDER_NUMBER_ATTEMPTS = 5;
  * recomputed server-side from the product's base price and customization
  * choices — a client-supplied price is never trusted.
  */
-export async function createManualOrder(input: CreateOrderInput) {
+export async function createManualOrder(input: CreateOrderInput, locale: Locale) {
   const products = await prisma.product.findMany({
     where: { id: { in: input.items.map((i) => i.productId) }, isActive: true },
   });
@@ -59,6 +60,7 @@ export async function createManualOrder(input: CreateOrderInput) {
           customerName: input.customerName,
           customerEmail: input.customerEmail,
           customerPhone: input.customerPhone,
+          locale,
           subtotal,
           total: subtotal,
           currency,
@@ -101,6 +103,7 @@ export function toNotificationData(
     paymentStatus: string;
     status: string;
     createdAt: Date;
+    locale: string;
     items: { productNameSnapshot: string; quantity: number }[];
   },
   adminOrderUrl: string
@@ -117,6 +120,7 @@ export function toNotificationData(
     paymentStatus: order.paymentStatus,
     orderStatus: order.status,
     createdAt: order.createdAt,
+    locale: order.locale,
     items: order.items.map((i) => ({ name: i.productNameSnapshot, quantity: i.quantity })),
     adminOrderUrl,
   };

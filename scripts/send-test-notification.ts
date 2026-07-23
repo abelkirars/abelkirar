@@ -37,6 +37,7 @@ async function main() {
     paymentStatus: "PENDING_VERIFICATION",
     orderStatus: "PENDING",
     createdAt: new Date(),
+    locale: "en",
     items: [{ name: "Test Product", quantity: 1 }],
     adminOrderUrl: `${siteUrl}/admin/orders/TEST-0000`,
   };

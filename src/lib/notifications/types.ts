@@ -20,6 +20,8 @@ export interface OrderNotificationData {
   createdAt: Date;
   items: OrderNotificationItem[];
   adminOrderUrl: string;
+  /** Customer's checkout locale, e.g. "en" or "am" — see Order.locale. */
+  locale: string;
 }
 
 export function formatMoney(cents: number, currency: string): string {

@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { createOrderSchema } from "@/lib/validations/order";
 import { createManualOrder, toNotificationData, OrderCreationError } from "@/lib/orders";
 import { notificationService } from "@/lib/notifications";
 import { checkRateLimit, clientIpFrom } from "@/lib/rate-limit";
+import type { Locale } from "@/i18n/locale";
 
 export async function POST(request: Request) {
   const ip = clientIpFrom(request);
@@ -36,7 +37,8 @@ export async function POST(request: Request) {
 
   let order: Awaited<ReturnType<typeof createManualOrder>>;
   try {
-    order = await createManualOrder(parsed.data);
+    const locale = (await getLocale()) as Locale;
+    order = await createManualOrder(parsed.data, locale);
   } catch (err) {
     if (err instanceof OrderCreationError) {
       return NextResponse.json({ error: err.message }, { status: err.status });

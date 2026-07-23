@@ -50,30 +50,28 @@ async function sendToTwilioChannels(eventLabel: string, order: OrderNotification
  */
 export const notificationService = {
   /**
-   * Sent synchronously as part of the order-creation request, so the
-   * customer's own locale cookie is in scope here — the email matches
-   * whatever language they were checking out in.
+   * Both customer emails below use `order.locale` — the checkout locale
+   * captured on the Order at creation time (see Order.locale) — rather than
+   * the ambient request cookie. `notifyCustomerOrderPending` fires within the
+   * same request the customer checked out in, so the two would agree anyway,
+   * but `notifyCustomerPaymentConfirmed` fires later from an admin's request
+   * (whose own locale cookie is irrelevant to the customer), so it relies on
+   * the stored value.
    */
   async notifyCustomerOrderPending(order: OrderNotificationData) {
     const [t, tPaymentLabels, tInstructions] = await Promise.all([
-      getTranslations("emails.orderPending"),
-      getTranslations("paymentLabels"),
-      getTranslations("paymentInstructions"),
+      getTranslations({ locale: order.locale, namespace: "emails.orderPending" }),
+      getTranslations({ locale: order.locale, namespace: "paymentLabels" }),
+      getTranslations({ locale: order.locale, namespace: "paymentInstructions" }),
     ]);
     const { subject, html } = customerOrderPendingEmail(order, t, tPaymentLabels, tInstructions);
     await sendEmail({ to: order.customerEmail, subject, html });
   },
 
-  /**
-   * Triggered later by an admin marking an order as paid — there's no
-   * request-scoped customer locale at that point (the order doesn't persist
-   * the customer's original language choice), so this email is always sent
-   * in English until that's tracked.
-   */
   async notifyCustomerPaymentConfirmed(order: OrderNotificationData) {
     const [t, tPaymentLabels] = await Promise.all([
-      getTranslations({ locale: "en", namespace: "emails.paymentConfirmed" }),
-      getTranslations({ locale: "en", namespace: "paymentLabels" }),
+      getTranslations({ locale: order.locale, namespace: "emails.paymentConfirmed" }),
+      getTranslations({ locale: order.locale, namespace: "paymentLabels" }),
     ]);
     const { subject, html } = customerPaymentConfirmedEmail(order, t, tPaymentLabels);
     await sendEmail({ to: order.customerEmail, subject, html });

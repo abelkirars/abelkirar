@@ -91,6 +91,10 @@ model Order {
   customerName            String?
   customerPhone           String?
   shippingAddress         Json?
+  // Locale the customer was checking out in (NEXT_LOCALE cookie at order
+  // creation), so later admin-triggered emails (e.g. payment confirmed) can
+  // still be sent in the customer's language instead of always English.
+  locale                  String         @default("en")
   currency                String         @default("usd")
   subtotal                Int
   total                   Int
