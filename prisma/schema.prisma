@@ -72,6 +72,11 @@ model Product {
   variants             Json            @default("[]")
   customizationOptions Json
   isActive             Boolean         @default(true)
+  /// Whether this product is also available as a custom order (distinct from
+  /// the fixed, price-affecting choices in customizationOptions).
+  isCustomMade         Boolean         @default(false)
+  customMadeDetails    String?
+  customMadeImageUrl   String?
   createdAt            DateTime        @default(now())
   updatedAt            DateTime        @updatedAt
 

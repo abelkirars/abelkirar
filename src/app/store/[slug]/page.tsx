@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { Container } from "@/components/marketing/container";
 import { ProductVisual } from "@/components/store/product-visual";
 import { CustomizationForm } from "@/components/store/customization-form";
+import { CustomOrderNotice } from "@/components/store/custom-order-notice";
 import type { ProductCustomizationOptions } from "@/types/customization";
 
 export const dynamic = "force-dynamic";
@@ -59,6 +60,8 @@ export default async function ProductDetailPage({
               }}
             />
           </div>
+
+          {product.isCustomMade && <CustomOrderNotice />}
         </div>
       </Container>
     </section>
