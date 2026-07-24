@@ -4,6 +4,9 @@ import { CrossPattern } from "@/components/marketing/cross-pattern";
 import { SectionHeading } from "@/components/marketing/section-heading";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { NewsletterForm } from "@/components/forms/newsletter-form";
+import { CommunityAnnouncements } from "@/components/marketing/community-announcements";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Community",
@@ -72,6 +75,8 @@ export default function CommunityPage() {
           </div>
         </Container>
       </section>
+
+      <CommunityAnnouncements />
 
       <section className="bg-muted/40 py-20 sm:py-28">
         <Container className="max-w-xl text-center">
