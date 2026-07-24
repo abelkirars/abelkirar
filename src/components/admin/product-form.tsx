@@ -55,7 +55,8 @@ export function ProductForm({
       router.refresh();
       if (!product) form.reset();
       onDone?.();
-    } catch {
+    } catch (err) {
+      console.error("[ProductForm] submit failed:", err);
       setError("Something went wrong");
     } finally {
       setSubmitting(false);

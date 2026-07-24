@@ -47,9 +47,10 @@ export function AnnouncementForm({
         return;
       }
       router.refresh();
-      if (!announcement) e.currentTarget.reset();
+      if (!announcement) form.reset();
       onDone?.();
-    } catch {
+    } catch (err) {
+      console.error("[AnnouncementForm] submit failed:", err);
       setError("Something went wrong");
     } finally {
       setSubmitting(false);
