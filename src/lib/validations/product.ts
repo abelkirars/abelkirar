@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { strictBoolean } from "@/lib/validations/boolean";
 
 export const PRODUCT_CATEGORIES = [
   "KIRAR",
@@ -18,8 +19,8 @@ export const productSchema = z.object({
   category: z.enum(PRODUCT_CATEGORIES),
   // Dollars as typed by the admin; converted to integer cents before saving.
   price: z.coerce.number().positive(),
-  published: z.coerce.boolean().default(true),
-  isCustomMade: z.coerce.boolean().default(false),
+  published: strictBoolean(true),
+  isCustomMade: strictBoolean(false),
   customMadeDetails: z.string().max(4000).optional().or(z.literal("")),
 });
 
