@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/db";
 import { Container } from "@/components/marketing/container";
-import { ClearCartOnMount } from "@/components/store/clear-cart-on-mount";
 import { PaymentConfirmationForm } from "@/components/store/payment-confirmation-form";
 import { getPaymentInstructions } from "@/lib/notifications/payment-instructions";
 import {
@@ -54,7 +53,6 @@ export default async function OrderConfirmationPage({
 
   return (
     <section className="py-16 sm:py-20">
-      <ClearCartOnMount />
       <Container className="max-w-2xl">
         <h1 className="font-heading text-3xl font-semibold tracking-tight sm:text-4xl">
           {alreadyPaid ? t("paymentConfirmed") : t("orderReceived")}

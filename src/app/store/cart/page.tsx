@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useCartStore, cartTotalPrice } from "@/store/cart-store";
+import { useCartStore, cartTotalPrice, cartTotalItems } from "@/store/cart-store";
 import { Container } from "@/components/marketing/container";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 
 type PaymentRegion = "US" | "EUROZONE";
@@ -17,7 +18,7 @@ type UsPaymentMethod = "ZELLE" | "CASH_APP";
 
 export default function CartPage() {
   const t = useTranslations("cart");
-  const { items, removeItem, setQuantity } = useCartStore();
+  const { items, removeItem, setQuantity, toggleSelected, setAllSelected } = useCartStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [paymentRegion, setPaymentRegion] = useState<PaymentRegion>("US");
@@ -32,9 +33,19 @@ export default function CartPage() {
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
 
-  const total = cartTotalPrice(items);
+  const selectedItems = items.filter((i) => i.selected);
+  const allSelected = items.length > 0 && items.every((i) => i.selected);
+  const someSelected = items.some((i) => i.selected);
+  const selectAllIndeterminate = someSelected && !allSelected;
+
+  const total = cartTotalPrice(selectedItems);
+  const selectedItemCount = cartTotalItems(selectedItems);
 
   async function handleSubmitOrder() {
+    if (selectedItems.length === 0) {
+      setError(t("noItemsSelected"));
+      return;
+    }
     setError(null);
     setLoading(true);
     try {
@@ -42,7 +53,7 @@ export default function CartPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          items: items.map((i) => ({
+          items: selectedItems.map((i) => ({
             productId: i.productId,
             customization: i.customization,
             quantity: i.quantity,
@@ -58,6 +69,11 @@ export default function CartPage() {
       if (!res.ok) {
         setError(data.error ?? t("genericError"));
         return;
+      }
+      // Only the items that were actually submitted leave the cart —
+      // anything the customer left unselected stays behind.
+      for (const item of selectedItems) {
+        removeItem(item.lineId);
       }
       router.push(`/store/order/${data.orderNumber}`);
     } catch {
@@ -86,9 +102,26 @@ export default function CartPage() {
       <Container className="grid gap-12 lg:grid-cols-[1fr_400px]">
         <div>
           <h1 className="font-heading text-3xl font-semibold">{t("title")}</h1>
-          <ul className="mt-8 divide-y divide-border">
+
+          <label className="mt-8 flex w-fit items-center gap-2 text-sm font-medium">
+            <Checkbox
+              checked={allSelected}
+              indeterminate={selectAllIndeterminate}
+              onCheckedChange={() => setAllSelected(!allSelected)}
+              aria-label={t("selectAll")}
+            />
+            {t("selectAll")}
+          </label>
+
+          <ul className="mt-4 divide-y divide-border">
             {items.map((item) => (
               <li key={item.lineId} className="flex gap-4 py-6">
+                <Checkbox
+                  checked={item.selected}
+                  onCheckedChange={() => toggleSelected(item.lineId)}
+                  aria-label={t("selectItem", { name: item.name })}
+                  className="mt-1 shrink-0"
+                />
                 <div className="min-w-0 flex-1">
                   <p className="font-medium">{item.name}</p>
                   {item.customizationSummary && (
@@ -126,9 +159,14 @@ export default function CartPage() {
         </div>
 
         <div className="h-fit space-y-6 rounded-2xl bg-card p-8 ring-1 ring-foreground/10">
-          <div className="flex items-center justify-between text-lg font-medium">
-            <span>{t("total")}</span>
-            <span>${(total / 100).toFixed(0)}</span>
+          <div>
+            <p className="text-sm text-muted-foreground">
+              {t("itemsSelected", { count: selectedItemCount, total: cartTotalItems(items) })}
+            </p>
+            <div className="mt-1 flex items-center justify-between text-lg font-medium">
+              <span>{t("total")}</span>
+              <span>${(total / 100).toFixed(0)}</span>
+            </div>
           </div>
 
           <div className="space-y-3 border-t border-border pt-6">
@@ -206,13 +244,22 @@ export default function CartPage() {
             )}
           </div>
 
+          {selectedItems.length === 0 && (
+            <p className="text-sm text-destructive">{t("noItemsSelected")}</p>
+          )}
           {error && <p className="text-sm text-destructive">{error}</p>}
 
           <Button
             size="lg"
             className="w-full"
             onClick={handleSubmitOrder}
-            disabled={loading || !customerName || !customerEmail || !customerPhone}
+            disabled={
+              loading ||
+              selectedItems.length === 0 ||
+              !customerName ||
+              !customerEmail ||
+              !customerPhone
+            }
           >
             {loading ? t("placingOrder") : t("placeOrder")}
           </Button>
