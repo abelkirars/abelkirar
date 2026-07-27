@@ -165,3 +165,48 @@ export function adminConciseMessage(eventLabel: string, order: OrderNotification
     `${order.adminOrderUrl}`
   );
 }
+
+/**
+ * Full new-order SMS/WhatsApp body sent to the business contacts (not a
+ * customer-facing message, so unlike the masked logging in sms.ts/whatsapp.ts,
+ * the customer's real phone/email are included in full — the business needs
+ * them to follow up). Every section beyond the core fields is built so a
+ * missing optional value (variant, custom order) just omits that line rather
+ * than rendering "undefined" or throwing.
+ */
+export function newOrderTwilioMessage(order: OrderNotificationData): string {
+  const itemLines = order.items
+    .map((i) => `${i.quantity} × ${i.name}${i.variantName ? ` (${i.variantName})` : ""}`)
+    .join("\n");
+
+  const customOrderLines = [
+    order.customOrder?.description ? `Custom order details: ${order.customOrder.description}` : null,
+    order.customOrder?.imageUrl ? `Custom order image: ${order.customOrder.imageUrl}` : null,
+  ].filter((line): line is string => line !== null);
+
+  const sections = [
+    "NEW ORDER",
+    [
+      `Order: ${order.orderNumber}`,
+      `Customer: ${order.customerName}`,
+      `Phone: ${order.customerPhone}`,
+      `Email: ${order.customerEmail}`,
+    ].join("\n"),
+    itemLines,
+    customOrderLines.length > 0 ? customOrderLines.join("\n") : null,
+    [
+      `Subtotal: ${formatMoney(order.subtotal, order.currency)}`,
+      `Total: ${formatMoney(order.total, order.currency)} (${order.currency.toUpperCase()})`,
+    ].join("\n"),
+    [
+      `Payment region: ${paymentRegionLabel(order.paymentRegion)}`,
+      `Payment method: ${paymentMethodLabel(order.paymentMethod)}`,
+      `Payment status: ${paymentStatusLabel(order.paymentStatus)}`,
+      `Order status: ${order.orderStatus}`,
+    ].join("\n"),
+    `Date: ${order.createdAt.toLocaleString()}`,
+    order.adminOrderUrl,
+  ];
+
+  return sections.filter((section): section is string => section !== null).join("\n\n");
+}

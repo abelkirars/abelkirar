@@ -72,6 +72,7 @@ export async function createManualOrder(input: CreateOrderInput, locale: Locale)
               quantity: item.quantity,
               productNameSnapshot: product.name,
               productImageSnapshot: (product.images as string[])[0],
+              variantNameSnapshot: product.variantName,
             })),
           },
         },
@@ -92,10 +93,12 @@ export async function createManualOrder(input: CreateOrderInput, locale: Locale)
 
 export function toNotificationData(
   order: {
+    id: string;
     orderNumber: string | null;
     customerName: string | null;
     customerEmail: string | null;
     customerPhone: string | null;
+    subtotal: number;
     total: number;
     currency: string;
     paymentMethod: string | null;
@@ -104,15 +107,17 @@ export function toNotificationData(
     status: string;
     createdAt: Date;
     locale: string;
-    items: { productNameSnapshot: string; quantity: number }[];
+    items: { productNameSnapshot: string; quantity: number; variantNameSnapshot: string | null }[];
   },
   adminOrderUrl: string
 ): OrderNotificationData {
   return {
+    id: order.id,
     orderNumber: order.orderNumber ?? "(unknown)",
     customerName: order.customerName ?? "(unknown)",
     customerEmail: order.customerEmail ?? "",
     customerPhone: order.customerPhone ?? "",
+    subtotal: order.subtotal,
     total: order.total,
     currency: order.currency,
     paymentMethod: (order.paymentMethod as "ZELLE" | "CASH_APP" | "EUR_BANK_TRANSFER") ?? "ZELLE",
@@ -121,7 +126,12 @@ export function toNotificationData(
     orderStatus: order.status,
     createdAt: order.createdAt,
     locale: order.locale,
-    items: order.items.map((i) => ({ name: i.productNameSnapshot, quantity: i.quantity })),
+    items: order.items.map((i) => ({
+      name: i.productNameSnapshot,
+      quantity: i.quantity,
+      variantName: i.variantNameSnapshot ?? undefined,
+    })),
+    // customOrder intentionally omitted — no checkout-time capture path exists yet.
     adminOrderUrl,
   };
 }

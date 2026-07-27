@@ -1,16 +1,34 @@
 export interface OrderNotificationItem {
   name: string;
   quantity: number;
+  /** Product.variantName snapshotted at order time, e.g. "Desalegn Kirar". */
+  variantName?: string;
 }
 
 export type PaymentMethodValue = "ZELLE" | "CASH_APP" | "EUR_BANK_TRANSFER";
 export type PaymentRegionValue = "US" | "EUROZONE";
 
+/**
+ * A customer's custom-order request (freeform description + reference
+ * image). There is currently no checkout-time capture path for this — see
+ * the storefront CustomOrderNotice component, which is UI-only for now — so
+ * this is always undefined until that capture is built. Kept optional here,
+ * and rendered conditionally in message templates, so that future work only
+ * needs to populate it, not thread a new field through the whole pipeline.
+ */
+export interface OrderNotificationCustomOrder {
+  description?: string;
+  imageUrl?: string;
+}
+
 export interface OrderNotificationData {
+  /** The Order's DB id (cuid) — distinct from orderNumber, used for idempotency lookups. */
+  id: string;
   orderNumber: string;
   customerName: string;
   customerEmail: string;
   customerPhone: string;
+  subtotal: number; // cents
   total: number; // cents
   currency: string;
   paymentMethod: PaymentMethodValue;
@@ -19,6 +37,7 @@ export interface OrderNotificationData {
   orderStatus: string;
   createdAt: Date;
   items: OrderNotificationItem[];
+  customOrder?: OrderNotificationCustomOrder;
   adminOrderUrl: string;
   /** Customer's checkout locale, e.g. "en" or "am" — see Order.locale. */
   locale: string;

@@ -26,10 +26,12 @@ async function main() {
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
   const testOrder = {
+    id: "test-order-id",
     orderNumber: "TEST-0000",
     customerName: "Test Customer",
     customerEmail: "test-customer@example.com",
     customerPhone: "+10000000000",
+    subtotal: 12345,
     total: 12345,
     currency: "usd",
     paymentMethod: "ZELLE" as const,

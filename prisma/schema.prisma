@@ -58,6 +58,14 @@ enum PaymentRegion {
   EUROZONE
 }
 
+/// Delivery state of an outbound order-notification attempt (SMS/WhatsApp).
+/// Null on Order means no attempt has been made yet for that channel.
+enum NotificationDeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
 model Product {
   id                   String          @id @default(cuid())
   slug                 String          @unique
@@ -125,6 +133,18 @@ model Order {
   createdAt               DateTime       @default(now())
   updatedAt               DateTime       @updatedAt
 
+  // New-order Twilio notification tracking (business-contact SMS/WhatsApp).
+  // A non-null status means a send was already attempted for that channel —
+  // this is the idempotency guard against duplicate sends on retry.
+  smsStatus      NotificationDeliveryStatus?
+  smsMessageSid  String?
+  smsSentAt      DateTime?
+  smsError       String?
+  whatsappStatus     NotificationDeliveryStatus?
+  whatsappMessageSid String?
+  whatsappSentAt     DateTime?
+  whatsappError      String?
+
   items                OrderItem[]
   paymentConfirmations PaymentConfirmation[]
   notes                OrderNote[]
@@ -189,6 +209,9 @@ model OrderItem {
   quantity              Int      @default(1)
   productNameSnapshot   String
   productImageSnapshot  String?
+  /// Product.variantName at order time (e.g. "Desalegn Kirar"), snapshotted
+  /// the same way productNameSnapshot is — survives later product edits/deletes.
+  variantNameSnapshot   String?
 }
 
 model ContactSubmission {

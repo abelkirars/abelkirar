@@ -3,6 +3,7 @@ import { sendEmail, adminEmailRecipients } from "@/lib/notifications/email";
 import { sendSmsToRecipients } from "@/lib/notifications/sms";
 import { sendWhatsAppToRecipients } from "@/lib/notifications/whatsapp";
 import { isTwilioNotificationsEnabled } from "@/lib/notifications/twilio-client";
+import { sendOrderNotifications } from "@/lib/notifications/order-notifications";
 import { parseRecipientList } from "@/lib/phone";
 import {
   adminConciseMessage,
@@ -79,10 +80,11 @@ export const notificationService = {
 
   async notifyAdminNewOrder(order: OrderNotificationData) {
     const { subject, html } = adminNewOrderEmail(order);
-    await Promise.all([
-      sendToAdminEmails(subject, html),
-      sendToTwilioChannels("New order", order),
-    ]);
+    // The Twilio leg for this event uses the richer, idempotency-tracked
+    // sendOrderNotifications (see order-notifications.ts) instead of the
+    // generic sendToTwilioChannels used by the other four events below —
+    // calling both would double-send SMS/WhatsApp for every new order.
+    await Promise.all([sendToAdminEmails(subject, html), sendOrderNotifications(order)]);
   },
 
   async notifyAdminPaymentSubmitted(order: OrderNotificationData) {
