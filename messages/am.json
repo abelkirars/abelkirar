@@ -213,7 +213,48 @@
     "enterSenderName": "ክፍያው የተላከበትን ስም ያስገቡ",
     "enterAmountSent": "የላኩትን የገንዘብ መጠን ያስገቡ",
     "enterName": "ስምዎን ያስገቡ",
-    "enterMessage": "የሚፈልጉትን ነገር በጥቂቱ ይንገሩን"
+    "enterMessage": "የሚፈልጉትን ነገር በጥቂቱ ይንገሩን",
+    "enterPassword": "የይለፍ ቃልዎን ያስገቡ",
+    "passwordMinLength": "የይለፍ ቃል ቢያንስ 8 ፊደላት ሊኖረው ይገባል",
+    "passwordsDontMatch": "የይለፍ ቃላት አይመሳሰሉም"
+  },
+  "studentLogin": {
+    "title": "የተማሪ መግቢያ",
+    "email": "ኢሜይል",
+    "password": "የይለፍ ቃል",
+    "submit": "ግባ",
+    "submitting": "በመግባት ላይ…",
+    "forgotPasswordLink": "የይለፍ ቃልዎን ረሱ?",
+    "invalidCredentials": "ኢሜይል ወይም የይለፍ ቃል ትክክል አይደለም።",
+    "errorAccountNotFound": "የተማሪ መለያዎን ማግኘት አልቻልንም። እባክዎ አስተማሪዎን ያነጋግሩ።",
+    "errorAccountInactive": "መለያዎ ቦዝኗል። እባክዎ አስተማሪዎን ያነጋግሩ።"
+  },
+  "studentSetPassword": {
+    "title": "የይለፍ ቃልዎን ያዘጋጁ",
+    "password": "የይለፍ ቃል",
+    "confirmPassword": "የይለፍ ቃል ያረጋግጡ",
+    "submit": "የይለፍ ቃል አስቀምጥ",
+    "submitting": "በማስቀመጥ ላይ…",
+    "invalidLinkTitle": "ይህ አገናኝ ልክ ያልሆነ ወይም ጊዜው ያለፈበት ነው",
+    "invalidLinkBody": "እባክዎ አዲስ ግብዣ ወይም የይለፍ ቃል ማደሻ አገናኝ ይጠይቁ።",
+    "requestNewLink": "አዲስ አገናኝ ይጠይቁ",
+    "errorWeakPasswordBreached": "ይህ የይለፍ ቃል ቀደም ሲል በታወቀ የመረጃ ጥሰት ውስጥ ታይቷል — እባክዎ ሌላ ይምረጡ።",
+    "errorWeakPasswordGeneric": "ይህ የይለፍ ቃል በጣም ደካማ ነው። እባክዎ የፊደላት፣ ቁጥሮች እና ምልክቶች ጥምረት ያለው ረዘም ያለ የይለፍ ቃል ይምረጡ።",
+    "errorAccountInactive": "መለያዎ ቦዝኗል። ለእገዛ እባክዎ አስተማሪዎን ያነጋግሩ።",
+    "errorGeneric": "የሆነ ችግር ተፈጥሯል። እባክዎ እንደገና ይሞክሩ።"
+  },
+  "studentForgotPassword": {
+    "title": "የይለፍ ቃልዎን ረሱ?",
+    "email": "ኢሜይል",
+    "submit": "የማደሻ አገናኝ ላክ",
+    "submitting": "በመላክ ላይ…",
+    "confirmation": "ለዚያ ኢሜይል መለያ ካለ፣ የይለፍ ቃል ማደሻ አገናኝ ልከንልዎታል።",
+    "backToLogin": "ወደ መግቢያ ተመለስ"
+  },
+  "studentDashboard": {
+    "title": "የተማሪ ዳሽቦርድ",
+    "greeting": "እንኳን ደህና መጡ፣ {fullName}።",
+    "placeholderNotice": "የእርስዎ ዳሽቦርድ በቅርቡ ይመጣል — ቆይተው ይመልከቱ።"
   },
   "emails": {
     "orderPending": {
@@ -235,6 +276,20 @@
     "newsletterWelcome": {
       "subject": "ወደ አቤል ክራር እንኳን ደህና መጡ",
       "body": "የአቤል ክራር ማህበረሰብ አባል ስለሆኑ እናመሰግናለን። የክራር ትምህርቶችን፣ አዳዲስ መሣሪያዎችንና የማህበረሰብ ኩነቶችን በተመለከተ መረጃ እንልክልዎታለን።"
+    },
+    "studentInvite": {
+      "subject": "ወደ አቤል ክራር አካዳሚ ተጋብዘዋል",
+      "greeting": "ሰላም {fullName}፣",
+      "body": "በአቤል ክራር አካዳሚ እንደ ተማሪ ታክለዋል። የይለፍ ቃልዎን ለማዘጋጀትና ወደ ተማሪ ዳሽቦርድዎ ለመግባት ከታች ይጫኑ፦",
+      "cta": "መለያዎን ያዘጋጁ",
+      "expiryNotice": "ይህ አገናኝ ከተወሰነ ጊዜ በኋላ ጊዜው ያልፍበታል — መስራት ካቆመ፣ አስተማሪዎ ግብዣውን እንደገና እንዲልክልዎት ይጠይቁ።"
+    },
+    "studentPasswordReset": {
+      "subject": "የይለፍ ቃልዎን ያድሱ — አቤል ክራር አካዳሚ",
+      "greeting": "ሰላም {fullName}፣",
+      "body": "የይለፍ ቃልዎን ለማደስ ጥያቄ ደርሶናል። አዲስ ለመምረጥ ከታች ይጫኑ፦",
+      "cta": "የይለፍ ቃልዎን ያድሱ",
+      "expiryNotice": "ይህ አገናኝ ከተወሰነ ጊዜ በኋላ ጊዜው ያልፍበታል። ይህን ካልጠየቁ፣ ይህን ኢሜይል ችላ ማለት ይችላሉ።"
     }
   }
 }

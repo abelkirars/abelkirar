@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { sendEmail, adminEmailRecipients } from "@/lib/notifications/email";
+import { sendEmail, adminEmailRecipients, type SendEmailResult } from "@/lib/notifications/email";
 import { sendSmsToRecipients } from "@/lib/notifications/sms";
 import { sendWhatsAppToRecipients } from "@/lib/notifications/whatsapp";
 import { isTwilioNotificationsEnabled } from "@/lib/notifications/twilio-client";
@@ -14,14 +14,16 @@ import {
   adminPaymentSubmittedEmail,
   customerOrderPendingEmail,
   customerPaymentConfirmedEmail,
+  studentInviteEmail,
+  studentPasswordResetEmail,
 } from "@/lib/notifications/templates";
 import type { OrderNotificationData } from "@/lib/notifications/types";
 
-/** Sends to every configured admin email address; no-ops if none are set. */
-async function sendToAdminEmails(subject: string, html: string) {
+/** Sends to every configured admin email address; no-ops (as a success — there's nothing to fail) if none are set. */
+async function sendToAdminEmails(subject: string, html: string): Promise<SendEmailResult> {
   const recipients = adminEmailRecipients();
-  if (!recipients.length) return;
-  await sendEmail({ to: recipients, subject, html });
+  if (!recipients.length) return { sent: true };
+  return sendEmail({ to: recipients, subject, html });
 }
 
 /**
@@ -59,63 +61,112 @@ export const notificationService = {
    * (whose own locale cookie is irrelevant to the customer), so it relies on
    * the stored value.
    */
-  async notifyCustomerOrderPending(order: OrderNotificationData) {
+  async notifyCustomerOrderPending(order: OrderNotificationData): Promise<SendEmailResult> {
     const [t, tPaymentLabels, tInstructions] = await Promise.all([
       getTranslations({ locale: order.locale, namespace: "emails.orderPending" }),
       getTranslations({ locale: order.locale, namespace: "paymentLabels" }),
       getTranslations({ locale: order.locale, namespace: "paymentInstructions" }),
     ]);
     const { subject, html } = customerOrderPendingEmail(order, t, tPaymentLabels, tInstructions);
-    await sendEmail({ to: order.customerEmail, subject, html });
+    return sendEmail({ to: order.customerEmail, subject, html });
   },
 
-  async notifyCustomerPaymentConfirmed(order: OrderNotificationData) {
+  async notifyCustomerPaymentConfirmed(order: OrderNotificationData): Promise<SendEmailResult> {
     const [t, tPaymentLabels] = await Promise.all([
       getTranslations({ locale: order.locale, namespace: "emails.paymentConfirmed" }),
       getTranslations({ locale: order.locale, namespace: "paymentLabels" }),
     ]);
     const { subject, html } = customerPaymentConfirmedEmail(order, t, tPaymentLabels);
-    await sendEmail({ to: order.customerEmail, subject, html });
+    return sendEmail({ to: order.customerEmail, subject, html });
   },
 
-  async notifyAdminNewOrder(order: OrderNotificationData) {
+  async notifyAdminNewOrder(order: OrderNotificationData): Promise<SendEmailResult> {
     const { subject, html } = adminNewOrderEmail(order);
     // The Twilio leg for this event uses the richer, idempotency-tracked
     // sendOrderNotifications (see order-notifications.ts) instead of the
     // generic sendToTwilioChannels used by the other four events below —
-    // calling both would double-send SMS/WhatsApp for every new order.
-    await Promise.all([sendToAdminEmails(subject, html), sendOrderNotifications(order)]);
+    // calling both would double-send SMS/WhatsApp for every new order. Only
+    // the email leg's result is returned; Twilio manages its own delivery
+    // status independently (Order.smsStatus/whatsappStatus).
+    const [emailResult] = await Promise.all([
+      sendToAdminEmails(subject, html),
+      sendOrderNotifications(order),
+    ]);
+    return emailResult;
   },
 
-  async notifyAdminPaymentSubmitted(order: OrderNotificationData) {
+  async notifyAdminPaymentSubmitted(order: OrderNotificationData): Promise<SendEmailResult> {
     const { subject, html } = adminPaymentSubmittedEmail(order);
-    await Promise.all([
+    const [emailResult] = await Promise.all([
       sendToAdminEmails(subject, html),
       sendToTwilioChannels("Payment confirmation submitted", order),
     ]);
+    return emailResult;
   },
 
-  async notifyAdminPaymentConfirmed(order: OrderNotificationData, confirmedByDisplayName: string) {
+  async notifyAdminPaymentConfirmed(
+    order: OrderNotificationData,
+    confirmedByDisplayName: string
+  ): Promise<SendEmailResult> {
     const { subject, html } = adminPaymentConfirmedEmail(order, confirmedByDisplayName);
-    await Promise.all([
+    const [emailResult] = await Promise.all([
       sendToAdminEmails(subject, html),
       sendToTwilioChannels("Payment confirmed", order),
     ]);
+    return emailResult;
   },
 
-  async notifyAdminPaymentNotFound(order: OrderNotificationData) {
+  async notifyAdminPaymentNotFound(order: OrderNotificationData): Promise<SendEmailResult> {
     const { subject, html } = adminPaymentNotFoundEmail(order);
-    await Promise.all([
+    const [emailResult] = await Promise.all([
       sendToAdminEmails(subject, html),
       sendToTwilioChannels("Payment not found", order),
     ]);
+    return emailResult;
   },
 
-  async notifyAdminOrderCancelled(order: OrderNotificationData, cancelledByDisplayName: string) {
+  async notifyAdminOrderCancelled(
+    order: OrderNotificationData,
+    cancelledByDisplayName: string
+  ): Promise<SendEmailResult> {
     const { subject, html } = adminOrderCancelledEmail(order, cancelledByDisplayName);
-    await Promise.all([
+    const [emailResult] = await Promise.all([
       sendToAdminEmails(subject, html),
       sendToTwilioChannels("Order cancelled", order),
     ]);
+    return emailResult;
+  },
+
+  /**
+   * Delivers a student's invite (or resend) action link — never logs it,
+   * only embeds it in the email body. Renders in the student's stored
+   * StudentProfile.locale.
+   */
+  async notifyStudentInvite(
+    email: string,
+    fullName: string,
+    actionLink: string,
+    locale: string
+  ): Promise<SendEmailResult> {
+    const t = await getTranslations({ locale, namespace: "emails.studentInvite" });
+    const { subject, html } = studentInviteEmail(fullName, actionLink, t);
+    return sendEmail({ to: email, subject, html });
+  },
+
+  /**
+   * Delivers a password-reset action link from the /student/forgot-password
+   * flow. Distinct copy from notifyStudentInvite (see studentPasswordResetEmail)
+   * even though the underlying Supabase mechanism (a one-time recovery link)
+   * is identical.
+   */
+  async notifyStudentPasswordReset(
+    email: string,
+    fullName: string,
+    actionLink: string,
+    locale: string
+  ): Promise<SendEmailResult> {
+    const t = await getTranslations({ locale, namespace: "emails.studentPasswordReset" });
+    const { subject, html } = studentPasswordResetEmail(fullName, actionLink, t);
+    return sendEmail({ to: email, subject, html });
   },
 };

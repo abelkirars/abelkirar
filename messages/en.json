@@ -213,7 +213,48 @@
     "enterSenderName": "Enter the name the payment was sent from",
     "enterAmountSent": "Enter the amount you sent",
     "enterName": "Enter your name",
-    "enterMessage": "Tell us a little about what you need"
+    "enterMessage": "Tell us a little about what you need",
+    "enterPassword": "Enter your password",
+    "passwordMinLength": "Password must be at least 8 characters",
+    "passwordsDontMatch": "Passwords don't match"
+  },
+  "studentLogin": {
+    "title": "Student Login",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Log in",
+    "submitting": "Logging in…",
+    "forgotPasswordLink": "Forgot your password?",
+    "invalidCredentials": "Incorrect email or password.",
+    "errorAccountNotFound": "We couldn't find your student account. Please contact your teacher.",
+    "errorAccountInactive": "Your account has been deactivated. Please contact your teacher."
+  },
+  "studentSetPassword": {
+    "title": "Set your password",
+    "password": "Password",
+    "confirmPassword": "Confirm password",
+    "submit": "Save password",
+    "submitting": "Saving…",
+    "invalidLinkTitle": "This link is invalid or has expired",
+    "invalidLinkBody": "Please request a new invite or password reset link.",
+    "requestNewLink": "Request a new link",
+    "errorWeakPasswordBreached": "This password has appeared in a known data breach — please choose another.",
+    "errorWeakPasswordGeneric": "This password is too weak. Please choose a longer password with a mix of letters, numbers, and symbols.",
+    "errorAccountInactive": "Your account has been deactivated. Please contact your teacher for help.",
+    "errorGeneric": "Something went wrong. Please try again."
+  },
+  "studentForgotPassword": {
+    "title": "Forgot your password?",
+    "email": "Email",
+    "submit": "Send reset link",
+    "submitting": "Sending…",
+    "confirmation": "If an account exists for that email, we've sent a password reset link.",
+    "backToLogin": "Back to login"
+  },
+  "studentDashboard": {
+    "title": "Student Dashboard",
+    "greeting": "Welcome, {fullName}.",
+    "placeholderNotice": "Your dashboard is coming soon — check back later."
   },
   "emails": {
     "orderPending": {
@@ -235,6 +276,20 @@
     "newsletterWelcome": {
       "subject": "Welcome to Abelkirar",
       "body": "Thank you for joining the Abelkirar community. You'll hear from us with Kirar lessons, new instruments, and community events."
+    },
+    "studentInvite": {
+      "subject": "You're invited to Abel Kirar Academy",
+      "greeting": "Hi {fullName},",
+      "body": "You've been added as a student at Abel Kirar Academy. Click below to set your password and access your student dashboard:",
+      "cta": "Set up your account",
+      "expiryNotice": "This link will expire after a while — if it's stopped working, ask your teacher to resend your invite."
+    },
+    "studentPasswordReset": {
+      "subject": "Reset your password — Abel Kirar Academy",
+      "greeting": "Hi {fullName},",
+      "body": "We received a request to reset your password. Click below to choose a new one:",
+      "cta": "Reset your password",
+      "expiryNotice": "This link will expire after a while. If you didn't request this, you can safely ignore this email."
     }
   }
 }

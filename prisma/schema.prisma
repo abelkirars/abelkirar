@@ -136,10 +136,10 @@ model Order {
   // New-order Twilio notification tracking (business-contact SMS/WhatsApp).
   // A non-null status means a send was already attempted for that channel —
   // this is the idempotency guard against duplicate sends on retry.
-  smsStatus      NotificationDeliveryStatus?
-  smsMessageSid  String?
-  smsSentAt      DateTime?
-  smsError       String?
+  smsStatus          NotificationDeliveryStatus?
+  smsMessageSid      String?
+  smsSentAt          DateTime?
+  smsError           String?
   whatsappStatus     NotificationDeliveryStatus?
   whatsappMessageSid String?
   whatsappSentAt     DateTime?
@@ -161,6 +161,9 @@ model Admin {
 
   confirmedOrders Order[]     @relation("PaymentConfirmedBy")
   notes           OrderNote[]
+
+  createdWeeklyPractices WeeklyPractice[]
+  createdMonthlyLogs     MonthlyLog[]
 }
 
 /// Customer-submitted proof of a Zelle/Cash App payment. Submitting one does
@@ -234,4 +237,179 @@ model NewsletterSubscriber {
   source           String?
   subscribedAt     DateTime  @default(now())
   unsubscribedAt   DateTime?
+}
+
+// ---------------------------------------------------------------------------
+// Student platform. Distinct from the Admin/bcrypt/JWT system above — student
+// identity is a Supabase Auth user, mirrored onto StudentProfile below. Admin
+// login is completely unaffected; requireAdminPage/requireAdminApi still gate
+// every /admin/* route exactly as before. See docs/student-platform-spec.md.
+// ---------------------------------------------------------------------------
+
+/// Only ever STUDENT in practice today — kept as an enum (rather than a bare
+/// boolean) so a future non-student Supabase-authenticated role is additive,
+/// not a migration. There is deliberately no separate User table: every
+/// Supabase-authenticated identity in this app is a student, so folding
+/// supabaseUserId/email/role directly onto StudentProfile avoids an
+/// always-1:1 join with no current benefit.
+enum Role {
+  ADMIN
+  STUDENT
+}
+
+enum StudentStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum StudentLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum WeeklyPracticeStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  SUBMITTED
+  REVIEWED
+  COMPLETED
+  MISSED
+}
+
+enum AttachmentUploadedBy {
+  ADMIN
+  STUDENT
+}
+
+model StudentProfile {
+  id             String @id @default(cuid())
+  /// Supabase Auth's auth.users.id — the actual login identity for this student.
+  supabaseUserId String @unique
+  email          String @unique
+  role           Role   @default(STUDENT)
+
+  fullName       String
+  phone          String?
+  level          StudentLevel?
+  enrollmentDate DateTime?
+  /// Re-checked against the DB on every authenticated request (never trust
+  /// the JWT alone) — the same pattern verifyAdminSession uses for Admin.isActive.
+  status         StudentStatus @default(ACTIVE)
+  notes          String?
+  /// "en" | "am" — validated app-side via src/i18n/locale.ts's isLocale(),
+  /// same plain-string approach already used for Order.locale, rather than a
+  /// second Prisma enum that would need to stay in sync with that file's
+  /// `locales` array by hand.
+  locale         String        @default("en")
+  /// Set only when the student actually finishes /student/set-password (invite
+  /// or recovery) and saves a password — NOT when they merely click the link.
+  /// Replaces the old last_sign_in_at proxy (see supabase-admin-auth.ts git
+  /// history), which over-counted "clicked but abandoned" as activated.
+  activatedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  weeklyPractices WeeklyPractice[]
+  monthlyLogs     MonthlyLog[]
+
+  @@index([status])
+}
+
+model WeeklyPractice {
+  id            String               @id @default(cuid())
+  studentId     String
+  student       StudentProfile       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  weekTitle     String
+  weekStartDate DateTime
+  weekEndDate   DateTime
+  instructions  String?
+  goals         String?
+  teacherNotes  String?
+  status        WeeklyPracticeStatus @default(NOT_STARTED)
+
+  studentSubmission String?
+  submittedAt       DateTime?
+  adminFeedback     String?
+  feedbackAt        DateTime?
+  reviewedAt        DateTime?
+  completedAt       DateTime?
+  /// Set when an admin explicitly reopens a SUBMITTED entry back to
+  /// IN_PROGRESS, unlocking student editing. A subsequent student edit is an
+  /// intentional, admin-authorized overwrite, not a silent one — see
+  /// docs/student-platform-spec.md for why this isn't a full submission-
+  /// history table (yet).
+  reopenedAt        DateTime?
+  reopenCount       Int       @default(0)
+
+  createdById String
+  createdBy   Admin    @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  attachments WeeklyPracticeAttachment[]
+
+  @@index([studentId, weekStartDate])
+  @@index([status])
+}
+
+model WeeklyPracticeAttachment {
+  id               String               @id @default(cuid())
+  weeklyPracticeId String
+  weeklyPractice   WeeklyPractice       @relation(fields: [weeklyPracticeId], references: [id], onDelete: Cascade)
+  uploadedBy       AttachmentUploadedBy
+  /// Object path in the private student-files bucket, not a public URL.
+  storagePath      String
+  fileName         String
+  mimeType         String
+  fileSize         Int
+  createdAt        DateTime             @default(now())
+
+  @@index([weeklyPracticeId])
+}
+
+model MonthlyLog {
+  id        String         @id @default(cuid())
+  studentId String
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  month     Int // 1-12
+  year      Int
+
+  attendanceSummary   String?
+  practiceConsistency String?
+  skillsPracticed     String?
+  strengths           String?
+  areasForImprovement String?
+  teacherComments     String?
+  studentComments     String?
+  progressRating      Int?
+  goalsNextMonth      String?
+
+  publishedToStudent Boolean   @default(false)
+  publishedAt        DateTime?
+
+  createdById String
+  createdBy   Admin    @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  attachments MonthlyLogAttachment[]
+
+  @@unique([studentId, month, year])
+  @@index([studentId, year, month])
+}
+
+model MonthlyLogAttachment {
+  id           String     @id @default(cuid())
+  monthlyLogId String
+  monthlyLog   MonthlyLog @relation(fields: [monthlyLogId], references: [id], onDelete: Cascade)
+  /// Object path in the private student-files bucket, not a public URL.
+  storagePath  String
+  fileName     String
+  mimeType     String
+  fileSize     Int
+  createdAt    DateTime   @default(now())
+
+  @@index([monthlyLogId])
 }

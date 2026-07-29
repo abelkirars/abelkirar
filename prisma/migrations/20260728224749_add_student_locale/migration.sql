@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "StudentProfile" ADD COLUMN     "locale" TEXT NOT NULL DEFAULT 'en';
+

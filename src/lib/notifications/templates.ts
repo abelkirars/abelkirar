@@ -210,3 +210,49 @@ export function newOrderTwilioMessage(order: OrderNotificationData): string {
 
   return sections.filter((section): section is string => section !== null).join("\n\n");
 }
+
+/**
+ * Student invite/resend-invite email — customer-facing (a student, not an
+ * admin), so translated like customerOrderPendingEmail above rather than
+ * hardcoded like the admin-facing order emails. The action link is a
+ * one-time Supabase Auth link (see src/lib/supabase-admin-auth.ts) — it must
+ * never be logged, only ever embedded here. Callers pass the translator
+ * built from the student's own StudentProfile.locale.
+ */
+export function studentInviteEmail(
+  fullName: string,
+  actionLink: string,
+  t: EmailTranslator
+) {
+  return {
+    subject: t("subject"),
+    html: `
+      <p>${t("greeting", { fullName })}</p>
+      <p>${t("body")}</p>
+      <p><a href="${actionLink}">${t("cta")}</a></p>
+      <p>${t("expiryNotice")}</p>
+    `,
+  };
+}
+
+/**
+ * Password-reset (forgot-password) email — mechanically the same kind of
+ * one-time Supabase action link as studentInviteEmail, but distinct copy:
+ * an already-enrolled student who forgot their password should never be told
+ * "you've been invited". Same never-log-the-link rule applies.
+ */
+export function studentPasswordResetEmail(
+  fullName: string,
+  actionLink: string,
+  t: EmailTranslator
+) {
+  return {
+    subject: t("subject"),
+    html: `
+      <p>${t("greeting", { fullName })}</p>
+      <p>${t("body")}</p>
+      <p><a href="${actionLink}">${t("cta")}</a></p>
+      <p>${t("expiryNotice")}</p>
+    `,
+  };
+}
