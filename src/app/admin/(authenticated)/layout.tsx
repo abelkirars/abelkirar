@@ -20,6 +20,7 @@ export default async function AuthenticatedAdminLayout({
             <Link href="/admin/products">Products</Link>
             <Link href="/admin/announcements">Announcements</Link>
             <Link href="/admin/upload-images">Upload images</Link>
+            <Link href="/admin/settings">Settings</Link>
           </nav>
           <div className="flex items-center gap-4 text-sm">
             <span className="text-muted-foreground">{session.displayName}</span>

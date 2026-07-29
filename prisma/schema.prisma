@@ -158,6 +158,14 @@ model Admin {
   isActive     Boolean   @default(true)
   createdAt    DateTime  @default(now())
   lastLoginAt  DateTime?
+  /// Set whenever this admin's password is changed. Compared against the
+  /// session JWT's `iat` claim in verifyAdminSession() — any token issued
+  /// before this timestamp is rejected, invalidating every other session on
+  /// a password change. The current session is reissued with a fresh token
+  /// in the same request, so it survives. Truncated to whole seconds when
+  /// written (see the password route) to match JWT `iat`'s native
+  /// second-granularity and avoid a same-second comparison race.
+  passwordChangedAt DateTime?
 
   confirmedOrders Order[]     @relation("PaymentConfirmedBy")
   notes           OrderNote[]

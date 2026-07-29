@@ -204,6 +204,10 @@
     "modernize": "ማዘመን",
     "modernizeDescription": "ተቀደሰውን መንፈሳዊ እሴት ሳያጣ ክራርን በዓለም ዙሪያ ለሚገኘው ዳያስፖራ በዲጂታል መንገድ ማድረስ።"
   },
+  "passwordToggle": {
+    "show": "የይለፍ ቃል አሳይ",
+    "hide": "የይለፍ ቃል ደብቅ"
+  },
   "validation": {
     "cartEmpty": "የዕቃ ቅርጫትዎ ባዶ ነው",
     "enterFullName": "ሙሉ ስምዎን ያስገቡ",

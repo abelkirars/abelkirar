@@ -7,7 +7,11 @@ import { readAdminSessionFromCookies, type AdminSessionPayload } from "@/lib/adm
 /**
  * Verifies the session cookie AND that the admin account still exists and is
  * active, so a deactivated admin is locked out immediately rather than only
- * after their token expires. Memoized per request via React's cache().
+ * after their token expires. Also rejects any token issued before the
+ * account's last password change (Admin.passwordChangedAt) — otherwise a
+ * stolen session cookie would keep working for up to 12 hours after a
+ * deliberate password change, defeating the point of changing it. Memoized
+ * per request via React's cache().
  */
 export const verifyAdminSession = cache(async (): Promise<AdminSessionPayload | null> => {
   const session = await readAdminSessionFromCookies();
@@ -15,6 +19,13 @@ export const verifyAdminSession = cache(async (): Promise<AdminSessionPayload | 
 
   const admin = await prisma.admin.findUnique({ where: { id: session.adminId } });
   if (!admin || !admin.isActive) return null;
+
+  if (admin.passwordChangedAt && session.issuedAt !== undefined) {
+    const issuedAtMs = session.issuedAt * 1000;
+    if (issuedAtMs < admin.passwordChangedAt.getTime()) {
+      return null;
+    }
+  }
 
   return session;
 });

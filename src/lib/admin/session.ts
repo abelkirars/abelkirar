@@ -8,6 +8,14 @@ export interface AdminSessionPayload {
   adminId: string;
   username: string;
   displayName: string;
+  /**
+   * The JWT's own `iat` claim (seconds since epoch), populated only when
+   * read back from an existing token via decryptSession() — never supplied
+   * when constructing a payload to sign a NEW session (encryptSession's own
+   * .setIssuedAt() sets the real one at sign time regardless). Used by
+   * verifyAdminSession() to reject tokens issued before a password change.
+   */
+  issuedAt?: number;
 }
 
 function encodedSecret() {
@@ -45,6 +53,7 @@ export async function decryptSession(
       adminId: payload.adminId,
       username: payload.username,
       displayName: payload.displayName,
+      issuedAt: typeof payload.iat === "number" ? payload.iat : undefined,
     };
   } catch {
     return null;

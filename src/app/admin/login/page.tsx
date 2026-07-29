@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Container } from "@/components/marketing/container";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 
 export default function AdminLoginPage() {
@@ -56,9 +57,8 @@ export default function AdminLoginPage() {
           </div>
           <div>
             <Label htmlFor="password">Password</Label>
-            <Input
+            <PasswordInput
               id="password"
-              type="password"
               className="mt-1"
               autoComplete="current-password"
               value={password}

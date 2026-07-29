@@ -9,6 +9,7 @@ import { createStudentLoginSchema, type StudentLoginInput } from "@/lib/validati
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { syncStudentLocaleOnFirstLogin } from "@/app/actions/sync-student-locale";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Button } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel, FieldError } from "@/components/ui/field";
 
@@ -16,6 +17,7 @@ export function StudentLoginForm() {
   const router = useRouter();
   const t = useTranslations("studentLogin");
   const tValidation = useTranslations("validation");
+  const tPasswordToggle = useTranslations("passwordToggle");
   const [formError, setFormError] = useState<string | null>(null);
   const {
     register,
@@ -62,10 +64,11 @@ export function StudentLoginForm() {
 
         <Field>
           <FieldLabel htmlFor="password">{t("password")}</FieldLabel>
-          <Input
+          <PasswordInput
             id="password"
-            type="password"
             autoComplete="current-password"
+            showPasswordLabel={tPasswordToggle("show")}
+            hidePasswordLabel={tPasswordToggle("hide")}
             {...register("password")}
           />
           <FieldError errors={[errors.password]} />

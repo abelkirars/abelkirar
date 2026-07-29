@@ -204,6 +204,10 @@
     "modernize": "Modernize",
     "modernizeDescription": "Bring the Kirar to a global, digitally-connected diaspora without losing what makes it sacred."
   },
+  "passwordToggle": {
+    "show": "Show password",
+    "hide": "Hide password"
+  },
   "validation": {
     "cartEmpty": "Your cart is empty",
     "enterFullName": "Enter your full name",

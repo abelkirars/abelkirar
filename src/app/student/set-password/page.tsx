@@ -11,7 +11,7 @@ import {
   type StudentSetPasswordInput,
 } from "@/lib/validations/student-auth";
 import { Container } from "@/components/marketing/container";
-import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Button } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel, FieldError } from "@/components/ui/field";
 
@@ -41,6 +41,7 @@ export default function StudentSetPasswordPage() {
   const router = useRouter();
   const t = useTranslations("studentSetPassword");
   const tValidation = useTranslations("validation");
+  const tPasswordToggle = useTranslations("passwordToggle");
   const [status, setStatus] = useState<LinkStatus>("loading");
   const [tokens, setTokens] = useState<{ accessToken: string; refreshToken: string } | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -144,10 +145,11 @@ export default function StudentSetPasswordPage() {
             <FieldGroup>
               <Field>
                 <FieldLabel htmlFor="password">{t("password")}</FieldLabel>
-                <Input
+                <PasswordInput
                   id="password"
-                  type="password"
                   autoComplete="new-password"
+                  showPasswordLabel={tPasswordToggle("show")}
+                  hidePasswordLabel={tPasswordToggle("hide")}
                   {...register("password")}
                 />
                 <FieldError errors={[errors.password]} />
@@ -155,10 +157,11 @@ export default function StudentSetPasswordPage() {
 
               <Field>
                 <FieldLabel htmlFor="confirmPassword">{t("confirmPassword")}</FieldLabel>
-                <Input
+                <PasswordInput
                   id="confirmPassword"
-                  type="password"
                   autoComplete="new-password"
+                  showPasswordLabel={tPasswordToggle("show")}
+                  hidePasswordLabel={tPasswordToggle("hide")}
                   {...register("confirmPassword")}
                 />
                 <FieldError errors={[errors.confirmPassword]} />
