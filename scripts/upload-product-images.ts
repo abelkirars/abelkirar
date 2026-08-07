@@ -44,7 +44,7 @@ async function uploadImage(filePath: string): Promise<string> {
   const mimeType = getMimeType(filePath);
 
   try {
-    const { data, error } = await supabase.storage
+    const { error } = await supabase.storage
       .from(BUCKET_NAME)
       .upload(fileName, fileContent, {
         contentType: mimeType,
