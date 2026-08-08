@@ -40,30 +40,39 @@ export function OrderActions({
 
   const alreadyPaid = paymentStatus === "PAID";
   const cancelled = orderStatus === "CANCELLED";
+  // A Custom Made request with no quote yet has no real price — clicking
+  // "Mark as paid" here would produce a PAID order with a zero total.
+  // Hidden entirely (not just disabled) until a quote exists; see QuoteForm
+  // on the order detail page for what replaces these while pending.
+  const isPendingQuote = paymentStatus === "PENDING_QUOTE";
 
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap gap-2">
-        <Button
-          size="sm"
-          disabled={alreadyPaid || cancelled || loading !== null}
-          onClick={() =>
-            runAction(
-              "mark-paid",
-              "Confirm you have manually verified this payment in Zelle/Cash App. This will mark the order as paid and notify the customer."
-            )
-          }
-        >
-          {loading === "mark-paid" ? "Marking paid…" : "Mark as paid"}
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={alreadyPaid || cancelled || loading !== null}
-          onClick={() => runAction("mark-not-found")}
-        >
-          {loading === "mark-not-found" ? "Updating…" : "Mark payment not found"}
-        </Button>
+        {!isPendingQuote && (
+          <>
+            <Button
+              size="sm"
+              disabled={alreadyPaid || cancelled || loading !== null}
+              onClick={() =>
+                runAction(
+                  "mark-paid",
+                  "Confirm you have manually verified this payment in Zelle/Cash App. This will mark the order as paid and notify the customer."
+                )
+              }
+            >
+              {loading === "mark-paid" ? "Marking paid…" : "Mark as paid"}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={alreadyPaid || cancelled || loading !== null}
+              onClick={() => runAction("mark-not-found")}
+            >
+              {loading === "mark-not-found" ? "Updating…" : "Mark payment not found"}
+            </Button>
+          </>
+        )}
         <Button
           size="sm"
           variant="destructive"

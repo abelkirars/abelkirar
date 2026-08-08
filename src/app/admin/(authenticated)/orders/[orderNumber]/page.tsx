@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { Container } from "@/components/marketing/container";
 import { OrderActions } from "@/components/admin/order-actions";
+import { QuoteForm } from "@/components/admin/quote-form";
+import { ResendQuoteEmailButton } from "@/components/admin/resend-quote-email-button";
 import { OrderNotes } from "@/components/admin/order-notes";
 import {
   formatMoney,
@@ -57,6 +59,16 @@ export default async function AdminOrderDetailPage({
           paymentStatus={order.paymentStatus}
           orderStatus={order.status}
         />
+
+        {order.paymentStatus === "PENDING_QUOTE" && (
+          <QuoteForm
+            orderNumber={order.orderNumber ?? ""}
+            paymentRegion={order.paymentRegion as "US" | "EUROZONE" | null}
+            description={order.customOrderDescription}
+          />
+        )}
+
+        {order.quotedAt && <ResendQuoteEmailButton orderNumber={order.orderNumber ?? ""} />}
 
         <div className="grid gap-6 sm:grid-cols-2">
           <div className="rounded-lg bg-card p-4 ring-1 ring-foreground/10">
@@ -134,7 +146,11 @@ export default async function AdminOrderDetailPage({
                 <span>
                   {item.quantity} × {item.productNameSnapshot}
                 </span>
-                <span>{formatMoney(item.unitPrice * item.quantity, order.currency)}</span>
+                <span>
+                  {order.paymentStatus === "PENDING_QUOTE"
+                    ? "—"
+                    : formatMoney(item.unitPrice * item.quantity, order.currency)}
+                </span>
               </li>
             ))}
           </ul>

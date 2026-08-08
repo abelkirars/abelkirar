@@ -312,6 +312,14 @@
       "productLabel": "[AM] Instrument",
       "descriptionLabel": "[AM] Your request"
     },
+    "quoteReady": {
+      "subject": "[AM] Your quote for order {orderNumber} is ready",
+      "greeting": "[AM] Hi {customerName},",
+      "quoteBody": "[AM] Thank you for your patience. We've reviewed your custom order request (order {orderNumber}) and your final price is {total}.",
+      "totalLabel": "[AM] Total",
+      "paymentMethodLabel": "[AM] Payment method",
+      "submitConfirmationNotice": "[AM] Once you've sent payment, please submit your payment confirmation details (sender name, amount, date/time, and optionally a screenshot) on your order confirmation page so we can verify it faster."
+    },
     "newsletterWelcome": {
       "subject": "ወደ አቤል ክራር እንኳን ደህና መጡ",
       "body": "የአቤል ክራር ማህበረሰብ አባል ስለሆኑ እናመሰግናለን። የክራር ትምህርቶችን፣ አዳዲስ መሣሪያዎችንና የማህበረሰብ ኩነቶችን በተመለከተ መረጃ እንልክልዎታለን።"

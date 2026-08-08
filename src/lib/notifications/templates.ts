@@ -129,6 +129,36 @@ export function adminNewCustomOrderEmail(order: CustomOrderNotificationData) {
   };
 }
 
+/**
+ * Sent once an admin has quoted a Custom Made request. By this point the
+ * order has a real total and paymentMethod (see the quote route), so this
+ * reuses OrderNotificationData and getPaymentInstructions exactly like
+ * customerOrderPendingEmail — no new payment-instruction logic.
+ */
+export function customerQuoteReadyEmail(
+  order: OrderNotificationData,
+  t: EmailTranslator,
+  tPaymentLabels: EmailTranslator,
+  tInstructions: EmailTranslator
+) {
+  const instructions = getPaymentInstructions(tInstructions, order.paymentMethod, order.orderNumber);
+  return {
+    subject: t("subject", { orderNumber: order.orderNumber }),
+    html: `
+      <p>${t("greeting", { customerName: order.customerName })}</p>
+      <p>${t("quoteBody", {
+        orderNumber: order.orderNumber,
+        total: formatMoney(order.total, order.currency),
+      })}</p>
+      <p><strong>${t("totalLabel")}:</strong> ${formatMoney(order.total, order.currency)}</p>
+      <p><strong>${t("paymentMethodLabel")}:</strong> ${translatedPaymentMethodLabel(tPaymentLabels, order.paymentMethod)}</p>
+      <h3>${instructions.heading}</h3>
+      <ul>${instructions.lines.map((l) => `<li>${l}</li>`).join("")}</ul>
+      <p>${t("submitConfirmationNotice")}</p>
+    `,
+  };
+}
+
 export function adminNewOrderEmail(order: OrderNotificationData) {
   return {
     subject: `New order ${order.orderNumber} — ${paymentMethodLabel(order.paymentMethod)} payment pending verification`,

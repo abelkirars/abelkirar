@@ -312,6 +312,14 @@
       "productLabel": "Instrument",
       "descriptionLabel": "Your request"
     },
+    "quoteReady": {
+      "subject": "Your quote for order {orderNumber} is ready",
+      "greeting": "Hi {customerName},",
+      "quoteBody": "Thank you for your patience. We've reviewed your custom order request (order {orderNumber}) and your final price is {total}.",
+      "totalLabel": "Total",
+      "paymentMethodLabel": "Payment method",
+      "submitConfirmationNotice": "Once you've sent payment, please submit your payment confirmation details (sender name, amount, date/time, and optionally a screenshot) on your order confirmation page so we can verify it faster."
+    },
     "newsletterWelcome": {
       "subject": "Welcome to Abelkirar",
       "body": "Thank you for joining the Abelkirar community. You'll hear from us with Kirar lessons, new instruments, and community events."

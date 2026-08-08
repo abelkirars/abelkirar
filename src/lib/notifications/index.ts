@@ -15,6 +15,7 @@ import {
   adminPaymentSubmittedEmail,
   customerOrderPendingEmail,
   customerCustomOrderPendingEmail,
+  customerQuoteReadyEmail,
   customerPaymentConfirmedEmail,
   studentInviteEmail,
   studentPasswordResetEmail,
@@ -81,6 +82,22 @@ export const notificationService = {
       getTranslations({ locale: order.locale, namespace: "paymentInstructions" }),
     ]);
     const { subject, html } = customerOrderPendingEmail(order, t, tPaymentLabels, tInstructions);
+    return sendEmail({ to: order.customerEmail, subject, html });
+  },
+
+  /**
+   * Sent by the admin quote action (and its resend companion) once a
+   * Custom Made request has a real price. By now the order carries a real
+   * total/paymentMethod, so this is a normal OrderNotificationData send —
+   * same shape as notifyCustomerPaymentConfirmed below.
+   */
+  async notifyCustomerQuoteReady(order: OrderNotificationData): Promise<SendEmailResult> {
+    const [t, tPaymentLabels, tInstructions] = await Promise.all([
+      getTranslations({ locale: order.locale, namespace: "emails.quoteReady" }),
+      getTranslations({ locale: order.locale, namespace: "paymentLabels" }),
+      getTranslations({ locale: order.locale, namespace: "paymentInstructions" }),
+    ]);
+    const { subject, html } = customerQuoteReadyEmail(order, t, tPaymentLabels, tInstructions);
     return sendEmail({ to: order.customerEmail, subject, html });
   },
 
