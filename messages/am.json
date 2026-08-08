@@ -86,6 +86,28 @@
     "addToCart": "ወደ ቅርጫት ጨምር",
     "addedToCart": "ወደ ቅርጫት ተጨምሯል"
   },
+  "customOrderNotice": {
+    "toggleLabel": "[AM] Custom Order Available",
+    "pricingNotice": "[AM] This is a quote request, not a purchase. We'll review your custom order and confirm the final price within 1–2 business days. The final price may be higher than this instrument's listed base price. You will not be charged anything until you receive and accept your quote.",
+    "descriptionLabel": "[AM] Describe your custom order",
+    "descriptionPlaceholder": "[AM] Describe the design, color, size, decoration, tuning, or other details you want.",
+    "imageLabel": "[AM] Upload a custom order image",
+    "chooseImage": "[AM] Choose image",
+    "replaceImage": "[AM] Replace image",
+    "removeImageAriaLabel": "[AM] Remove selected image",
+    "imageTypeError": "[AM] Please upload a JPG, PNG, or WebP image.",
+    "imageSizeError": "[AM] Image must be smaller than 8MB.",
+    "contactDetails": "[AM] Contact details",
+    "fullName": "[AM] Full name",
+    "emailAddress": "[AM] Email address",
+    "phoneNumber": "[AM] Phone number",
+    "paymentRegion": "[AM] Payment region",
+    "usRegion": "[AM] United States — USD",
+    "eurozoneRegion": "[AM] Eurozone — EUR",
+    "submit": "[AM] Submit request",
+    "submitting": "[AM] Submitting…",
+    "genericError": "[AM] Something went wrong. Please try again."
+  },
   "cart": {
     "title": "የዕቃ ቅርጫትዎ",
     "empty": "የዕቃ ቅርጫትዎ ባዶ ነው",
@@ -125,7 +147,9 @@
     "paidProcessing": "ተከፍሏል — በሂደት ላይ",
     "pendingVerification": "ክፍያው በመረጋገጥ ላይ",
     "importantNotice": "አስፈላጊ፡ ክፍያዎን ከትዕዛዝዎ ጋር ማገናኘት እንድንችል በክፍያ ማስታወሻዎ ላይ የትዕዛዝ ቁጥር {orderNumber}ን ያካቱ።",
-    "manualVerificationNotice": "ክፍያዎች በቡድናችን በእጅ የሚረጋገጡ ናቸው። ክፍያዎን ሳናረጋግጥ ትዕዛዝዎ አይከናወንም — ይህም በራስ-ሰር የሚሰራ አይደለም።"
+    "manualVerificationNotice": "ክፍያዎች በቡድናችን በእጅ የሚረጋገጡ ናቸው። ክፍያዎን ሳናረጋግጥ ትዕዛዝዎ አይከናወንም — ይህም በራስ-ሰር የሚሰራ አይደለም።",
+    "quotePendingHeading": "[AM] Custom order request received",
+    "quotePendingNotice": "[AM] We're reviewing the details you submitted. You'll receive an email with your final price and payment instructions within 1–2 business days. Please note the final price may be higher than the instrument's listed base price, depending on the customization you've requested."
   },
   "paymentLabels": {
     "us": "አሜሪካ",
@@ -136,7 +160,8 @@
     "pendingVerification": "በማረጋገጥ ላይ",
     "paid": "ተከፍሏል",
     "paymentNotFound": "ክፍያ አልተገኘም",
-    "refunded": "ተመላሽ ተደርጓል"
+    "refunded": "ተመላሽ ተደርጓል",
+    "pendingQuote": "[AM] Awaiting quote"
   },
   "paymentInstructions": {
     "zelleHeading": "በ Zelle ይክፈሉ",
@@ -216,6 +241,8 @@
     "paymentMethodMismatch": "የተመረጠው የክፍያ ዘዴ ከተመረጠው የክፍያ ክልል ጋር አይጣጣምም",
     "enterSenderName": "ክፍያው የተላከበትን ስም ያስገቡ",
     "enterAmountSent": "የላኩትን የገንዘብ መጠን ያስገቡ",
+    "enterCustomOrderDescription": "[AM] Describe your custom order (at least 10 characters)",
+    "customOrderDescriptionTooLong": "[AM] Description must be 4000 characters or fewer",
     "enterName": "ስምዎን ያስገቡ",
     "enterMessage": "የሚፈልጉትን ነገር በጥቂቱ ይንገሩን",
     "enterPassword": "የይለፍ ቃልዎን ያስገቡ",
@@ -276,6 +303,14 @@
       "greeting": "ሰላም {customerName}፣",
       "body": "ለትዕዛዝ ቁጥር {orderNumber} ({total}) በ{paymentMethod} የላኩትን ክፍያ በእጅ አረጋግጠናል።",
       "nextSteps": "ትዕዛዝዎ አሁን በመዘጋጀት ላይ ይገኛል። የሙዚቃ መሣሪያዎ ሲዘጋጅ የሚቀጥሉትን እርምጃዎችና ጊዜውን እናሳውቅዎታለን።"
+    },
+    "customOrderPending": {
+      "subject": "[AM] Custom order request {orderNumber} received",
+      "pricingNotice": "[AM] Your custom order request has been received. Our team will review your description and confirm your final price within 1–2 business days. The final price may be higher than the instrument's listed base price. No payment is due yet — we'll email you again with your total and payment instructions once your quote is ready.",
+      "greeting": "[AM] Thank you for your custom order request, {customerName}.",
+      "orderNumberLabel": "[AM] Order number",
+      "productLabel": "[AM] Instrument",
+      "descriptionLabel": "[AM] Your request"
     },
     "newsletterWelcome": {
       "subject": "ወደ አቤል ክራር እንኳን ደህና መጡ",

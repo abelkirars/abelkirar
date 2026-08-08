@@ -21,6 +21,31 @@ export interface OrderNotificationCustomOrder {
   imageUrl?: string;
 }
 
+/**
+ * Data for the Custom Made quote-request flow (OrderType.CUSTOM_QUOTE) —
+ * deliberately separate from OrderNotificationData below rather than reusing
+ * it: that type models a fully-priced order (non-nullable paymentMethod,
+ * a real total), neither of which exists yet for a quote request. Keeping
+ * this minimal avoids fabricating a fake price or payment method in an
+ * email that must contain neither.
+ */
+export interface CustomOrderNotificationData {
+  /** The Order's DB id (cuid). */
+  id: string;
+  orderNumber: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  description: string;
+  /** Product.name snapshotted onto the order's one companion OrderItem. */
+  productName: string;
+  paymentRegion: PaymentRegionValue;
+  /** Checkout locale, e.g. "en" or "am" — see Order.locale. */
+  locale: string;
+  createdAt: Date;
+  adminOrderUrl: string;
+}
+
 export interface OrderNotificationData {
   /** The Order's DB id (cuid) — distinct from orderNumber, used for idempotency lookups. */
   id: string;
@@ -65,6 +90,7 @@ const PAYMENT_STATUS_LABELS: Record<string, string> = {
   PAID: "Paid",
   PAYMENT_NOT_FOUND: "Payment not found",
   REFUNDED: "Refunded",
+  PENDING_QUOTE: "Awaiting quote",
 };
 
 export function paymentStatusLabel(status: string): string {
@@ -99,6 +125,7 @@ const PAYMENT_STATUS_KEYS: Record<string, string> = {
   PAID: "paid",
   PAYMENT_NOT_FOUND: "paymentNotFound",
   REFUNDED: "refunded",
+  PENDING_QUOTE: "pendingQuote",
 };
 
 export function translatedPaymentStatusLabel(

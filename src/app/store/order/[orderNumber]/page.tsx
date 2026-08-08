@@ -37,6 +37,11 @@ export default async function OrderConfirmationPage({
   const tInstructions = await getTranslations("paymentInstructions");
   const tPaymentLabels = await getTranslations("paymentLabels");
 
+  // CRITICAL: this must be checked before anything below ever reads
+  // order.total. For a Custom Made request, total is 0 as a placeholder —
+  // not a real price — until an admin quotes it (see docs plan, Phase 4).
+  const isPendingQuote = order.paymentStatus === "PENDING_QUOTE";
+
   const isManualPayment =
     order.paymentMethod === "ZELLE" ||
     order.paymentMethod === "CASH_APP" ||
@@ -55,49 +60,55 @@ export default async function OrderConfirmationPage({
     <section className="py-16 sm:py-20">
       <Container className="max-w-2xl">
         <h1 className="font-heading text-3xl font-semibold tracking-tight sm:text-4xl">
-          {alreadyPaid ? t("paymentConfirmed") : t("orderReceived")}
+          {isPendingQuote ? t("quotePendingHeading") : alreadyPaid ? t("paymentConfirmed") : t("orderReceived")}
         </h1>
         <p className="mt-4 text-lg text-muted-foreground">
           {t("orderNumber")} <strong>{orderNumber}</strong>
         </p>
 
-        <div className="mt-8 space-y-2 rounded-2xl bg-card p-6 ring-1 ring-foreground/10">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">{t("total")}</span>
-            <span className="font-medium">{formatMoney(order.total, order.currency)}</span>
+        {isPendingQuote ? (
+          <div className="mt-8 rounded-2xl bg-card p-6 ring-1 ring-foreground/10">
+            <p className="text-sm text-foreground">{t("quotePendingNotice")}</p>
           </div>
-          {order.paymentRegion && (
+        ) : (
+          <div className="mt-8 space-y-2 rounded-2xl bg-card p-6 ring-1 ring-foreground/10">
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">{t("paymentRegion")}</span>
+              <span className="text-muted-foreground">{t("total")}</span>
+              <span className="font-medium">{formatMoney(order.total, order.currency)}</span>
+            </div>
+            {order.paymentRegion && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">{t("paymentRegion")}</span>
+                <span className="font-medium">
+                  {translatedPaymentRegionLabel(
+                    tPaymentLabels,
+                    order.paymentRegion as "US" | "EUROZONE"
+                  )}{" "}
+                  ({order.currency.toUpperCase()})
+                </span>
+              </div>
+            )}
+            {order.paymentMethod && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">{t("paymentMethod")}</span>
+                <span className="font-medium">
+                  {translatedPaymentMethodLabel(
+                    tPaymentLabels,
+                    order.paymentMethod as "ZELLE" | "CASH_APP" | "EUR_BANK_TRANSFER"
+                  )}
+                </span>
+              </div>
+            )}
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">{t("status")}</span>
               <span className="font-medium">
-                {translatedPaymentRegionLabel(
-                  tPaymentLabels,
-                  order.paymentRegion as "US" | "EUROZONE"
-                )}{" "}
-                ({order.currency.toUpperCase()})
+                {alreadyPaid ? t("paidProcessing") : t("pendingVerification")}
               </span>
             </div>
-          )}
-          {order.paymentMethod && (
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">{t("paymentMethod")}</span>
-              <span className="font-medium">
-                {translatedPaymentMethodLabel(
-                  tPaymentLabels,
-                  order.paymentMethod as "ZELLE" | "CASH_APP" | "EUR_BANK_TRANSFER"
-                )}
-              </span>
-            </div>
-          )}
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">{t("status")}</span>
-            <span className="font-medium">
-              {alreadyPaid ? t("paidProcessing") : t("pendingVerification")}
-            </span>
           </div>
-        </div>
+        )}
 
-        {!alreadyPaid && instructions && (
+        {!isPendingQuote && !alreadyPaid && instructions && (
           <>
             <div className="mt-8 rounded-2xl border border-accent/30 bg-accent/5 p-6">
               <h2 className="font-heading text-xl font-semibold">

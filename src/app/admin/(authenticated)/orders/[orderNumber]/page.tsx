@@ -3,7 +3,12 @@ import { prisma } from "@/lib/db";
 import { Container } from "@/components/marketing/container";
 import { OrderActions } from "@/components/admin/order-actions";
 import { OrderNotes } from "@/components/admin/order-notes";
-import { formatMoney, paymentMethodLabel, paymentRegionLabel } from "@/lib/notifications/types";
+import {
+  formatMoney,
+  paymentMethodLabel,
+  paymentRegionLabel,
+  paymentStatusLabel,
+} from "@/lib/notifications/types";
 
 export const dynamic = "force-dynamic";
 
@@ -82,7 +87,11 @@ export default async function AdminOrderDetailPage({
           <dl className="mt-2 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
             <div>
               <dt className="text-muted-foreground">Total</dt>
-              <dd className="font-medium">{formatMoney(order.total, order.currency)}</dd>
+              <dd className="font-medium">
+                {order.paymentStatus === "PENDING_QUOTE"
+                  ? paymentStatusLabel(order.paymentStatus)
+                  : formatMoney(order.total, order.currency)}
+              </dd>
             </div>
             <div>
               <dt className="text-muted-foreground">Region</dt>

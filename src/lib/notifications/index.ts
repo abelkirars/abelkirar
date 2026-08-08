@@ -8,16 +8,18 @@ import { parseRecipientList } from "@/lib/phone";
 import {
   adminConciseMessage,
   adminNewOrderEmail,
+  adminNewCustomOrderEmail,
   adminOrderCancelledEmail,
   adminPaymentConfirmedEmail,
   adminPaymentNotFoundEmail,
   adminPaymentSubmittedEmail,
   customerOrderPendingEmail,
+  customerCustomOrderPendingEmail,
   customerPaymentConfirmedEmail,
   studentInviteEmail,
   studentPasswordResetEmail,
 } from "@/lib/notifications/templates";
-import type { OrderNotificationData } from "@/lib/notifications/types";
+import type { OrderNotificationData, CustomOrderNotificationData } from "@/lib/notifications/types";
 
 /**
  * Sends to every configured admin email address. If none are configured,
@@ -89,6 +91,24 @@ export const notificationService = {
     ]);
     const { subject, html } = customerPaymentConfirmedEmail(order, t, tPaymentLabels);
     return sendEmail({ to: order.customerEmail, subject, html });
+  },
+
+  /**
+   * Custom Made quote-request flow (OrderType.CUSTOM_QUOTE) — no price or
+   * payment method exists yet, so neither is mentioned. No Twilio leg (out
+   * of scope for this phase) and no OrderNotificationLog write (that table
+   * is Phase 4 work) — failures are logged to console by the caller, same
+   * as every other notification call before OrderNotificationLog existed.
+   */
+  async notifyCustomerCustomOrderPending(order: CustomOrderNotificationData): Promise<SendEmailResult> {
+    const t = await getTranslations({ locale: order.locale, namespace: "emails.customOrderPending" });
+    const { subject, html } = customerCustomOrderPendingEmail(order, t);
+    return sendEmail({ to: order.customerEmail, subject, html });
+  },
+
+  async notifyAdminNewCustomOrder(order: CustomOrderNotificationData): Promise<SendEmailResult> {
+    const { subject, html } = adminNewCustomOrderEmail(order);
+    return sendToAdminEmails(subject, html);
   },
 
   async notifyAdminNewOrder(order: OrderNotificationData): Promise<SendEmailResult> {

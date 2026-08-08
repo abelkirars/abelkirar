@@ -1,24 +1,44 @@
 "use client";
 
 import { useId, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import { ChevronDown, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8MB
+// Reference-photo upload lands in Phase 3 (private bucket + signed URLs).
+// The picker UI/state below is kept intact, just not rendered, so wiring it
+// up later doesn't require rebuilding this part.
+const ENABLE_CUSTOM_ORDER_IMAGE_UPLOAD = false;
 
-export function CustomOrderNotice() {
+type PaymentRegion = "US" | "EUROZONE";
+
+export function CustomOrderNotice({ productId }: { productId: string }) {
+  const t = useTranslations("customOrderNotice");
+  const router = useRouter();
   const panelId = useId();
-  const errorId = useId();
+  const imageErrorId = useId();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [expanded, setExpanded] = useState(false);
   const [description, setDescription] = useState("");
   const [preview, setPreview] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
+
+  const [customerName, setCustomerName] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [paymentRegion, setPaymentRegion] = useState<PaymentRegion>("US");
+
+  const [loading, setLoading] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -27,15 +47,15 @@ export function CustomOrderNotice() {
     if (!file) return;
 
     if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
-      setError("Please upload a JPG, PNG, or WebP image.");
+      setImageError(t("imageTypeError"));
       return;
     }
     if (file.size > MAX_IMAGE_BYTES) {
-      setError("Image must be smaller than 8MB.");
+      setImageError(t("imageSizeError"));
       return;
     }
 
-    setError(null);
+    setImageError(null);
     setPreview((prev) => {
       if (prev) URL.revokeObjectURL(prev);
       return URL.createObjectURL(file);
@@ -47,8 +67,40 @@ export function CustomOrderNotice() {
       if (prev) URL.revokeObjectURL(prev);
       return null;
     });
-    setError(null);
+    setImageError(null);
   }
+
+  async function handleSubmit() {
+    setSubmitError(null);
+    setLoading(true);
+    try {
+      const res = await fetch("/api/custom-orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId,
+          description,
+          customerName,
+          customerEmail,
+          customerPhone,
+          paymentRegion,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSubmitError(data.error ?? t("genericError"));
+        return;
+      }
+      router.push(`/store/order/${data.orderNumber}`);
+    } catch {
+      setSubmitError(t("genericError"));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const canSubmit =
+    description.trim().length >= 10 && !!customerName && !!customerEmail && !!customerPhone;
 
   return (
     <div className="mt-8 rounded-2xl border border-border bg-muted/30 p-6">
@@ -59,9 +111,7 @@ export function CustomOrderNotice() {
         aria-controls={panelId}
         className="flex w-full items-center justify-between gap-2 text-left"
       >
-        <span className="font-heading text-lg font-semibold">
-          Custom Order Available
-        </span>
+        <span className="font-heading text-lg font-semibold">{t("toggleLabel")}</span>
         <ChevronDown
           className={cn(
             "size-5 shrink-0 text-muted-foreground transition-transform",
@@ -71,82 +121,136 @@ export function CustomOrderNotice() {
       </button>
 
       <div id={panelId} hidden={!expanded} className="mt-5 space-y-5">
+        <p className="rounded-lg border border-accent/30 bg-accent/5 p-3 text-sm text-foreground">
+          {t("pricingNotice")}
+        </p>
+
         <div>
           <label htmlFor="customOrderDescription" className="text-sm font-medium">
-            Describe your custom order
+            {t("descriptionLabel")}
           </label>
           <Textarea
             id="customOrderDescription"
             className="mt-2"
-            placeholder="Describe the design, color, size, decoration, tuning, or other details you want."
+            placeholder={t("descriptionPlaceholder")}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
         </div>
 
-        <div>
-          <label htmlFor="customOrderImage" className="text-sm font-medium">
-            Upload a custom order image
-          </label>
+        {ENABLE_CUSTOM_ORDER_IMAGE_UPLOAD && (
+          <div>
+            <label htmlFor="customOrderImage" className="text-sm font-medium">
+              {t("imageLabel")}
+            </label>
 
-          <input
-            ref={fileInputRef}
-            id="customOrderImage"
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            onChange={handleFileChange}
-            aria-invalid={!!error}
-            aria-describedby={error ? errorId : undefined}
-            className="sr-only"
-          />
+            <input
+              ref={fileInputRef}
+              id="customOrderImage"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={handleFileChange}
+              aria-invalid={!!imageError}
+              aria-describedby={imageError ? imageErrorId : undefined}
+              className="sr-only"
+            />
 
-          {!preview ? (
-            <div className="mt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                Choose image
-              </Button>
-            </div>
-          ) : (
-            <div className="mt-2 space-y-2">
-              <div className="relative aspect-4/3 w-full max-w-xs overflow-hidden rounded-lg border border-border">
-                <Image
-                  src={preview}
-                  alt="Selected custom order reference"
-                  fill
-                  unoptimized
-                  sizes="(max-width: 640px) 100vw, 320px"
-                  className="object-cover"
-                />
-                <button
+            {!preview ? (
+              <div className="mt-2">
+                <Button
                   type="button"
-                  onClick={handleRemoveImage}
-                  aria-label="Remove selected image"
-                  className="absolute top-2 right-2 flex size-7 items-center justify-center rounded-full bg-background/90 text-foreground shadow-sm transition-colors hover:bg-background"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
                 >
-                  <X className="size-4" />
-                </button>
+                  {t("chooseImage")}
+                </Button>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                Replace image
-              </Button>
-            </div>
-          )}
+            ) : (
+              <div className="mt-2 space-y-2">
+                <div className="relative aspect-4/3 w-full max-w-xs overflow-hidden rounded-lg border border-border">
+                  <Image
+                    src={preview}
+                    alt="Selected custom order reference"
+                    fill
+                    unoptimized
+                    sizes="(max-width: 640px) 100vw, 320px"
+                    className="object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleRemoveImage}
+                    aria-label={t("removeImageAriaLabel")}
+                    className="absolute top-2 right-2 flex size-7 items-center justify-center rounded-full bg-background/90 text-foreground shadow-sm transition-colors hover:bg-background"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {t("replaceImage")}
+                </Button>
+              </div>
+            )}
 
-          {error && (
-            <p id={errorId} role="alert" className="mt-2 text-sm text-destructive">
-              {error}
-            </p>
-          )}
+            {imageError && (
+              <p id={imageErrorId} role="alert" className="mt-2 text-sm text-destructive">
+                {imageError}
+              </p>
+            )}
+          </div>
+        )}
+
+        <div className="space-y-3 border-t border-border pt-5">
+          <Label>{t("contactDetails")}</Label>
+          <Input
+            placeholder={t("fullName")}
+            value={customerName}
+            onChange={(e) => setCustomerName(e.target.value)}
+          />
+          <Input
+            type="email"
+            placeholder={t("emailAddress")}
+            value={customerEmail}
+            onChange={(e) => setCustomerEmail(e.target.value)}
+          />
+          <Input
+            type="tel"
+            placeholder={t("phoneNumber")}
+            value={customerPhone}
+            onChange={(e) => setCustomerPhone(e.target.value)}
+          />
         </div>
+
+        <div className="space-y-3 border-t border-border pt-5">
+          <Label>{t("paymentRegion")}</Label>
+          <div className="flex gap-2">
+            {(["US", "EUROZONE"] as const).map((region) => (
+              <button
+                key={region}
+                type="button"
+                onClick={() => setPaymentRegion(region)}
+                className={cn(
+                  "flex-1 rounded-md border px-3 py-2 text-sm transition-colors",
+                  paymentRegion === region
+                    ? "border-primary bg-primary/10 text-foreground"
+                    : "border-border text-muted-foreground hover:border-primary/50"
+                )}
+              >
+                {region === "US" ? t("usRegion") : t("eurozoneRegion")}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {submitError && <p className="text-sm text-destructive">{submitError}</p>}
+
+        <Button className="w-full" disabled={loading || !canSubmit} onClick={handleSubmit}>
+          {loading ? t("submitting") : t("submit")}
+        </Button>
       </div>
     </div>
   );

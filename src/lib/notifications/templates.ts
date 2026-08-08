@@ -5,6 +5,7 @@ import {
   paymentStatusLabel,
   translatedPaymentMethodLabel,
   type OrderNotificationData,
+  type CustomOrderNotificationData,
 } from "@/lib/notifications/types";
 import { getPaymentInstructions } from "@/lib/notifications/payment-instructions";
 
@@ -85,6 +86,45 @@ export function customerPaymentConfirmedEmail(
         total: formatMoney(order.total, order.currency),
       })}</p>
       <p>${t("nextSteps")}</p>
+    `,
+  };
+}
+
+/**
+ * Customer-facing — translated per the recipient's locale, resolving
+ * "emails.customOrderPending" keys. The pricing notice is placed first,
+ * above every other line: this must never read as a priced order
+ * confirmation, since no price or payment method exists yet.
+ */
+export function customerCustomOrderPendingEmail(
+  order: CustomOrderNotificationData,
+  t: EmailTranslator
+) {
+  return {
+    subject: t("subject", { orderNumber: order.orderNumber }),
+    html: `
+      <p><strong>${t("pricingNotice")}</strong></p>
+      <p>${t("greeting", { customerName: order.customerName })}</p>
+      <p><strong>${t("orderNumberLabel")}:</strong> ${order.orderNumber}</p>
+      <p><strong>${t("productLabel")}:</strong> ${order.productName}</p>
+      <p><strong>${t("descriptionLabel")}:</strong> ${order.description}</p>
+    `,
+  };
+}
+
+/** Admin-facing — English only, matching every other admin order email. */
+export function adminNewCustomOrderEmail(order: CustomOrderNotificationData) {
+  return {
+    subject: `New custom order request ${order.orderNumber} — quote needed`,
+    html: `
+      <p><strong>Order:</strong> ${order.orderNumber}</p>
+      <p><strong>Customer:</strong> ${order.customerName}</p>
+      <p><strong>Email:</strong> ${order.customerEmail}</p>
+      <p><strong>Phone:</strong> ${order.customerPhone}</p>
+      <p><strong>Instrument:</strong> ${order.productName}</p>
+      <p><strong>Payment region:</strong> ${order.paymentRegion === "US" ? "United States" : "Eurozone"}</p>
+      <p><strong>Request:</strong> ${order.description}</p>
+      <p><a href="${order.adminOrderUrl}">Review this request and set a quote in the admin dashboard</a></p>
     `,
   };
 }

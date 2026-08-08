@@ -71,7 +71,11 @@ export default async function AdminOrdersPage({
                     </Link>
                   </td>
                   <td className="py-2 pr-4">{order.customerName}</td>
-                  <td className="py-2 pr-4">{formatMoney(order.total, order.currency)}</td>
+                  <td className="py-2 pr-4">
+                    {order.paymentStatus === "PENDING_QUOTE"
+                      ? paymentStatusLabel(order.paymentStatus)
+                      : formatMoney(order.total, order.currency)}
+                  </td>
                   <td className="py-2 pr-4">{order.paymentMethod}</td>
                   <td className="py-2 pr-4">{paymentStatusLabel(order.paymentStatus)}</td>
                   <td className="py-2 pr-4">{order.status}</td>

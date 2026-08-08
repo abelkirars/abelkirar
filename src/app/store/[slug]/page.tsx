@@ -61,7 +61,7 @@ export default async function ProductDetailPage({
             />
           </div>
 
-          {product.isCustomMade && <CustomOrderNotice />}
+          {product.isCustomMade && <CustomOrderNotice productId={product.id} />}
         </div>
       </Container>
     </section>
