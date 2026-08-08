@@ -49,10 +49,23 @@ export async function POST(
       `${siteUrl}/admin/orders/${updated.orderNumber}`
     );
 
-    await Promise.all([
+    const [customerResult, adminResult] = await Promise.all([
       notificationService.notifyCustomerPaymentConfirmed(notificationData),
       notificationService.notifyAdminPaymentConfirmed(notificationData, auth.session.displayName),
     ]);
+
+    if (!customerResult.sent) {
+      console.error(
+        `[mark-paid] Customer payment-confirmed email not sent for order ${updated.orderNumber}:`,
+        customerResult.error
+      );
+    }
+    if (!adminResult.sent) {
+      console.error(
+        `[mark-paid] Admin payment-confirmed email not sent for order ${updated.orderNumber}:`,
+        adminResult.error
+      );
+    }
   } catch (err) {
     console.error("[mark-paid] Failed to send notifications:", err);
   }

@@ -97,7 +97,13 @@ export async function POST(
   try {
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL as string;
     const notificationData = toNotificationData(order, `${siteUrl}/admin/orders/${order.orderNumber}`);
-    await notificationService.notifyAdminPaymentSubmitted(notificationData);
+    const adminResult = await notificationService.notifyAdminPaymentSubmitted(notificationData);
+    if (!adminResult.sent) {
+      console.error(
+        `[confirm-payment] Admin payment-submitted email not sent for order ${order.orderNumber}:`,
+        adminResult.error
+      );
+    }
   } catch (err) {
     console.error("[confirm-payment] Failed to send admin notification:", err);
   }

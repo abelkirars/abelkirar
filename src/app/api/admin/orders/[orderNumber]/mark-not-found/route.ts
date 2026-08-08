@@ -40,7 +40,13 @@ export async function POST(
       updated,
       `${siteUrl}/admin/orders/${updated.orderNumber}`
     );
-    await notificationService.notifyAdminPaymentNotFound(notificationData);
+    const adminResult = await notificationService.notifyAdminPaymentNotFound(notificationData);
+    if (!adminResult.sent) {
+      console.error(
+        `[mark-not-found] Admin payment-not-found email not sent for order ${updated.orderNumber}:`,
+        adminResult.error
+      );
+    }
   } catch (err) {
     console.error("[mark-not-found] Failed to send admin notification:", err);
   }

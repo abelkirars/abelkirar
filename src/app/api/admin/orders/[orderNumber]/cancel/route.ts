@@ -37,7 +37,13 @@ export async function POST(
       updated,
       `${siteUrl}/admin/orders/${updated.orderNumber}`
     );
-    await notificationService.notifyAdminOrderCancelled(notificationData, auth.session.displayName);
+    const adminResult = await notificationService.notifyAdminOrderCancelled(notificationData, auth.session.displayName);
+    if (!adminResult.sent) {
+      console.error(
+        `[cancel] Admin order-cancelled email not sent for order ${updated.orderNumber}:`,
+        adminResult.error
+      );
+    }
   } catch (err) {
     console.error("[cancel] Failed to send admin notification:", err);
   }
