@@ -19,10 +19,21 @@ import {
 } from "@/lib/notifications/templates";
 import type { OrderNotificationData } from "@/lib/notifications/types";
 
-/** Sends to every configured admin email address; no-ops (as a success — there's nothing to fail) if none are set. */
+/**
+ * Sends to every configured admin email address. If none are configured,
+ * this does NOT report success — an empty ADMIN_NOTIFICATION_EMAILS is a
+ * real, visible misconfiguration (the admin silently getting zero order
+ * notifications), not a no-op. Never throws — a missing config must not
+ * fail the order/action that triggered this call.
+ */
 async function sendToAdminEmails(subject: string, html: string): Promise<SendEmailResult> {
   const recipients = adminEmailRecipients();
-  if (!recipients.length) return { sent: true };
+  if (!recipients.length) {
+    console.warn(
+      `[notifications] ADMIN_NOTIFICATION_EMAILS is not configured — skipping admin email: ${subject}`
+    );
+    return { sent: false, error: "No admin recipients configured (ADMIN_NOTIFICATION_EMAILS is empty)" };
+  }
   return sendEmail({ to: recipients, subject, html });
 }
 

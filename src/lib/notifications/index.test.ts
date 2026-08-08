@@ -41,6 +41,7 @@ vi.mock("@/lib/notifications/twilio-client", () => ({ isTwilioNotificationsEnabl
 vi.mock("@/lib/notifications/order-notifications", () => ({ sendOrderNotifications: vi.fn() }));
 
 import { notificationService } from "@/lib/notifications";
+import type { OrderNotificationData } from "@/lib/notifications/types";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -102,5 +103,42 @@ describe("notificationService.notifyStudentInvite locale threading", () => {
       2,
       expect.objectContaining({ subject: en.emails.studentInvite.subject })
     );
+  });
+});
+
+function makeOrder(): OrderNotificationData {
+  return {
+    id: "order_1",
+    orderNumber: "ORD-0001",
+    customerName: "Jane Doe",
+    customerEmail: "jane@example.com",
+    customerPhone: "+15551234567",
+    subtotal: 10000,
+    total: 10000,
+    currency: "usd",
+    paymentMethod: "ZELLE",
+    paymentRegion: "US",
+    paymentStatus: "PENDING_VERIFICATION",
+    orderStatus: "PENDING",
+    createdAt: new Date("2026-01-01T00:00:00Z"),
+    items: [{ name: "Heritage Kirar", quantity: 1 }],
+    adminOrderUrl: "https://example.com/admin/orders/ORD-0001",
+    locale: "en",
+  };
+}
+
+describe("notificationService.notifyAdminNewOrder — empty ADMIN_NOTIFICATION_EMAILS", () => {
+  it("reports sent: false, not sent: true, when no admin recipients are configured", async () => {
+    // adminEmailRecipients() is mocked to return [] for this whole file (see
+    // the "@/lib/notifications/email" mock above) — this is exactly the
+    // production state that went undetected for two weeks: the env var
+    // empty, admin notifications silently reporting success.
+    const result = await notificationService.notifyAdminNewOrder(makeOrder());
+
+    expect(result.sent).toBe(false);
+    expect(result.error).toMatch(/no admin recipients configured/i);
+    // The empty-recipients check short-circuits before ever calling
+    // sendEmail — confirms this isn't accidentally passing via some other path.
+    expect(mockSendEmail).not.toHaveBeenCalled();
   });
 });

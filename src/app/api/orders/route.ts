@@ -54,10 +54,23 @@ export async function POST(request: Request) {
     const adminOrderUrl = `${siteUrl}/admin/orders/${order.orderNumber}`;
     const notificationData = toNotificationData(order, adminOrderUrl);
 
-    await Promise.all([
+    const [customerResult, adminResult] = await Promise.all([
       notificationService.notifyCustomerOrderPending(notificationData),
       notificationService.notifyAdminNewOrder(notificationData),
     ]);
+
+    if (!customerResult.sent) {
+      console.error(
+        `[orders] Customer order-pending email not sent for order ${order.orderNumber}:`,
+        customerResult.error
+      );
+    }
+    if (!adminResult.sent) {
+      console.error(
+        `[orders] Admin new-order email not sent for order ${order.orderNumber}:`,
+        adminResult.error
+      );
+    }
   } catch (err) {
     console.error("[orders] Failed to send order notifications:", err);
   }
