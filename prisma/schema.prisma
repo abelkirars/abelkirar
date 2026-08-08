@@ -31,6 +31,7 @@ enum OrderType {
   PRODUCT
   COURSE
   SUBSCRIPTION
+  CUSTOM_QUOTE
 }
 
 enum ContactStatus {
@@ -51,6 +52,7 @@ enum PaymentStatus {
   PAID
   PAYMENT_NOT_FOUND
   REFUNDED
+  PENDING_QUOTE
 }
 
 enum PaymentRegion {
@@ -145,9 +147,19 @@ model Order {
   whatsappSentAt     DateTime?
   whatsappError      String?
 
+  // Custom Made quote-request fields (docs plan, Phase 1 — schema only, no
+  // application code reads or writes these yet). Nullable; populated only
+  // for OrderType.CUSTOM_QUOTE orders, never for the manual PRODUCT flow.
+  customOrderDescription String?
+  customOrderImagePath   String?
+  quotedAt               DateTime?
+  quotedById             String?
+  quotedBy               Admin?         @relation("QuotedBy", fields: [quotedById], references: [id])
+
   items                OrderItem[]
   paymentConfirmations PaymentConfirmation[]
   notes                OrderNote[]
+  notificationLogs     OrderNotificationLog[]
 }
 
 model Admin {
@@ -168,6 +180,7 @@ model Admin {
   passwordChangedAt DateTime?
 
   confirmedOrders Order[]     @relation("PaymentConfirmedBy")
+  quotedOrders    Order[]     @relation("QuotedBy")
   notes           OrderNote[]
 
   createdWeeklyPractices WeeklyPractice[]
@@ -197,6 +210,32 @@ model OrderNote {
   admin     Admin    @relation(fields: [adminId], references: [id])
   body      String
   createdAt DateTime @default(now())
+}
+
+/// One row per outbound order-notification-email attempt (customer- or
+/// admin-facing), across the order's whole lifecycle — order-pending,
+/// payment-confirmed, quote-ready, etc. Deliberately a child table rather
+/// than fixed columns on Order: an order sends multiple distinct emails
+/// over its lifetime, so a fixed pair of columns would be silently
+/// overwritten by whichever email sent most recently, losing both the
+/// history and the ability to tell which specific email failed. No
+/// application code reads or writes this table yet (Phase 1 — schema only).
+model OrderNotificationLog {
+  id      String @id @default(cuid())
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  /// Which notificationService method produced this attempt, e.g.
+  /// "customerOrderPending", "adminNewOrder", "customerQuoteReady". A plain
+  /// string rather than a Postgres enum — same reasoning as
+  /// StudentProfile.locale below: this set will keep growing as new
+  /// notification types are added, and an enum would need its own
+  /// ALTER TYPE migration every time.
+  kind      String
+  status    NotificationDeliveryStatus
+  error     String?
+  createdAt DateTime                   @default(now())
+
+  @@index([orderId])
 }
 
 /// Simple DB-backed rate limiter (no Redis in this project). Rows older than
