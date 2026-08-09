@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/db";
-import { resend } from "@/lib/resend";
+import { sendEmail } from "@/lib/notifications/email";
 import { createNewsletterSchema } from "@/lib/validations/newsletter";
 
 export async function POST(request: Request) {
@@ -24,14 +24,16 @@ export async function POST(request: Request) {
     create: { email, source },
   });
 
-  if (process.env.RESEND_API_KEY) {
-    const tEmail = await getTranslations("emails.newsletterWelcome");
-    await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL as string,
-      to: email,
-      subject: tEmail("subject"),
-      html: `<p>${tEmail("body")}</p>`,
-    });
+  // The subscriber is already saved at this point — a notification failure
+  // must never turn into an error response for a signup that succeeded.
+  const tEmail = await getTranslations("emails.newsletterWelcome");
+  const emailResult = await sendEmail({
+    to: email,
+    subject: tEmail("subject"),
+    html: `<p>${tEmail("body")}</p>`,
+  });
+  if (!emailResult.sent) {
+    console.error(`[newsletter] Welcome email not sent for ${subscriber.id}:`, emailResult.error);
   }
 
   return NextResponse.json({ ok: true, id: subscriber.id });

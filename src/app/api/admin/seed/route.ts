@@ -187,6 +187,9 @@ export async function POST() {
 }
 
 export async function GET() {
+  const auth = await requireAdminApi();
+  if ("response" in auth) return auth.response;
+
   try {
     const products = await prisma.product.findMany({
       select: { slug: true, name: true, category: true, basePrice: true },

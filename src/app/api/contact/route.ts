@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/db";
-import { resend } from "@/lib/resend";
+import { sendEmail } from "@/lib/notifications/email";
 import { createContactSchema } from "@/lib/validations/contact";
 
 export async function POST(request: Request) {
@@ -20,9 +20,10 @@ export async function POST(request: Request) {
     data: parsed.data,
   });
 
-  if (process.env.RESEND_API_KEY && process.env.CONTACT_NOTIFICATION_EMAIL) {
-    await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL as string,
+  // The submission is already saved at this point — a notification failure
+  // must never turn into an error response for a submission that succeeded.
+  if (process.env.CONTACT_NOTIFICATION_EMAIL) {
+    const emailResult = await sendEmail({
       to: process.env.CONTACT_NOTIFICATION_EMAIL,
       subject: `New inquiry: ${parsed.data.topic ?? "General"} — ${parsed.data.name}`,
       html: `
@@ -33,6 +34,12 @@ export async function POST(request: Request) {
         <p><strong>Message:</strong><br/>${parsed.data.message}</p>
       `,
     });
+    if (!emailResult.sent) {
+      console.error(
+        `[contact] Admin notification email not sent for submission ${submission.id}:`,
+        emailResult.error
+      );
+    }
   }
 
   return NextResponse.json({ ok: true, id: submission.id });
