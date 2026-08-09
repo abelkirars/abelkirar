@@ -122,3 +122,35 @@ confirmed serving real photos correctly.
 4. Delete the temp/debug-env branch, local and remote.
 5. `docs/PROJECT_STATE.md` has never been created, so the externalised-state layer of the durability
    system does not exist.
+
+---
+
+## 2026-08-10 — Correction: mark-paid and mark-not-found were never actually guarded
+
+**Correction to the 2026-08-09 entry.** That entry states that hiding the Mark-as-paid and
+Mark-payment-not-found buttons while `PENDING_QUOTE` "closed a hole where clicking them would have
+produced a `PAID` order with a zero total." That was wrong. This entry does not edit the original —
+the record of what was believed at the time has value — it corrects it here.
+
+**What was actually true.** The guard existed only in `order-actions.tsx`, a client component. Both API
+routes accepted the POST regardless of `paymentStatus`. An authenticated admin could produce a `PAID`
+order with `total` 0 via a direct request — the precise outcome the 2026-08-09 entry claimed was
+prevented, and a violation of that same entry's stated invariant that no code may treat `total === 0` as
+a real price.
+
+**What was already correct.** `/quote` had the correct server-side guard from the start (409 when
+`paymentStatus` is not `PENDING_QUOTE`). The pattern existed in the codebase; it simply was not applied
+to the other two routes.
+
+**Decision — fix.** Both routes now 409 before any other check, matching `quote/route.ts`.
+
+**Severity.** Required an authenticated admin session, so this was never externally exposed. The problem
+was the false confidence in the log, not the exposure.
+
+**General rule.** Hiding a control in the UI is not a guard. Any invariant that matters must be enforced
+server-side, and a decision-log entry claiming a hole is closed should name where the check actually
+lives.
+
+**Still open.** `POST /api/orders/[orderNumber]/confirm-payment` has no `PENDING_QUOTE` check either. It
+writes a `PaymentConfirmation` row and emails the admin a $0.00 notification, but never changes order
+status — data hygiene rather than money correctness. Deliberately deferred to the Tier 4 test work.
