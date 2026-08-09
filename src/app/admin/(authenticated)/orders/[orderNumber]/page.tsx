@@ -14,6 +14,23 @@ import {
 
 export const dynamic = "force-dynamic";
 
+const NOTIFICATION_KIND_LABELS: Record<string, string> = {
+  customerOrderPending: "Order confirmation (customer)",
+  customerQuoteReady: "Quote ready (customer)",
+  customerPaymentConfirmed: "Payment confirmed (customer)",
+  customerCustomOrderPending: "Custom order received (customer)",
+  adminNewCustomOrder: "New custom order (admin)",
+  adminNewOrder: "New order (admin)",
+  adminPaymentSubmitted: "Payment submitted (admin)",
+  adminPaymentConfirmed: "Payment confirmed (admin)",
+  adminPaymentNotFound: "Payment not found (admin)",
+  adminOrderCancelled: "Order cancelled (admin)",
+};
+
+function notificationKindLabel(kind: string): string {
+  return NOTIFICATION_KIND_LABELS[kind] ?? kind;
+}
+
 async function getOrder(orderNumber: string) {
   return prisma.order.findUnique({
     where: { orderNumber },
@@ -22,6 +39,7 @@ async function getOrder(orderNumber: string) {
       paymentConfirmations: { orderBy: { createdAt: "desc" } },
       notes: { orderBy: { createdAt: "desc" }, include: { admin: true } },
       paymentConfirmedBy: true,
+      notificationLogs: { orderBy: { createdAt: "desc" } },
     },
   });
 }
@@ -194,6 +212,25 @@ export default async function AdminOrderDetailPage({
             ))}
           </ul>
         </div>
+
+        {order.notificationLogs.length > 0 && (
+          <div className="rounded-lg bg-card p-4 ring-1 ring-foreground/10">
+            <h2 className="font-medium">Failed notification emails</h2>
+            <ul className="mt-2 space-y-3">
+              {order.notificationLogs.map((log) => (
+                <li key={log.id} className="rounded-md bg-muted/50 p-3 text-sm">
+                  <p className="font-medium text-destructive">
+                    {notificationKindLabel(log.kind)} — failed to send
+                  </p>
+                  {log.error && <p className="mt-1 text-muted-foreground">{log.error}</p>}
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {log.createdAt.toLocaleString()}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <div className="rounded-lg bg-card p-4 ring-1 ring-foreground/10">
           <h2 className="font-medium">Internal notes</h2>
