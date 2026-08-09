@@ -40,12 +40,22 @@ vi.mock("@/lib/notifications/whatsapp", () => ({ sendWhatsAppToRecipients: vi.fn
 vi.mock("@/lib/notifications/twilio-client", () => ({ isTwilioNotificationsEnabled: () => false }));
 vi.mock("@/lib/notifications/order-notifications", () => ({ sendOrderNotifications: vi.fn() }));
 
+const mockOrderNotificationLogCreate = vi.fn();
+vi.mock("@/lib/db", () => ({
+  prisma: {
+    orderNotificationLog: {
+      create: (...args: unknown[]) => mockOrderNotificationLogCreate(...args),
+    },
+  },
+}));
+
 import { notificationService } from "@/lib/notifications";
 import type { OrderNotificationData } from "@/lib/notifications/types";
 
 beforeEach(() => {
   vi.clearAllMocks();
   mockSendEmail.mockResolvedValue({ sent: true });
+  mockOrderNotificationLogCreate.mockResolvedValue(undefined);
 });
 
 describe("notificationService.notifyStudentInvite locale threading", () => {
@@ -140,5 +150,33 @@ describe("notificationService.notifyAdminNewOrder — empty ADMIN_NOTIFICATION_E
     // The empty-recipients check short-circuits before ever calling
     // sendEmail — confirms this isn't accidentally passing via some other path.
     expect(mockSendEmail).not.toHaveBeenCalled();
+  });
+});
+
+describe("withOrderNotificationLog (exercised via notifyCustomerOrderPending)", () => {
+  it("writes a FAILED OrderNotificationLog row when the send fails", async () => {
+    mockSendEmail.mockResolvedValue({ sent: false, error: "Resend rejected the email" });
+
+    const order = makeOrder();
+    const result = await notificationService.notifyCustomerOrderPending(order);
+
+    expect(result.sent).toBe(false);
+    expect(mockOrderNotificationLogCreate).toHaveBeenCalledWith({
+      data: {
+        orderId: order.id,
+        kind: "customerOrderPending",
+        status: "FAILED",
+        error: "Resend rejected the email",
+      },
+    });
+  });
+
+  it("writes nothing when the send succeeds", async () => {
+    mockSendEmail.mockResolvedValue({ sent: true });
+
+    const result = await notificationService.notifyCustomerOrderPending(makeOrder());
+
+    expect(result.sent).toBe(true);
+    expect(mockOrderNotificationLogCreate).not.toHaveBeenCalled();
   });
 });

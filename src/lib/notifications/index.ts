@@ -1,4 +1,5 @@
 import { getTranslations } from "next-intl/server";
+import { prisma } from "@/lib/db";
 import { sendEmail, adminEmailRecipients, type SendEmailResult } from "@/lib/notifications/email";
 import { sendSmsToRecipients } from "@/lib/notifications/sms";
 import { sendWhatsAppToRecipients } from "@/lib/notifications/whatsapp";
@@ -60,6 +61,41 @@ async function sendToTwilioChannels(eventLabel: string, order: OrderNotification
 }
 
 /**
+ * Wraps an order-related email send with a failure record in
+ * OrderNotificationLog — failures only, not successes: there's no UI that
+ * consumes success history yet, and a table containing only failures is
+ * simpler to badge and to read. The schema still supports SENT if that's
+ * wanted later.
+ *
+ * The log write happens strictly after the real send already resolved, so
+ * it can never affect whether the email itself succeeded. If the write
+ * itself fails, that's logged and swallowed — an observability failure must
+ * never look like, or cause, a notification failure.
+ */
+async function withOrderNotificationLog(
+  orderId: string,
+  kind: string,
+  send: () => Promise<SendEmailResult>
+): Promise<SendEmailResult> {
+  const result = await send();
+
+  if (!result.sent) {
+    try {
+      await prisma.orderNotificationLog.create({
+        data: { orderId, kind, status: "FAILED", error: result.error },
+      });
+    } catch (err) {
+      console.error(
+        `[notifications] Failed to write OrderNotificationLog (order ${orderId}, kind ${kind}):`,
+        err
+      );
+    }
+  }
+
+  return result;
+}
+
+/**
  * Single entry point for order notifications. Email is always the primary,
  * guaranteed channel (Resend is already configured in this project). SMS and
  * WhatsApp go through Twilio and only ever fire when TWILIO_NOTIFICATIONS_ENABLED
@@ -82,7 +118,9 @@ export const notificationService = {
       getTranslations({ locale: order.locale, namespace: "paymentInstructions" }),
     ]);
     const { subject, html } = customerOrderPendingEmail(order, t, tPaymentLabels, tInstructions);
-    return sendEmail({ to: order.customerEmail, subject, html });
+    return withOrderNotificationLog(order.id, "customerOrderPending", () =>
+      sendEmail({ to: order.customerEmail, subject, html })
+    );
   },
 
   /**
@@ -98,7 +136,9 @@ export const notificationService = {
       getTranslations({ locale: order.locale, namespace: "paymentInstructions" }),
     ]);
     const { subject, html } = customerQuoteReadyEmail(order, t, tPaymentLabels, tInstructions);
-    return sendEmail({ to: order.customerEmail, subject, html });
+    return withOrderNotificationLog(order.id, "customerQuoteReady", () =>
+      sendEmail({ to: order.customerEmail, subject, html })
+    );
   },
 
   async notifyCustomerPaymentConfirmed(order: OrderNotificationData): Promise<SendEmailResult> {
@@ -107,25 +147,29 @@ export const notificationService = {
       getTranslations({ locale: order.locale, namespace: "paymentLabels" }),
     ]);
     const { subject, html } = customerPaymentConfirmedEmail(order, t, tPaymentLabels);
-    return sendEmail({ to: order.customerEmail, subject, html });
+    return withOrderNotificationLog(order.id, "customerPaymentConfirmed", () =>
+      sendEmail({ to: order.customerEmail, subject, html })
+    );
   },
 
   /**
    * Custom Made quote-request flow (OrderType.CUSTOM_QUOTE) — no price or
    * payment method exists yet, so neither is mentioned. No Twilio leg (out
-   * of scope for this phase) and no OrderNotificationLog write (that table
-   * is Phase 4 work) — failures are logged to console by the caller, same
-   * as every other notification call before OrderNotificationLog existed.
+   * of scope for this phase).
    */
   async notifyCustomerCustomOrderPending(order: CustomOrderNotificationData): Promise<SendEmailResult> {
     const t = await getTranslations({ locale: order.locale, namespace: "emails.customOrderPending" });
     const { subject, html } = customerCustomOrderPendingEmail(order, t);
-    return sendEmail({ to: order.customerEmail, subject, html });
+    return withOrderNotificationLog(order.id, "customerCustomOrderPending", () =>
+      sendEmail({ to: order.customerEmail, subject, html })
+    );
   },
 
   async notifyAdminNewCustomOrder(order: CustomOrderNotificationData): Promise<SendEmailResult> {
     const { subject, html } = adminNewCustomOrderEmail(order);
-    return sendToAdminEmails(subject, html);
+    return withOrderNotificationLog(order.id, "adminNewCustomOrder", () =>
+      sendToAdminEmails(subject, html)
+    );
   },
 
   async notifyAdminNewOrder(order: OrderNotificationData): Promise<SendEmailResult> {
@@ -137,7 +181,7 @@ export const notificationService = {
     // the email leg's result is returned; Twilio manages its own delivery
     // status independently (Order.smsStatus/whatsappStatus).
     const [emailResult] = await Promise.all([
-      sendToAdminEmails(subject, html),
+      withOrderNotificationLog(order.id, "adminNewOrder", () => sendToAdminEmails(subject, html)),
       sendOrderNotifications(order),
     ]);
     return emailResult;
@@ -146,7 +190,7 @@ export const notificationService = {
   async notifyAdminPaymentSubmitted(order: OrderNotificationData): Promise<SendEmailResult> {
     const { subject, html } = adminPaymentSubmittedEmail(order);
     const [emailResult] = await Promise.all([
-      sendToAdminEmails(subject, html),
+      withOrderNotificationLog(order.id, "adminPaymentSubmitted", () => sendToAdminEmails(subject, html)),
       sendToTwilioChannels("Payment confirmation submitted", order),
     ]);
     return emailResult;
@@ -158,7 +202,7 @@ export const notificationService = {
   ): Promise<SendEmailResult> {
     const { subject, html } = adminPaymentConfirmedEmail(order, confirmedByDisplayName);
     const [emailResult] = await Promise.all([
-      sendToAdminEmails(subject, html),
+      withOrderNotificationLog(order.id, "adminPaymentConfirmed", () => sendToAdminEmails(subject, html)),
       sendToTwilioChannels("Payment confirmed", order),
     ]);
     return emailResult;
@@ -167,7 +211,7 @@ export const notificationService = {
   async notifyAdminPaymentNotFound(order: OrderNotificationData): Promise<SendEmailResult> {
     const { subject, html } = adminPaymentNotFoundEmail(order);
     const [emailResult] = await Promise.all([
-      sendToAdminEmails(subject, html),
+      withOrderNotificationLog(order.id, "adminPaymentNotFound", () => sendToAdminEmails(subject, html)),
       sendToTwilioChannels("Payment not found", order),
     ]);
     return emailResult;
@@ -179,7 +223,7 @@ export const notificationService = {
   ): Promise<SendEmailResult> {
     const { subject, html } = adminOrderCancelledEmail(order, cancelledByDisplayName);
     const [emailResult] = await Promise.all([
-      sendToAdminEmails(subject, html),
+      withOrderNotificationLog(order.id, "adminOrderCancelled", () => sendToAdminEmails(subject, html)),
       sendToTwilioChannels("Order cancelled", order),
     ]);
     return emailResult;
