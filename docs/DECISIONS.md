@@ -154,3 +154,31 @@ lives.
 **Still open.** `POST /api/orders/[orderNumber]/confirm-payment` has no `PENDING_QUOTE` check either. It
 writes a `PaymentConfirmation` row and emails the admin a $0.00 notification, but never changes order
 status — data hygiene rather than money correctness. Deliberately deferred to the Tier 4 test work.
+
+---
+
+## 2026-08-10 — Guards examined during test coverage: three that read stronger than they are
+
+**Context.** While writing Tier 1 and Tier 2 order tests, three places turned up where the code's
+apparent intent and its actual enforcement diverge. None is a bug. All are recorded because the mark-paid
+incident earlier today was the same shape, and the next person to read this code will make the same
+assumption already made once.
+
+**1. `mark-not-found` has no CANCELLED guard.** `mark-paid` checks `status === "CANCELLED"` and 409s;
+`mark-not-found` does not. Marking a cancelled order's payment as not-found moves no money and changes no
+total, so this was left alone deliberately rather than fixed. No test claims coverage of a guard that
+isn't there.
+
+**2. `createManualOrder` has no internal quantity bound.** The `max(10)` cap lives in
+`checkoutItemSchema` at the API route boundary, and there is exactly one caller, which validates first.
+The function multiplies by whatever quantity it receives. A test documents this trust boundary rather
+than asserting a defense that doesn't exist inside the function.
+
+**3. The quote route's region-pairing guard has an unreachable branch.** `quoteSchema` accepts only
+`ZELLE` and `CASH_APP`, so a schema-valid method that is wrong for the order's region cannot be
+constructed. The "wrong method for US" branch is dead code, reachable only if the schema widens. The
+reachable branch is the omitted-method case, and that is what the test covers.
+
+**General rule.** When writing a test for a guard, confirm the guard exists and that the input can
+actually reach it. A test that passes for the wrong reason is worse than no test, because it converts an
+unknown into false confidence.
