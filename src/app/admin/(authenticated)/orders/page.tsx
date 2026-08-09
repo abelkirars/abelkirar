@@ -19,6 +19,9 @@ export default async function AdminOrdersPage({
     },
     orderBy: { createdAt: "desc" },
     take: 100,
+    include: {
+      notificationLogs: { where: { status: "FAILED" }, take: 1, select: { id: true } },
+    },
   });
 
   return (
@@ -69,6 +72,12 @@ export default async function AdminOrdersPage({
                     >
                       {order.orderNumber}
                     </Link>
+                    {order.notificationLogs.length > 0 && (
+                      <span className="ml-2 inline-flex items-center gap-1 text-xs font-medium text-destructive">
+                        <span className="size-1.5 rounded-full bg-destructive" aria-hidden="true" />
+                        Email failed
+                      </span>
+                    )}
                   </td>
                   <td className="py-2 pr-4">{order.customerName}</td>
                   <td className="py-2 pr-4">
