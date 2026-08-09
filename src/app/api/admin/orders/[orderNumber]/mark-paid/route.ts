@@ -20,6 +20,17 @@ export async function POST(
     return NextResponse.json({ error: "Order not found" }, { status: 404 });
   }
 
+  // A Custom Made order with no quote yet has no real price — mirrors the
+  // guard in quote/route.ts:23-25. The button that reaches this route is
+  // hidden client-side (order-actions.tsx) but that is not a server-side
+  // guarantee; this is.
+  if (order.paymentStatus === "PENDING_QUOTE") {
+    return NextResponse.json(
+      { error: "This order is awaiting a quote and has no price to confirm as paid" },
+      { status: 409 }
+    );
+  }
+
   // Prevent duplicate confirmation: once paid, this is a no-op 409, not a
   // silent re-confirmation that would overwrite who/when it was confirmed.
   if (order.paymentStatus === "PAID") {

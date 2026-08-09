@@ -19,6 +19,16 @@ export async function POST(
   if (!order) {
     return NextResponse.json({ error: "Order not found" }, { status: 404 });
   }
+
+  // Same guard as mark-paid — an unquoted order has no price, and
+  // "payment not found" is meaningless before a price exists to look for.
+  if (order.paymentStatus === "PENDING_QUOTE") {
+    return NextResponse.json(
+      { error: "This order is awaiting a quote and has no payment to check for" },
+      { status: 409 }
+    );
+  }
+
   if (order.paymentStatus === "PAID") {
     return NextResponse.json(
       { error: "Cannot mark an already-paid order as payment not found" },
