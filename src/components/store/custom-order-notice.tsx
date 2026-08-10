@@ -16,7 +16,9 @@ const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8MB
 // Reference-photo upload lands in Phase 3 (private bucket + signed URLs).
 // The picker UI/state below is kept intact, just not rendered, so wiring it
 // up later doesn't require rebuilding this part.
-const ENABLE_CUSTOM_ORDER_IMAGE_UPLOAD = false;
+// Wired to POST /api/custom-orders (piece 4) — field name "customOrderImage"
+// must match formData.get("customOrderImage") on the route exactly.
+const ENABLE_CUSTOM_ORDER_IMAGE_UPLOAD = true;
 
 type PaymentRegion = "US" | "EUROZONE";
 
@@ -30,6 +32,7 @@ export function CustomOrderNotice({ productId }: { productId: string }) {
   const [expanded, setExpanded] = useState(false);
   const [description, setDescription] = useState("");
   const [preview, setPreview] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
 
   const [customerName, setCustomerName] = useState("");
@@ -56,6 +59,7 @@ export function CustomOrderNotice({ productId }: { productId: string }) {
     }
 
     setImageError(null);
+    setImageFile(file);
     setPreview((prev) => {
       if (prev) URL.revokeObjectURL(prev);
       return URL.createObjectURL(file);
@@ -63,6 +67,7 @@ export function CustomOrderNotice({ productId }: { productId: string }) {
   }
 
   function handleRemoveImage() {
+    setImageFile(null);
     setPreview((prev) => {
       if (prev) URL.revokeObjectURL(prev);
       return null;
@@ -74,24 +79,29 @@ export function CustomOrderNotice({ productId }: { productId: string }) {
     setSubmitError(null);
     setLoading(true);
     try {
+      const formData = new FormData();
+      formData.set("productId", productId);
+      formData.set("description", description);
+      formData.set("customerName", customerName);
+      formData.set("customerEmail", customerEmail);
+      formData.set("customerPhone", customerPhone);
+      formData.set("paymentRegion", paymentRegion);
+      if (imageFile) formData.set("customOrderImage", imageFile);
+
       const res = await fetch("/api/custom-orders", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          productId,
-          description,
-          customerName,
-          customerEmail,
-          customerPhone,
-          paymentRegion,
-        }),
+        body: formData,
       });
       const data = await res.json();
       if (!res.ok) {
         setSubmitError(data.error ?? t("genericError"));
         return;
       }
-      router.push(`/store/order/${data.orderNumber}`);
+      if (data.imageUploaded === false) {
+        router.push(`/store/order/${data.orderNumber}?photoAttachFailed=1`);
+      } else {
+        router.push(`/store/order/${data.orderNumber}`);
+      }
     } catch {
       setSubmitError(t("genericError"));
     } finally {
