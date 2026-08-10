@@ -74,7 +74,7 @@ All from [prisma/schema.prisma](../prisma/schema.prisma).
 | `Admin` | An admin-dashboard user account (bcrypt password hash, custom JWT session). |
 | `PaymentConfirmation` | Customer-submitted proof of a Zelle/Cash App payment; never auto-marks the order paid. |
 | `OrderNote` | Internal admin note attached to an order. |
-| `OrderNotificationLog` | Intended per-attempt log of outbound order-notification emails. Table exists; **no code writes to it yet** (see §13). |
+| `OrderNotificationLog` | Per-attempt log of **failed** outbound order-notification emails — successes are not logged. Written by `withOrderNotificationLog()` in [src/lib/notifications/index.ts:75-93](../src/lib/notifications/index.ts#L75-L93), wrapping every `notify*` method. Surfaced in the admin orders list and order detail page (both reference it directly). |
 | `RateLimitHit` | Row-per-hit backing store for the DB-based sliding-window rate limiter. |
 | `OrderItem` | A line item on an order, with product name/image/price snapshotted at order time. |
 | `ContactSubmission` | A contact-form submission. |
@@ -238,32 +238,40 @@ Neither of these two benefits from the `{sent, error}` result-inspection hardeni
 
 Ran `npm run test`:
 ```
-Test Files  14 passed (14)
-     Tests  108 passed (108)
+Test Files  22 passed (22)
+     Tests  171 passed (171)
 ```
-14 test files: `src/app/actions/sync-student-locale.test.ts`, `src/app/api/admin/settings/password/route.test.ts`, `src/app/api/admin/students/[studentId]/email/route.test.ts`, `src/app/api/admin/students/route.test.ts`, `src/app/api/student/forgot-password/route.test.ts`, `src/app/api/student/set-password/route.test.ts`, `src/i18n/request.test.ts`, `src/lib/admin/dal.test.ts`, `src/lib/notifications/email.test.ts`, `src/lib/notifications/index.test.ts`, `src/lib/notifications/order-notifications.test.ts`, `src/lib/notifications/templates.test.ts`, `src/lib/phone.test.ts`, `src/lib/student/dal.test.ts`.
+22 test files: `src/app/actions/sync-student-locale.test.ts`, `src/app/api/admin/orders/[orderNumber]/mark-not-found/route.test.ts`, `src/app/api/admin/orders/[orderNumber]/mark-paid/route.test.ts`, `src/app/api/admin/orders/[orderNumber]/quote/resend/route.test.ts`, `src/app/api/admin/orders/[orderNumber]/quote/route.test.ts`, `src/app/api/admin/settings/password/route.test.ts`, `src/app/api/admin/students/[studentId]/email/route.test.ts`, `src/app/api/admin/students/route.test.ts`, `src/app/api/custom-orders/route.test.ts`, `src/app/api/orders/[orderNumber]/confirm-payment/route.test.ts`, `src/app/api/orders/route.test.ts`, `src/app/api/student/forgot-password/route.test.ts`, `src/app/api/student/set-password/route.test.ts`, `src/i18n/request.test.ts`, `src/lib/admin/dal.test.ts`, `src/lib/notifications/email.test.ts`, `src/lib/notifications/index.test.ts`, `src/lib/notifications/order-notifications.test.ts`, `src/lib/notifications/templates.test.ts`, `src/lib/orders.test.ts`, `src/lib/phone.test.ts`, `src/lib/student/dal.test.ts`.
+
+For the Prisma-mocking, `$transaction`, and `next-intl` conventions these route tests follow (and when
+`@/lib/orders` needs a full mock vs. can be imported for real), see `docs/DECISIONS.md`'s 2026-08-10
+"Order and payment test coverage" entry rather than duplicating that reasoning here.
 
 **Areas with no test coverage at all** (no matching `*.test.ts`/`*.test.tsx` file found anywhere):
-- `src/lib/orders.ts` (`createManualOrder`, `createCustomOrder`, both `toNotificationData` helpers).
-- Every order-facing API route: `/api/orders`, `/api/orders/[orderNumber]`, `/api/orders/[orderNumber]/confirm-payment`, `/api/custom-orders`, and every `/api/admin/orders/[orderNumber]/*` route including the two quote routes.
+- `GET /api/orders/[orderNumber]` (the unused public order-lookup route, §7).
+- `POST /api/admin/orders/[orderNumber]/{cancel,note}` and `GET /api/admin/orders/[orderNumber]/screenshot/[confirmationId]` — deliberately deferred: CRUD with auth checks, judged lower value than the order/payment-correctness paths now covered.
 - Every admin CRUD route for products and announcements.
 - `/api/contact`, `/api/newsletter`, `/api/admin/seed`, `/api/admin/upload-instrument-images`, `/api/admin/update-instrument-images`, `/api/admin/students/[studentId]/route.ts`, `/api/admin/students/[studentId]/resend-invite`.
 - `src/lib/rate-limit.ts`, `src/lib/order-number.ts`, `src/lib/pricing.ts`, `src/lib/payment-screenshots.ts`, `src/lib/public-image-upload.ts`.
 - `src/proxy.ts` itself (its locale-resolution dependency, `src/i18n/request.ts`, has a test; the routing/redirect/cookie-refresh logic in `proxy.ts` does not).
 - **Every React component** — zero `*.test.tsx` files exist anywhere in the repo.
 
+**Now covered, as of this phase**: `src/lib/orders.ts` (`createManualOrder`, `createCustomOrder`), `POST
+/api/orders`, `POST /api/custom-orders`, `POST /api/orders/[orderNumber]/confirm-payment`, and every
+`/api/admin/orders/[orderNumber]/{mark-paid,mark-not-found,quote,quote/resend}` route.
+
 ## 13. Known incomplete work
 
 Only items verifiable from code/comments or `docs/DECISIONS.md`'s own "Still open" list:
 
-1. **`OrderNotificationLog` has no writer.** The table and its Prisma model exist; the model's own doc-comment says *"No application code reads or writes this table yet"* ([prisma/schema.prisma:222](../prisma/schema.prisma#L222)) — confirmed true by search. No admin-UI badge for it exists either.
-2. **Student file attachments are schema-only.** `WeeklyPracticeAttachment`/`MonthlyLogAttachment` exist with a documented "student-files" private bucket in the doc-comments, but no upload/read code exists anywhere (§9).
-3. **Custom Made reference-photo upload (Phase 3) is not built** — per `docs/DECISIONS.md`, listed as "Still open," optional.
-4. **Contact and newsletter emails bypass the result-inspection hardening** entirely (§10) — they call `resend.emails.send()` directly and don't check the returned `{data, error}`.
-5. **41 Amharic message keys remain untranslated**, `[AM]`-prefixed (§11).
-6. **`temp/debug-env` branch** — per `docs/DECISIONS.md`, still pending deletion (local and remote); the route itself has been removed from `main`.
-7. **`/student/dashboard` is an explicit placeholder** — its own code comment states the real dashboard is a future phase ([src/app/student/dashboard/page.tsx:12](../src/app/student/dashboard/page.tsx#L12)).
-8. **This file itself** — `docs/PROJECT_STATE.md` did not exist before this was written; `docs/DECISIONS.md`'s 2026-08-09 entry notes its absence as the missing "externalised-state layer."
+1. **Student file attachments are schema-only.** `WeeklyPracticeAttachment`/`MonthlyLogAttachment` exist with a documented "student-files" private bucket in the doc-comments, but no upload/read code exists anywhere (§9).
+2. **Custom Made reference-photo upload (Phase 3) is not built** — per `docs/DECISIONS.md`, listed as "Still open," optional.
+3. **Contact and newsletter emails bypass the result-inspection hardening** entirely (§10) — they call `resend.emails.send()` directly and don't check the returned `{data, error}`.
+4. **41 Amharic message keys remain untranslated**, `[AM]`-prefixed (§11).
+5. **`temp/debug-env` branch** — per `docs/DECISIONS.md`, still pending deletion (local and remote); no local ref exists as of this writing (`git branch -a` confirmed), but that doesn't establish the remote copy is gone.
+6. **`/student/dashboard` is an explicit placeholder** — its own code comment states the real dashboard is a future phase ([src/app/student/dashboard/page.tsx:12](../src/app/student/dashboard/page.tsx#L12)).
+7. **`mark-not-found` has no `CANCELLED` guard, unlike `mark-paid`.** Verified directly in [src/app/api/admin/orders/[orderNumber]/mark-not-found/route.ts](<../src/app/api/admin/orders/[orderNumber]/mark-not-found/route.ts>) — it checks only `PAID`. Deliberate, not a bug: marking a cancelled order's payment as "not found" moves no money and changes no total. Recorded in `docs/DECISIONS.md`'s 2026-08-10 entry.
+8. **Test coverage gaps remain** — see §12 for the current list of what's untested. The same 2026-08-10 `docs/DECISIONS.md` entry states this plainly so the current test count isn't mistaken for broad coverage.
 
 ## 14. Known constraints
 
