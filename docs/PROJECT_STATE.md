@@ -175,6 +175,7 @@ Every `process.env.*` reference in `src/` and `scripts/`, grouped by feature:
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — [src/proxy.ts](../src/proxy.ts), [src/lib/supabase-server.ts](../src/lib/supabase-server.ts), [src/lib/supabase-browser.ts](../src/lib/supabase-browser.ts). **Build-time-inlined**, same as above — per `docs/DECISIONS.md`'s 2026-08-09 entry, this one was missing from Vercel entirely at merge time and was added before merging specifically because a missing value silently breaks the whole student-auth client bundle rather than throwing.
 - `SUPABASE_SERVICE_ROLE_KEY` — [src/lib/supabase-admin.ts](../src/lib/supabase-admin.ts) and admin upload routes. Runtime, server-only (not `NEXT_PUBLIC_`).
 - `SUPABASE_PAYMENT_SCREENSHOTS_BUCKET` — [src/lib/payment-screenshots.ts:8](../src/lib/payment-screenshots.ts#L8). Runtime; falls back to the literal `"payment-screenshots"` if unset (no crash).
+- `SUPABASE_CUSTOM_ORDER_IMAGES_BUCKET` — [src/lib/custom-order-images.ts:4](../src/lib/custom-order-images.ts#L4). Runtime; optional, falls back to the literal `"custom-order-images"` if unset (no crash) — same pattern as the payment-screenshots var above.
 
 **Resend / email**
 - `RESEND_API_KEY`, `RESEND_FROM_EMAIL` — [src/lib/resend.ts](../src/lib/resend.ts), [src/lib/notifications/email.ts](../src/lib/notifications/email.ts), and directly in `/api/contact` and `/api/newsletter`. Runtime; `sendEmail()` no-ops with a logged warning if either is unset (does not crash). The direct `resend.emails.send()` calls in contact/newsletter have no such guard beyond an `if` check before calling.
@@ -200,6 +201,12 @@ Every `process.env.*` reference in `src/` and `scripts/`, grouped by feature:
 
 - **`product-images`** bucket — **public**. Written by [src/lib/public-image-upload.ts](../src/lib/public-image-upload.ts) (`uploadPublicImage`, service-role client) under folders like `products/`, `announcements/`, `custom-made/`. URLs are constructed directly as `${NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/product-images/${path}` — a plain unauthenticated HTTP GET, no anon key, no PostgREST call involved in viewing.
 - **`payment-screenshots`** bucket (name from `SUPABASE_PAYMENT_SCREENSHOTS_BUCKET`, default `"payment-screenshots"`) — **private**. Written/read by [src/lib/payment-screenshots.ts](../src/lib/payment-screenshots.ts) via the service-role client; only the object *path* is stored on `PaymentConfirmation.screenshotPath`, never a public URL. Viewing requires a short-lived signed URL (`getPaymentScreenshotSignedUrl`, default 300s), minted only from the admin-gated screenshot route.
+- **`custom-order-images`** bucket (name from `SUPABASE_CUSTOM_ORDER_IMAGES_BUCKET`, default
+  `"custom-order-images"`) — **private**. Written/read by [src/lib/custom-order-images.ts](../src/lib/custom-order-images.ts)
+  via the service-role client, mirroring `payment-screenshots.ts` exactly: only the object *path* is
+  stored on `Order.customOrderImagePath`, never a public URL; viewing requires a signed URL minted only
+  from the admin-gated `custom-order-image` route. Created manually in Supabase (see `docs/DECISIONS.md`'s
+  2026-08-10 Phase 3 entry) — not something any code provisions.
 - **"student-files" bucket** — referenced only in Prisma schema doc-comments on `WeeklyPracticeAttachment.storagePath`/`MonthlyLogAttachment.storagePath` ([prisma/schema.prisma:409](../prisma/schema.prisma#L409), [:454](../prisma/schema.prisma#L454)). **No upload or read code exists anywhere in `src/` for it** — confirmed by repo-wide search. This is a documented future bucket, not a working one.
 
 ## 10. Notifications — every email the system sends
@@ -232,14 +239,16 @@ Neither of these two benefits from the `{sent, error}` result-inspection hardeni
 - Locales: `en`, `am` ([src/i18n/locale.ts](../src/i18n/locale.ts)), default `en`.
 - Resolution ([src/i18n/request.ts](../src/i18n/request.ts)): an explicit `locale` param (used when sending a notification in a stored student/order locale) takes priority; otherwise falls back to the `NEXT_LOCALE` cookie; otherwise the default.
 - Message files: `messages/en.json`, `messages/am.json`.
-- **41** keys in `messages/am.json` currently carry an `[AM] ` placeholder-English prefix (counted directly from the file), matching the number recorded in `docs/DECISIONS.md`'s 2026-08-09 entry (37 from Phases 2/4 + 4 pre-existing in `cart.*`).
+- **42** keys in `messages/am.json` currently carry an `[AM] ` placeholder-English prefix (counted directly
+  from the file): 41 as recorded in `docs/DECISIONS.md`'s 2026-08-09 entry (37 from Phases 2/4 + 4
+  pre-existing in `cart.*`), plus 1 added in the 2026-08-10 Phase 3 entry (`orderConfirmation.imageAttachFailed`).
 
 ## 12. Tests
 
 Ran `npm run test`:
 ```
 Test Files  22 passed (22)
-     Tests  171 passed (171)
+     Tests  175 passed (175)
 ```
 22 test files: `src/app/actions/sync-student-locale.test.ts`, `src/app/api/admin/orders/[orderNumber]/mark-not-found/route.test.ts`, `src/app/api/admin/orders/[orderNumber]/mark-paid/route.test.ts`, `src/app/api/admin/orders/[orderNumber]/quote/resend/route.test.ts`, `src/app/api/admin/orders/[orderNumber]/quote/route.test.ts`, `src/app/api/admin/settings/password/route.test.ts`, `src/app/api/admin/students/[studentId]/email/route.test.ts`, `src/app/api/admin/students/route.test.ts`, `src/app/api/custom-orders/route.test.ts`, `src/app/api/orders/[orderNumber]/confirm-payment/route.test.ts`, `src/app/api/orders/route.test.ts`, `src/app/api/student/forgot-password/route.test.ts`, `src/app/api/student/set-password/route.test.ts`, `src/i18n/request.test.ts`, `src/lib/admin/dal.test.ts`, `src/lib/notifications/email.test.ts`, `src/lib/notifications/index.test.ts`, `src/lib/notifications/order-notifications.test.ts`, `src/lib/notifications/templates.test.ts`, `src/lib/orders.test.ts`, `src/lib/phone.test.ts`, `src/lib/student/dal.test.ts`.
 
@@ -249,10 +258,10 @@ For the Prisma-mocking, `$transaction`, and `next-intl` conventions these route 
 
 **Areas with no test coverage at all** (no matching `*.test.ts`/`*.test.tsx` file found anywhere):
 - `GET /api/orders/[orderNumber]` (the unused public order-lookup route, §7).
-- `POST /api/admin/orders/[orderNumber]/{cancel,note}` and `GET /api/admin/orders/[orderNumber]/screenshot/[confirmationId]` — deliberately deferred: CRUD with auth checks, judged lower value than the order/payment-correctness paths now covered.
+- `POST /api/admin/orders/[orderNumber]/{cancel,note}`, `GET /api/admin/orders/[orderNumber]/screenshot/[confirmationId]`, and `GET /api/admin/orders/[orderNumber]/custom-order-image` — deliberately deferred: CRUD/viewing routes with auth checks, judged lower value than the order/payment-correctness paths now covered.
 - Every admin CRUD route for products and announcements.
 - `/api/contact`, `/api/newsletter`, `/api/admin/seed`, `/api/admin/upload-instrument-images`, `/api/admin/update-instrument-images`, `/api/admin/students/[studentId]/route.ts`, `/api/admin/students/[studentId]/resend-invite`.
-- `src/lib/rate-limit.ts`, `src/lib/order-number.ts`, `src/lib/pricing.ts`, `src/lib/payment-screenshots.ts`, `src/lib/public-image-upload.ts`.
+- `src/lib/rate-limit.ts`, `src/lib/order-number.ts`, `src/lib/pricing.ts`, `src/lib/payment-screenshots.ts`, `src/lib/custom-order-images.ts`, `src/lib/public-image-upload.ts`.
 - `src/proxy.ts` itself (its locale-resolution dependency, `src/i18n/request.ts`, has a test; the routing/redirect/cookie-refresh logic in `proxy.ts` does not).
 - **Every React component** — zero `*.test.tsx` files exist anywhere in the repo.
 
@@ -265,12 +274,12 @@ For the Prisma-mocking, `$transaction`, and `next-intl` conventions these route 
 Only items verifiable from code/comments or `docs/DECISIONS.md`'s own "Still open" list:
 
 1. **Student file attachments are schema-only.** `WeeklyPracticeAttachment`/`MonthlyLogAttachment` exist with a documented "student-files" private bucket in the doc-comments, but no upload/read code exists anywhere (§9).
-2. **Custom Made reference-photo upload (Phase 3) is not built** — per `docs/DECISIONS.md`, listed as "Still open," optional.
-3. **Contact and newsletter emails bypass the result-inspection hardening** entirely (§10) — they call `resend.emails.send()` directly and don't check the returned `{data, error}`.
-4. **41 Amharic message keys remain untranslated**, `[AM]`-prefixed (§11).
-5. **`temp/debug-env` branch** — per `docs/DECISIONS.md`, still pending deletion (local and remote); no local ref exists as of this writing (`git branch -a` confirmed), but that doesn't establish the remote copy is gone.
-6. **`/student/dashboard` is an explicit placeholder** — its own code comment states the real dashboard is a future phase ([src/app/student/dashboard/page.tsx:12](../src/app/student/dashboard/page.tsx#L12)).
-7. **`mark-not-found` has no `CANCELLED` guard, unlike `mark-paid`.** Verified directly in [src/app/api/admin/orders/[orderNumber]/mark-not-found/route.ts](<../src/app/api/admin/orders/[orderNumber]/mark-not-found/route.ts>) — it checks only `PAID`. Deliberate, not a bug: marking a cancelled order's payment as "not found" moves no money and changes no total. Recorded in `docs/DECISIONS.md`'s 2026-08-10 entry.
+2. **Contact and newsletter emails bypass the result-inspection hardening** entirely (§10) — they call `resend.emails.send()` directly and don't check the returned `{data, error}`.
+3. **42 Amharic message keys remain untranslated**, `[AM]`-prefixed (§11).
+4. **`temp/debug-env` branch** — per `docs/DECISIONS.md`, still pending deletion (local and remote); no local ref exists as of this writing (`git branch -a` confirmed), but that doesn't establish the remote copy is gone.
+5. **`/student/dashboard` is an explicit placeholder** — its own code comment states the real dashboard is a future phase ([src/app/student/dashboard/page.tsx:12](../src/app/student/dashboard/page.tsx#L12)).
+6. **`mark-not-found` has no `CANCELLED` guard, unlike `mark-paid`.** Verified directly in [src/app/api/admin/orders/[orderNumber]/mark-not-found/route.ts](<../src/app/api/admin/orders/[orderNumber]/mark-not-found/route.ts>) — it checks only `PAID`. Deliberate, not a bug: marking a cancelled order's payment as "not found" moves no money and changes no total. Recorded in `docs/DECISIONS.md`'s 2026-08-10 entry.
+7. **`src/lib/supabase-admin.ts` has no `import "server-only"` guard.** It constructs a service-role Supabase client at module scope, referencing `SUPABASE_SERVICE_ROLE_KEY` directly ([src/lib/supabase-admin.ts:7-10](../src/lib/supabase-admin.ts#L7-L10)). An accidental import from a client component would not fail the build loudly — found while building the Custom Made reference-photo upload (`docs/DECISIONS.md`'s 2026-08-10 entry), where `custom-order-notice.tsx` deliberately avoided importing `custom-order-images.ts` for exactly this reason. Standing gap, not fixed.
 8. **Test coverage gaps remain** — see §12 for the current list of what's untested. The same 2026-08-10 `docs/DECISIONS.md` entry states this plainly so the current test count isn't mistaken for broad coverage.
 
 ## 14. Known constraints

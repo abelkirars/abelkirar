@@ -220,3 +220,47 @@ unknown into false confidence.
 - `rate-limit.ts`, `order-number.ts`, `pricing.ts`, `payment-screenshots.ts`, `public-image-upload.ts`.
 - Admin product and announcement CRUD routes.
 - Real transactional atomicity, per convention 2.
+
+---
+
+## 2026-08-10 — Custom Made reference-photo upload shipped (Phase 3)
+
+**Built in six reviewable pieces:** storage helper, admin signed-URL route, admin page rendering, the
+route change itself, the client, and the soft-fail notice.
+
+**Verified live on Production** with order `ABK-20260810-6XSFL`: photo uploaded, the admin link opened the
+signed URL, the PNG rendered.
+
+**Decision — ordering.** File type and size are validated BEFORE the order is created; the upload itself
+runs AFTER. The storage path is `orders/{orderId}/...`, so the upload needs a real order id, but a bad
+file must not create an order. Validating first avoids create-then-delete entirely.
+
+**Rejected — an `imagePath` parameter on `createCustomOrder`.** It would have been structurally
+always-null from its only caller, implying a write path that cannot exist and misleading the next reader
+about where `customOrderImagePath` actually gets written. `attachCustomOrderImage` is the sole writer.
+
+**Decision — the failure split, and why it differs from `confirm-payment`.** A bad file 400s (the
+customer's problem, immediately fixable). Any other upload failure soft-fails, with the order intact (our
+problem — losing a required description over an optional photo is disproportionate). `confirm-payment`
+hard-fails on the equivalent case because the screenshot there IS the evidence being verified — there is
+no "the important part already succeeded" fallback to lean on.
+
+**Decision — the attach-failed signal rides a query param, not a schema column.** It needs to survive one
+navigation, not become a durable order attribute; the durable channel for "we didn't get your photo" is
+the confirmation email's own instruction to reply.
+
+**Decision — the component keeps its own local type/size constants** rather than importing them from
+`custom-order-images.ts`, because that module imports `supabaseAdmin`, which reads
+`SUPABASE_SERVICE_ROLE_KEY` at module scope with no `import "server-only"` guard. Not worth gambling a
+service-role key on bundler behaviour to save one duplicated pair of constants.
+
+**Found, not fixed — `src/lib/supabase-admin.ts` has no `import "server-only"` guard.** An accidental
+client-side import would not fail the build loudly. Standing gap, worth a small follow-up.
+
+**Found and fixed — the custom order description was invisible after quoting.** It previously rendered
+only inside `QuoteForm`, which disappears once `paymentStatus` moves past `PENDING_QUOTE` — an admin could
+no longer see what the customer asked for while building the instrument. Fixed in piece 3 by gating a new,
+always-visible block on the description existing, not on `paymentStatus`.
+
+**Manual setup done.** The private `custom-order-images` bucket was created in Supabase.
+`SUPABASE_CUSTOM_ORDER_IMAGES_BUCKET` is unset and falls back to that literal name.
