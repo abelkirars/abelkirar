@@ -149,7 +149,8 @@
     "importantNotice": "Important: include order number {orderNumber} in your payment note so we can match your payment to this order.",
     "manualVerificationNotice": "Payments are verified manually by our team. Your order will not be processed until we’ve confirmed your payment — this does not happen automatically.",
     "quotePendingHeading": "Custom order request received",
-    "quotePendingNotice": "We're reviewing the details you submitted. You'll receive an email with your final price and payment instructions within 1–2 business days. Please note the final price may be higher than the instrument's listed base price, depending on the customization you've requested."
+    "quotePendingNotice": "We're reviewing the details you submitted. You'll receive an email with your final price and payment instructions within 1–2 business days. Please note the final price may be higher than the instrument's listed base price, depending on the customization you've requested.",
+    "imageAttachFailed": "We received your request, but your reference photo didn't attach. You can send it by replying to your confirmation email."
   },
   "paymentLabels": {
     "us": "United States",

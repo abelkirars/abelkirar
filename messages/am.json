@@ -149,7 +149,8 @@
     "importantNotice": "አስፈላጊ፡ ክፍያዎን ከትዕዛዝዎ ጋር ማገናኘት እንድንችል በክፍያ ማስታወሻዎ ላይ የትዕዛዝ ቁጥር {orderNumber}ን ያካቱ።",
     "manualVerificationNotice": "ክፍያዎች በቡድናችን በእጅ የሚረጋገጡ ናቸው። ክፍያዎን ሳናረጋግጥ ትዕዛዝዎ አይከናወንም — ይህም በራስ-ሰር የሚሰራ አይደለም።",
     "quotePendingHeading": "[AM] Custom order request received",
-    "quotePendingNotice": "[AM] We're reviewing the details you submitted. You'll receive an email with your final price and payment instructions within 1–2 business days. Please note the final price may be higher than the instrument's listed base price, depending on the customization you've requested."
+    "quotePendingNotice": "[AM] We're reviewing the details you submitted. You'll receive an email with your final price and payment instructions within 1–2 business days. Please note the final price may be higher than the instrument's listed base price, depending on the customization you've requested.",
+    "imageAttachFailed": "[AM] We received your request, but your reference photo didn't attach. You can send it by replying to your confirmation email."
   },
   "paymentLabels": {
     "us": "አሜሪካ",

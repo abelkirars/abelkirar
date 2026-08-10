@@ -26,10 +26,13 @@ async function getOrder(orderNumber: string) {
 
 export default async function OrderConfirmationPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ orderNumber: string }>;
+  searchParams: Promise<{ photoAttachFailed?: string }>;
 }) {
   const { orderNumber } = await params;
+  const { photoAttachFailed } = await searchParams;
   const order = await getOrder(orderNumber);
   if (!order) notFound();
 
@@ -105,6 +108,12 @@ export default async function OrderConfirmationPage({
                 {alreadyPaid ? t("paidProcessing") : t("pendingVerification")}
               </span>
             </div>
+          </div>
+        )}
+
+        {photoAttachFailed === "1" && (
+          <div className="mt-8 rounded-2xl bg-card p-6 ring-1 ring-foreground/10">
+            <p className="text-sm text-foreground">{t("imageAttachFailed")}</p>
           </div>
         )}
 
