@@ -1,7 +1,17 @@
 import { NextResponse } from "next/server";
 import { getLocale, getTranslations } from "next-intl/server";
 import { createCustomOrderSchema } from "@/lib/validations/custom-order";
-import { createCustomOrder, toCustomOrderNotificationData, OrderCreationError } from "@/lib/orders";
+import {
+  createCustomOrder,
+  attachCustomOrderImage,
+  toCustomOrderNotificationData,
+  OrderCreationError,
+} from "@/lib/orders";
+import {
+  uploadCustomOrderImage,
+  ALLOWED_CUSTOM_ORDER_IMAGE_TYPES,
+  MAX_CUSTOM_ORDER_IMAGE_BYTES,
+} from "@/lib/custom-order-images";
 import { notificationService } from "@/lib/notifications";
 import { checkRateLimit, clientIpFrom } from "@/lib/rate-limit";
 import type { Locale } from "@/i18n/locale";
@@ -25,20 +35,43 @@ export async function POST(request: Request) {
     );
   }
 
-  let body: unknown;
+  let formData: FormData;
   try {
-    body = await request.json();
+    formData = await request.formData();
   } catch {
-    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid form submission" }, { status: 400 });
   }
 
   const t = await getTranslations("validation");
-  const parsed = createCustomOrderSchema(t).safeParse(body);
+  const parsed = createCustomOrderSchema(t).safeParse({
+    productId: formData.get("productId"),
+    description: formData.get("description"),
+    customerName: formData.get("customerName"),
+    customerEmail: formData.get("customerEmail"),
+    customerPhone: formData.get("customerPhone"),
+    paymentRegion: formData.get("paymentRegion"),
+  });
   if (!parsed.success) {
     return NextResponse.json(
       { error: parsed.error.issues[0]?.message ?? "Invalid input" },
       { status: 400 }
     );
+  }
+
+  // Reject a bad file before creating anything. The actual upload can't
+  // happen yet — its storage path is orders/{orderId}/..., and no orderId
+  // exists until the order is created — but type/size checks don't need
+  // one, so they run here, against the same canonical constants
+  // uploadCustomOrderImage itself enforces below.
+  const rawImage = formData.get("customOrderImage");
+  const referenceImage = rawImage instanceof File && rawImage.size > 0 ? rawImage : null;
+  if (referenceImage) {
+    if (!ALLOWED_CUSTOM_ORDER_IMAGE_TYPES.has(referenceImage.type)) {
+      return NextResponse.json({ error: "Unsupported image type" }, { status: 400 });
+    }
+    if (referenceImage.size > MAX_CUSTOM_ORDER_IMAGE_BYTES) {
+      return NextResponse.json({ error: "Image is too large" }, { status: 400 });
+    }
   }
 
   let order: Awaited<ReturnType<typeof createCustomOrder>>;
@@ -51,6 +84,26 @@ export async function POST(request: Request) {
     }
     console.error("[custom-orders] Failed to create custom order:", err);
     return NextResponse.json({ error: "Failed to submit custom order request" }, { status: 500 });
+  }
+
+  // The order already exists at this point. Any upload failure from here
+  // on is soft: losing the reference photo does not undo a request that
+  // already succeeded, and there is no "no order created" option left.
+  let imageUploaded: boolean | undefined;
+  let imageError: string | undefined;
+  if (referenceImage) {
+    try {
+      const path = await uploadCustomOrderImage(order.id, referenceImage);
+      await attachCustomOrderImage(order.id, path);
+      imageUploaded = true;
+    } catch (err) {
+      console.error(
+        `[custom-orders] Reference image upload failed for order ${order.orderNumber}:`,
+        err
+      );
+      imageUploaded = false;
+      imageError = err instanceof Error ? err.message : "Failed to upload reference image";
+    }
   }
 
   // The order is already saved at this point — a notification failure must
@@ -81,5 +134,8 @@ export async function POST(request: Request) {
     console.error("[custom-orders] Failed to send custom order notifications:", err);
   }
 
-  return NextResponse.json({ orderNumber: order.orderNumber });
+  return NextResponse.json({
+    orderNumber: order.orderNumber,
+    ...(imageUploaded !== undefined ? { imageUploaded, ...(imageError ? { imageError } : {}) } : {}),
+  });
 }

@@ -158,6 +158,20 @@ export async function createCustomOrder(input: CreateCustomOrderInput, locale: L
   throw new OrderCreationError("Could not generate a unique order number", 500);
 }
 
+/**
+ * Attaches a Custom Made reference photo's storage path to an
+ * already-created order. Separate from createCustomOrder because the
+ * storage path is orders/{orderId}/... — the upload cannot happen until
+ * the order exists and has a real id, so this always runs as a second,
+ * later write, never as part of order creation itself.
+ */
+export async function attachCustomOrderImage(orderId: string, imagePath: string) {
+  return prisma.order.update({
+    where: { id: orderId },
+    data: { customOrderImagePath: imagePath },
+  });
+}
+
 export function toCustomOrderNotificationData(
   order: {
     id: string;
