@@ -22,20 +22,33 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
-const mockGenerateLink = vi.fn();
-const mockDeleteUser = vi.fn();
-const mockListUsers = vi.fn();
-vi.mock("@/lib/supabase-admin", () => ({
-  supabaseAdmin: {
-    auth: {
-      admin: {
-        generateLink: (...args: unknown[]) => mockGenerateLink(...args),
-        deleteUser: (...args: unknown[]) => mockDeleteUser(...args),
-        listUsers: (...args: unknown[]) => mockListUsers(...args),
-      },
-    },
-  },
-}));
+const mockGenerateStudentInviteLink = vi.fn();
+const mockGenerateStudentRecoveryLink = vi.fn();
+const mockDeleteSupabaseUser = vi.fn();
+const mockFindSupabaseUserByEmail = vi.fn();
+// The route imports from @/lib/supabase-admin-auth directly, not
+// @/lib/supabase-admin — mock at that boundary, not one level deeper.
+// Previously this mocked @/lib/supabase-admin only, which still let the
+// real supabase-admin-auth.ts module load; that was harmless until it
+// gained its own `import "server-only"` line, which throws outside Next's
+// webpack build (Vitest included) regardless of whether the code is
+// genuinely server-side. See docs/DECISIONS.md's server-only-guard entry.
+vi.mock("@/lib/supabase-admin-auth", () => {
+  class StudentInviteError extends Error {
+    code?: string;
+    constructor(message: string, code?: string) {
+      super(message);
+      this.code = code;
+    }
+  }
+  return {
+    generateStudentInviteLink: (...args: unknown[]) => mockGenerateStudentInviteLink(...args),
+    generateStudentRecoveryLink: (...args: unknown[]) => mockGenerateStudentRecoveryLink(...args),
+    deleteSupabaseUser: (...args: unknown[]) => mockDeleteSupabaseUser(...args),
+    findSupabaseUserByEmail: (...args: unknown[]) => mockFindSupabaseUserByEmail(...args),
+    StudentInviteError,
+  };
+});
 
 const mockNotifyStudentInvite = vi.fn();
 vi.mock("@/lib/notifications", () => ({
@@ -45,6 +58,7 @@ vi.mock("@/lib/notifications", () => ({
 }));
 
 import { POST } from "@/app/api/admin/students/route";
+import { StudentInviteError } from "@/lib/supabase-admin-auth";
 
 function buildRequest(fields: Record<string, string>): Request {
   const formData = new FormData();
@@ -77,18 +91,15 @@ describe("POST /api/admin/students", () => {
 
     expect(res.status).toBe(401);
     expect(mockCheckRateLimit).not.toHaveBeenCalled();
-    expect(mockGenerateLink).not.toHaveBeenCalled();
+    expect(mockGenerateStudentInviteLink).not.toHaveBeenCalled();
     expect(mockCreateStudent).not.toHaveBeenCalled();
   });
 
   it("creates the profile, links supabaseUserId, and sends the invite on success", async () => {
     mockFindUniqueStudent.mockResolvedValue(null);
-    mockGenerateLink.mockResolvedValue({
-      data: {
-        properties: { action_link: "https://supabase.example/verify?token=abc" },
-        user: { id: "auth-user-1" },
-      },
-      error: null,
+    mockGenerateStudentInviteLink.mockResolvedValue({
+      actionLink: "https://supabase.example/verify?token=abc",
+      supabaseUserId: "auth-user-1",
     });
     mockCreateStudent.mockResolvedValue({
       id: "student-1",
@@ -115,7 +126,7 @@ describe("POST /api/admin/students", () => {
       "https://supabase.example/verify?token=abc",
       "en"
     );
-    expect(mockDeleteUser).not.toHaveBeenCalled();
+    expect(mockDeleteSupabaseUser).not.toHaveBeenCalled();
   });
 
   it("returns 409 without creating any auth user when a StudentProfile already has this email", async () => {
@@ -124,7 +135,7 @@ describe("POST /api/admin/students", () => {
     const res = await POST(buildRequest(validFields));
 
     expect(res.status).toBe(409);
-    expect(mockGenerateLink).not.toHaveBeenCalled();
+    expect(mockGenerateStudentInviteLink).not.toHaveBeenCalled();
   });
 
   it("adopts an orphaned auth user (email_exists, but no StudentProfile references it) instead of rejecting", async () => {
@@ -132,24 +143,13 @@ describe("POST /api/admin/students", () => {
     // Same mock backs both the initial email lookup and the later
     // supabaseUserId lookup — both are expected to find nothing for a true orphan.
     mockFindUniqueStudent.mockResolvedValue(null);
-    mockGenerateLink
+    mockGenerateStudentInviteLink
+      .mockRejectedValueOnce(new StudentInviteError("already exists", "email_exists"))
       .mockResolvedValueOnce({
-        data: null,
-        error: { code: "email_exists", message: "already exists" },
-      })
-      .mockResolvedValueOnce({
-        data: {
-          properties: { action_link: "https://supabase.example/verify?token=fresh" },
-          user: { id: "auth-orphan-1" },
-        },
-        error: null,
+        actionLink: "https://supabase.example/verify?token=fresh",
+        supabaseUserId: "auth-orphan-1",
       });
-    mockListUsers.mockResolvedValue({
-      data: {
-        users: [{ id: "auth-orphan-1", email: "orphan@example.com", email_confirmed_at: null }],
-      },
-      error: null,
-    });
+    mockFindSupabaseUserByEmail.mockResolvedValue({ id: "auth-orphan-1", emailConfirmedAt: null });
     mockCreateStudent.mockResolvedValue({
       id: "student-2",
       email: "orphan@example.com",
@@ -165,60 +165,44 @@ describe("POST /api/admin/students", () => {
     expect(mockCreateStudent).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ supabaseUserId: "auth-orphan-1" }) })
     );
-    expect(mockDeleteUser).not.toHaveBeenCalled();
+    expect(mockDeleteSupabaseUser).not.toHaveBeenCalled();
   });
 
-  it("cleans up the newly-created Supabase user when the Prisma insert fails", async () => {
+  // This used to be two tests: one where the cleanup delete succeeds, one
+  // where it also fails. That distinction was only observable by mocking
+  // the raw Supabase SDK error response directly. Now that the mock
+  // boundary is @/lib/supabase-admin-auth (see the module-level comment
+  // above), deleteSupabaseUser's own internal error handling is hidden
+  // behind the mock — the real function never surfaces a failure to its
+  // caller; it's void and self-logging by design (see its doc comment in
+  // supabase-admin-auth.ts). The route genuinely cannot tell the two cases
+  // apart anymore, so keeping both tests would mean one passed for the
+  // wrong reason. Merged into one.
+  it("cleans up the newly-created Supabase user, logs, and returns 500 when the Prisma insert fails", async () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     mockFindUniqueStudent.mockResolvedValue(null);
-    mockGenerateLink.mockResolvedValue({
-      data: {
-        properties: { action_link: "https://supabase.example/verify?token=abc" },
-        user: { id: "auth-user-3" },
-      },
-      error: null,
+    mockGenerateStudentInviteLink.mockResolvedValue({
+      actionLink: "https://supabase.example/verify?token=abc",
+      supabaseUserId: "auth-user-3",
     });
     mockCreateStudent.mockRejectedValue(new Error("unique constraint violation"));
-    mockDeleteUser.mockResolvedValue({ data: {}, error: null });
+    mockDeleteSupabaseUser.mockResolvedValue(undefined);
 
     const res = await POST(buildRequest(validFields));
 
     expect(res.status).toBe(500);
-    expect(mockDeleteUser).toHaveBeenCalledWith("auth-user-3");
-    errorSpy.mockRestore();
-  });
-
-  it("surfaces an error and logs it, without crashing, when both the Prisma insert AND the cleanup delete fail", async () => {
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    mockFindUniqueStudent.mockResolvedValue(null);
-    mockGenerateLink.mockResolvedValue({
-      data: {
-        properties: { action_link: "https://supabase.example/verify?token=abc" },
-        user: { id: "auth-user-4" },
-      },
-      error: null,
-    });
-    mockCreateStudent.mockRejectedValue(new Error("db unreachable"));
-    mockDeleteUser.mockResolvedValue({ data: null, error: { message: "delete failed" } });
-
-    const response = await POST(buildRequest(validFields));
-
-    expect(response.status).toBe(500);
-    const body = await response.json();
+    const body = await res.json();
     expect(body.error).toBeTruthy();
-    // The delete failure must be logged, not silently swallowed.
+    expect(mockDeleteSupabaseUser).toHaveBeenCalledWith("auth-user-3");
     expect(errorSpy).toHaveBeenCalled();
     errorSpy.mockRestore();
   });
 
   it("still saves the student and returns a degraded success when the invite email fails to send", async () => {
     mockFindUniqueStudent.mockResolvedValue(null);
-    mockGenerateLink.mockResolvedValue({
-      data: {
-        properties: { action_link: "https://supabase.example/verify?token=abc" },
-        user: { id: "auth-user-5" },
-      },
-      error: null,
+    mockGenerateStudentInviteLink.mockResolvedValue({
+      actionLink: "https://supabase.example/verify?token=abc",
+      supabaseUserId: "auth-user-5",
     });
     mockCreateStudent.mockResolvedValue({
       id: "student-5",
