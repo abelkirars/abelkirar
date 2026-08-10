@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { Container } from "@/components/marketing/container";
 import { CrossPattern } from "@/components/marketing/cross-pattern";
@@ -28,10 +29,20 @@ export async function MissionSection() {
           </Link>
         </div>
 
-        <div className="relative aspect-4/5 overflow-hidden rounded-2xl bg-gradient-to-br from-secondary to-[#16362c] text-secondary-foreground">
+        <div className="relative aspect-4/3 overflow-hidden rounded-2xl">
+          <Image
+            src="/mission-kirar.png"
+            alt="A Kirar resting in a sunlit interior"
+            fill
+            className="object-cover"
+          />
+          {/* Scrim: matches instrument-category-cards.tsx — the quote is
+              bottom-anchored and a photo can't guarantee the cream text
+              stays legible the way the solid gradient did. */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
           <CrossPattern className="text-[#f3e9d2] opacity-[0.12]" />
           <div className="relative flex h-full flex-col justify-end p-8">
-            <p className="font-heading text-2xl text-balance">{t("quote")}</p>
+            <p className="font-heading text-2xl text-balance text-[#f3e9d2]">{t("quote")}</p>
           </div>
         </div>
       </Container>
