@@ -264,3 +264,40 @@ always-visible block on the description existing, not on `paymentStatus`.
 
 **Manual setup done.** The private `custom-order-images` bucket was created in Supabase.
 `SUPABASE_CUSTOM_ORDER_IMAGES_BUCKET` is unset and falls back to that literal name.
+
+---
+
+## 2026-08-10 — `server-only` guards, and a test that mocked the wrong boundary
+
+**Decision.** Added `import "server-only";` to five modules: `supabase-admin.ts` and the four libs that
+wrap it (`supabase-admin-auth.ts`, `payment-screenshots.ts`, `custom-order-images.ts`,
+`public-image-upload.ts`).
+
+**Rejected — guarding only `supabase-admin.ts`.** The transitive guard would still catch the mistake, but
+the build error would point two hops away from the file the developer actually touched. Each of the four
+wrappers also contains its own server-only logic rather than being a pure passthrough.
+
+**Sequencing.** The `server-only` package had to be installed first. Adding the import before installing
+would have turned a silent gap into a hard Vercel build failure with "Cannot find module," and local
+`npm run build` cannot catch that here (P1001).
+
+**What it revealed — the reusable part.** Adding the guard immediately broke
+`src/app/api/admin/students/route.test.ts`. Root cause: that test mocked `@/lib/supabase-admin`, but the
+route imports `@/lib/supabase-admin-auth` — one level up. The test had always been exercising a different
+boundary than the route uses. It passed anyway, and would have kept passing indefinitely. The guard
+exposed it only because a module-level side effect runs for real when the file itself is not mocked.
+Fixed by mocking at the boundary the route actually imports, matching what `forgot-password/route.test.ts`
+already did correctly. Two cleanup tests merged into one: `deleteSupabaseUser` is void and swallows its
+own errors by design, so once mocked at the correct boundary the route cannot distinguish the two cases.
+Keeping both would have meant one passing for the wrong reason. Test count 175 → 174.
+
+**Pattern worth naming.** This is the third instance in two days of something reading stronger than it
+enforced: `mark-paid`'s guard existed only in the UI; the quote route's region-pairing branch is
+unreachable through its own schema; and now a test asserting against a boundary the code does not use. In
+each case the code looked correct and the failure was invisible until something forced it into the open.
+General rule: when verifying a protection, check what the code actually imports and what input can
+actually reach it — not what the names imply.
+
+**Verification.** `npm run test` cannot prove these guards resolve correctly — `server-only` throws under
+plain Node regardless of context, and every test in this chain mocks the modules. The real check was a
+successful Vercel build on `main`, which passed.
