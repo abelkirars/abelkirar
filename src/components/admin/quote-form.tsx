@@ -10,11 +10,9 @@ import { cn } from "@/lib/utils";
 export function QuoteForm({
   orderNumber,
   paymentRegion,
-  description,
 }: {
   orderNumber: string;
   paymentRegion: "US" | "EUROZONE" | null;
-  description: string | null;
 }) {
   const router = useRouter();
   const isUS = paymentRegion === "US";
@@ -54,13 +52,6 @@ export function QuoteForm({
   return (
     <div className="rounded-lg bg-card p-4 ring-1 ring-foreground/10">
       <h2 className="font-medium">Set quote</h2>
-
-      {description && (
-        <div className="mt-2 rounded-md bg-muted/50 p-3 text-sm">
-          <p className="font-medium text-muted-foreground">Customer&rsquo;s request</p>
-          <p className="mt-1 whitespace-pre-wrap">{description}</p>
-        </div>
-      )}
 
       <div className="mt-4 flex flex-wrap items-end gap-4">
         <div>

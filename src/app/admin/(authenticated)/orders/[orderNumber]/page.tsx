@@ -82,11 +82,27 @@ export default async function AdminOrderDetailPage({
           <QuoteForm
             orderNumber={order.orderNumber ?? ""}
             paymentRegion={order.paymentRegion as "US" | "EUROZONE" | null}
-            description={order.customOrderDescription}
           />
         )}
 
         {order.quotedAt && <ResendQuoteEmailButton orderNumber={order.orderNumber ?? ""} />}
+
+        {order.customOrderDescription && (
+          <div className="rounded-lg bg-card p-4 ring-1 ring-foreground/10">
+            <h2 className="font-medium">Custom order request</h2>
+            <p className="mt-2 whitespace-pre-wrap text-sm">{order.customOrderDescription}</p>
+            {order.customOrderImagePath && (
+              <a
+                className="mt-2 inline-block text-accent hover:underline"
+                href={`/api/admin/orders/${order.orderNumber}/custom-order-image`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                View reference photo
+              </a>
+            )}
+          </div>
+        )}
 
         <div className="grid gap-6 sm:grid-cols-2">
           <div className="rounded-lg bg-card p-4 ring-1 ring-foreground/10">
