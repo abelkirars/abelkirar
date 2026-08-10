@@ -301,3 +301,25 @@ actually reach it — not what the names imply.
 **Verification.** `npm run test` cannot prove these guards resolve correctly — `server-only` throws under
 plain Node regardless of context, and every test in this chain mocks the modules. The real check was a
 successful Vercel build on `main`, which passed.
+
+---
+
+## 2026-08-11 — Admin notifications go to two recipients by email; Twilio deferred
+
+**Decision.** Both administrators now receive admin notifications via Resend, configured through
+`ADMIN_NOTIFICATION_EMAILS` as a comma-separated list. Verified live: new-order and cancellation emails
+reached both addresses.
+
+**Rejected, for now — Twilio SMS and WhatsApp.** The code exists and is inert behind
+`TWILIO_NOTIFICATIONS_ENABLED=false`. Deferred because WhatsApp beyond the sandbox needs a Meta Business
+account and template approval, and SMS to US numbers needs A2P 10DLC registration — days of waiting and a
+paid account, for a channel email already covers.
+
+**Two gaps found and fixed while verifying.** `adminEmailRecipients` did not deduplicate, so a repeated
+address in the env var sent the same person the same email twice. No admin notification fired when a
+quote was sent or resent, even though `cancel` and `mark-paid` both notify the whole list for
+admin-triggered actions.
+
+**Test gap closed.** `adminEmailRecipients` had no direct test coverage at all despite being the single
+point of failure for every admin notification. Now covered: multiple addresses, whitespace, trailing
+commas, exact and case-differing duplicates, and unset.
