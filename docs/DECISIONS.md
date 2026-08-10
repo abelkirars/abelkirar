@@ -182,3 +182,41 @@ reachable branch is the omitted-method case, and that is what the test covers.
 **General rule.** When writing a test for a guard, confirm the guard exists and that the input can
 actually reach it. A test that passes for the wrong reason is worse than no test, because it converts an
 unknown into false confidence.
+
+---
+
+## 2026-08-10 — Order and payment test coverage: what is covered, what is not, and the conventions established
+
+**What was covered.** 171 tests, 22 files, up from 110 at the start of this phase:
+- `src/lib/orders.ts` — `createManualOrder` and `createCustomOrder`.
+- `POST /api/orders` and `POST /api/custom-orders`.
+- `POST /api/orders/[orderNumber]/confirm-payment`.
+- `mark-paid`, `mark-not-found`, `quote`, `quote/resend`.
+
+**Bugs found and fixed during this phase.**
+- `mark-paid` and `mark-not-found` accepted `PENDING_QUOTE` orders server-side (commit `1a42e59`) — see
+  the correction entry above.
+- `confirm-payment` had the same gap (this commit).
+
+**Conventions established.** Recorded so the next test file does not invent a second approach.
+1. Prisma is always a mocked `@/lib/db` module. Hand-roll only the model/method pairs the route actually
+   calls. A real client is impossible here — P1001 means no DB is reachable from the dev machine.
+2. `$transaction` is mocked in array form as `vi.fn((ops) => Promise.all(ops))`. This proves both
+   statements ran with the expected args; it does NOT test transactional atomicity, which no test on this
+   machine can.
+3. `next-intl` is mocked lightly for route tests — an identity translator (`key => key`) and `getLocale`
+   returning `"en"`. Validation assertions therefore check raw i18n keys, not translated prose. The
+   heavier mock in `notifications/index.test.ts` exists only because that file specifically tests locale
+   threading.
+4. Whether to full-mock `@/lib/orders` depends on whether `@/lib/db` is already mocked in that file. If
+   it is, the real `orders` module is safe to import — `vi.mock` intercepts `db` for every importer. If
+   it is not, `@/lib/orders` must be fully mocked, because importing it constructs a live `PrismaClient`
+   at module load.
+
+**What is deliberately not covered.** Stated plainly so 171 tests are not mistaken for broad coverage.
+- `cancel`, `note`, and `screenshot` routes — CRUD with auth checks, judged lower value.
+- Every React component — zero `.test.tsx` files exist in the repo.
+- `src/proxy.ts` routing, redirect, and cookie-refresh logic.
+- `rate-limit.ts`, `order-number.ts`, `pricing.ts`, `payment-screenshots.ts`, `public-image-upload.ts`.
+- Admin product and announcement CRUD routes.
+- Real transactional atomicity, per convention 2.
