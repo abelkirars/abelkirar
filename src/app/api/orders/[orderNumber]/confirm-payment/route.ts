@@ -37,6 +37,18 @@ export async function POST(
   if (!order) {
     return NextResponse.json({ error: "Order not found" }, { status: 404 });
   }
+
+  // A Custom Made order with no quote yet has no price to confirm a
+  // payment against — same guard, same reasoning, as mark-paid and
+  // mark-not-found. Placed before any form parsing or screenshot upload
+  // so a rejected request never touches the upload path.
+  if (order.paymentStatus === "PENDING_QUOTE") {
+    return NextResponse.json(
+      { error: "This order is awaiting a quote and has no payment to confirm yet" },
+      { status: 409 }
+    );
+  }
+
   if (order.paymentStatus === "PAID") {
     return NextResponse.json(
       { error: "This order has already been marked as paid" },
