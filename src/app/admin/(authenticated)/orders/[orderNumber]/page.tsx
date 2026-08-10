@@ -175,18 +175,39 @@ export default async function AdminOrderDetailPage({
         <div className="rounded-lg bg-card p-4 ring-1 ring-foreground/10">
           <h2 className="font-medium">Items</h2>
           <ul className="mt-2 divide-y divide-border text-sm">
-            {order.items.map((item) => (
-              <li key={item.id} className="flex justify-between py-2">
-                <span>
-                  {item.quantity} × {item.productNameSnapshot}
-                </span>
-                <span>
-                  {order.paymentStatus === "PENDING_QUOTE"
-                    ? "—"
-                    : formatMoney(item.unitPrice * item.quantity, order.currency)}
-                </span>
-              </li>
-            ))}
+            {order.items.map((item) => {
+              // Raw field:choice IDs, not resolved labels. selectedCustomization
+              // snapshots only IDs (e.g. { shape: "round" }), and the human labels
+              // live on the product's current customizationOptions — which can be
+              // edited after this order was placed. There's no admin UI to edit
+              // them today, so a live join would happen to be accurate right now,
+              // but that's incidental, not guaranteed, and would go silently wrong
+              // the moment that editing UI exists. Showing exactly what's stored
+              // is the only thing that can't display something the customer
+              // didn't actually see.
+              const customization = (item.selectedCustomization ?? {}) as Record<string, string>;
+              const customizationEntries = Object.entries(customization);
+
+              return (
+                <li key={item.id} className="flex flex-col gap-1 py-2">
+                  <div className="flex justify-between">
+                    <span>
+                      {item.quantity} × {item.productNameSnapshot}
+                    </span>
+                    <span>
+                      {order.paymentStatus === "PENDING_QUOTE"
+                        ? "—"
+                        : formatMoney(item.unitPrice * item.quantity, order.currency)}
+                    </span>
+                  </div>
+                  {customizationEntries.length > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      {customizationEntries.map(([field, choice]) => `${field}: ${choice}`).join(", ")}
+                    </p>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </div>
 
