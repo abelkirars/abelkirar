@@ -5,10 +5,10 @@ vi.mock("@/lib/resend", () => ({
   resend: { emails: { send: (...args: unknown[]) => mockSend(...args) } },
 }));
 
-import { sendEmail } from "@/lib/notifications/email";
+import { sendEmail, adminEmailRecipients } from "@/lib/notifications/email";
 
 const savedEnv: Record<string, string | undefined> = {};
-const ENV_KEYS = ["RESEND_API_KEY", "RESEND_FROM_EMAIL"] as const;
+const ENV_KEYS = ["RESEND_API_KEY", "RESEND_FROM_EMAIL", "ADMIN_NOTIFICATION_EMAILS"] as const;
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -84,5 +84,43 @@ describe("sendEmail", () => {
     expect(result.sent).toBe(false);
     expect(mockSend).not.toHaveBeenCalled();
     warnSpy.mockRestore();
+  });
+});
+
+describe("adminEmailRecipients", () => {
+  it("splits two comma-separated addresses", () => {
+    process.env.ADMIN_NOTIFICATION_EMAILS = "owner@abelkirar.com,manager@abelkirar.com";
+
+    expect(adminEmailRecipients()).toEqual(["owner@abelkirar.com", "manager@abelkirar.com"]);
+  });
+
+  it("trims whitespace around each address", () => {
+    process.env.ADMIN_NOTIFICATION_EMAILS = "  owner@abelkirar.com , manager@abelkirar.com  ";
+
+    expect(adminEmailRecipients()).toEqual(["owner@abelkirar.com", "manager@abelkirar.com"]);
+  });
+
+  it("drops the empty entry left by a trailing comma", () => {
+    process.env.ADMIN_NOTIFICATION_EMAILS = "owner@abelkirar.com,manager@abelkirar.com,";
+
+    expect(adminEmailRecipients()).toEqual(["owner@abelkirar.com", "manager@abelkirar.com"]);
+  });
+
+  it("drops an exact duplicate", () => {
+    process.env.ADMIN_NOTIFICATION_EMAILS = "owner@abelkirar.com,owner@abelkirar.com";
+
+    expect(adminEmailRecipients()).toEqual(["owner@abelkirar.com"]);
+  });
+
+  it("drops a case-differing duplicate, keeping the first occurrence's casing", () => {
+    process.env.ADMIN_NOTIFICATION_EMAILS = "owner@abelkirar.com,Owner@Abelkirar.com";
+
+    expect(adminEmailRecipients()).toEqual(["owner@abelkirar.com"]);
+  });
+
+  it("returns an empty array when unset", () => {
+    delete process.env.ADMIN_NOTIFICATION_EMAILS;
+
+    expect(adminEmailRecipients()).toEqual([]);
   });
 });

@@ -46,6 +46,19 @@ export async function POST(
     );
   }
 
+  // Best-effort, admin-list notification — mirrors /quote's own call. A
+  // failure here must never affect the response.
+  const adminResult = await notificationService.notifyAdminQuoteSent(
+    notificationData,
+    auth.session.displayName
+  );
+  if (!adminResult.sent) {
+    console.error(
+      `[quote-resend] Admin quote-sent email not sent for order ${order.orderNumber}:`,
+      adminResult.error
+    );
+  }
+
   return NextResponse.json({
     ok: true,
     emailSent: emailResult.sent,

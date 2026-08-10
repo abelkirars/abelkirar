@@ -32,9 +32,11 @@ vi.mock("@/lib/db", () => ({
 }));
 
 const mockNotifyCustomerQuoteReady = vi.fn();
+const mockNotifyAdminQuoteSent = vi.fn();
 vi.mock("@/lib/notifications", () => ({
   notificationService: {
     notifyCustomerQuoteReady: (...args: unknown[]) => mockNotifyCustomerQuoteReady(...args),
+    notifyAdminQuoteSent: (...args: unknown[]) => mockNotifyAdminQuoteSent(...args),
   },
 }));
 
@@ -86,9 +88,12 @@ function requotedOrder(overrides: Record<string, unknown> = {}) {
 beforeEach(() => {
   vi.clearAllMocks();
   process.env.NEXT_PUBLIC_SITE_URL = "https://example.com";
-  mockRequireAdminApi.mockResolvedValue({ session: { adminId: "admin-1" } });
+  mockRequireAdminApi.mockResolvedValue({
+    session: { adminId: "admin-1", displayName: "Admin User" },
+  });
   mockUpdateOrder.mockResolvedValue({});
   mockUpdateManyOrderItem.mockResolvedValue({});
+  mockNotifyAdminQuoteSent.mockResolvedValue({ sent: true });
 });
 
 describe("POST /api/admin/orders/[orderNumber]/quote", () => {
@@ -209,6 +214,11 @@ describe("POST /api/admin/orders/[orderNumber]/quote", () => {
       where: { orderId: "order-1" },
       data: { unitPrice: 20000 },
     });
+    // The admin list gets told too, with the acting admin's display name.
+    expect(mockNotifyAdminQuoteSent).toHaveBeenCalledWith(
+      expect.objectContaining({ orderNumber: "ABK-20260808-F5539" }),
+      "Admin User"
+    );
   });
 
   it("converts dollars to cents: 200.50 becomes 20050", async () => {
@@ -242,6 +252,9 @@ describe("POST /api/admin/orders/[orderNumber]/quote", () => {
     // The write already happened before the email was attempted.
     expect(mockUpdateOrder).toHaveBeenCalledTimes(1);
     expect(errorSpy).toHaveBeenCalled();
+    // The admin notification is independent of the customer email's outcome
+    // — it still fires even though the customer send above failed.
+    expect(mockNotifyAdminQuoteSent).toHaveBeenCalled();
     errorSpy.mockRestore();
   });
 });

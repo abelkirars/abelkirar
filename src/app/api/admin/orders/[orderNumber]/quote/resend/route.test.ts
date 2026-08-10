@@ -18,9 +18,11 @@ vi.mock("@/lib/db", () => ({
 }));
 
 const mockNotifyCustomerQuoteReady = vi.fn();
+const mockNotifyAdminQuoteSent = vi.fn();
 vi.mock("@/lib/notifications", () => ({
   notificationService: {
     notifyCustomerQuoteReady: (...args: unknown[]) => mockNotifyCustomerQuoteReady(...args),
+    notifyAdminQuoteSent: (...args: unknown[]) => mockNotifyAdminQuoteSent(...args),
   },
 }));
 
@@ -63,7 +65,10 @@ function quotedOrder(overrides: Record<string, unknown> = {}) {
 beforeEach(() => {
   vi.clearAllMocks();
   process.env.NEXT_PUBLIC_SITE_URL = "https://example.com";
-  mockRequireAdminApi.mockResolvedValue({ session: { adminId: "admin-1" } });
+  mockRequireAdminApi.mockResolvedValue({
+    session: { adminId: "admin-1", displayName: "Admin User" },
+  });
+  mockNotifyAdminQuoteSent.mockResolvedValue({ sent: true });
 });
 
 describe("POST /api/admin/orders/[orderNumber]/quote/resend", () => {
@@ -105,6 +110,11 @@ describe("POST /api/admin/orders/[orderNumber]/quote/resend", () => {
     const body = await res.json();
     expect(body.ok).toBe(true);
     expect(body.emailSent).toBe(true);
+    // The admin list gets told too, with the acting admin's display name.
+    expect(mockNotifyAdminQuoteSent).toHaveBeenCalledWith(
+      expect.objectContaining({ orderNumber: "ABK-20260808-F5539" }),
+      "Admin User"
+    );
   });
 
   it("never modifies order data — order.update is not called", async () => {

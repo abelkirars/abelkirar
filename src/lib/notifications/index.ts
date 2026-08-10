@@ -14,6 +14,7 @@ import {
   adminPaymentConfirmedEmail,
   adminPaymentNotFoundEmail,
   adminPaymentSubmittedEmail,
+  adminQuoteSentEmail,
   customerOrderPendingEmail,
   customerCustomOrderPendingEmail,
   customerQuoteReadyEmail,
@@ -227,6 +228,22 @@ export const notificationService = {
       sendToTwilioChannels("Order cancelled", order),
     ]);
     return emailResult;
+  },
+
+  /**
+   * Tells the admin list a quote went out and who sent it — fired from both
+   * /quote and /quote/resend. Email only, no Twilio leg (out of scope), so
+   * unlike notifyAdminOrderCancelled above this doesn't need the
+   * Promise.all/sendToTwilioChannels pairing.
+   */
+  async notifyAdminQuoteSent(
+    order: OrderNotificationData,
+    quotedByDisplayName: string
+  ): Promise<SendEmailResult> {
+    const { subject, html } = adminQuoteSentEmail(order, quotedByDisplayName);
+    return withOrderNotificationLog(order.id, "adminQuoteSent", () =>
+      sendToAdminEmails(subject, html)
+    );
   },
 
   /**

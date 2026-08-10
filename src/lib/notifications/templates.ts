@@ -220,6 +220,24 @@ export function adminOrderCancelledEmail(
 }
 
 /**
+ * Mirrors adminOrderCancelledEmail exactly — same shared summary block, same
+ * "who did this" line, same shape. Sent to the admin list alongside the
+ * customer's own quote-ready email (from both /quote and /quote/resend) so
+ * the rest of the team knows a quote went out and who sent it, the same way
+ * they're already told about a cancellation or a payment confirmation.
+ */
+export function adminQuoteSentEmail(order: OrderNotificationData, quotedByDisplayName: string) {
+  return {
+    subject: `Order ${order.orderNumber} quoted by ${quotedByDisplayName}`,
+    html: `
+      <p><strong>Quoted by:</strong> ${quotedByDisplayName}</p>
+      ${adminOrderSummaryHtml(order)}
+      <p><a href="${order.adminOrderUrl}">View order</a></p>
+    `,
+  };
+}
+
+/**
  * Concise SMS/WhatsApp body shared by all five admin events. Deliberately
  * minimal: event type, order number, customer name, total, payment method,
  * payment status, order status, and the secure admin link — no screenshot

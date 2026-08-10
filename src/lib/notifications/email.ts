@@ -49,9 +49,22 @@ export async function sendEmail({ to, subject, html }: SendEmailArgs): Promise<S
   }
 }
 
+/**
+ * Deduplicates case-insensitively (owner@x.com and Owner@X.com are the same
+ * mailbox) but preserves the casing of the first occurrence in the output —
+ * a config typo shouldn't silently double-send to the same inbox.
+ */
 export function adminEmailRecipients(): string[] {
-  return (process.env.ADMIN_NOTIFICATION_EMAILS ?? "")
+  const seen = new Set<string>();
+  const recipients: string[] = [];
+  for (const email of (process.env.ADMIN_NOTIFICATION_EMAILS ?? "")
     .split(",")
     .map((e) => e.trim())
-    .filter(Boolean);
+    .filter(Boolean)) {
+    const key = email.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    recipients.push(email);
+  }
+  return recipients;
 }
