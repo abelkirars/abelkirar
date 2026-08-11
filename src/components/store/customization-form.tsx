@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Image from "next/image";
 import { useTranslations } from "next-intl";
 import type {
   ProductCustomizationOptions,
@@ -150,6 +151,42 @@ export function CustomizationForm({ product }: Props) {
                 setSelected((s) => ({ ...s, [field.id]: e.target.value }))
               }
             />
+          )}
+
+          {field.type === "image-select" && (
+            <div className="mt-2 grid grid-cols-3 gap-3 sm:grid-cols-4">
+              {field.choices?.map((choice) => (
+                <button
+                  key={choice.id}
+                  type="button"
+                  onClick={() =>
+                    setSelected((s) => ({ ...s, [field.id]: choice.id }))
+                  }
+                  aria-current={selected[field.id] === choice.id}
+                  className={cn(
+                    "overflow-hidden rounded-lg ring-2 transition-all",
+                    selected[field.id] === choice.id
+                      ? "ring-primary"
+                      : "ring-transparent hover:ring-border"
+                  )}
+                >
+                  <div className="relative aspect-square w-full bg-muted">
+                    {choice.imageUrl && (
+                      <Image src={choice.imageUrl} alt="" fill className="object-cover" />
+                    )}
+                  </div>
+                  <p className="mt-1.5 truncate px-1 pb-1 text-center text-xs font-medium">
+                    {choice.label}
+                    {choice.priceModifier !== 0 && (
+                      <span className="ml-1 font-normal opacity-70">
+                        {choice.priceModifier > 0 ? "+" : ""}
+                        ${(choice.priceModifier / 100).toFixed(0)}
+                      </span>
+                    )}
+                  </p>
+                </button>
+              ))}
+            </div>
           )}
         </div>
       ))}
