@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { Container } from "@/components/marketing/container";
@@ -5,6 +6,7 @@ import { OrderActions } from "@/components/admin/order-actions";
 import { QuoteForm } from "@/components/admin/quote-form";
 import { ResendQuoteEmailButton } from "@/components/admin/resend-quote-email-button";
 import { OrderNotes } from "@/components/admin/order-notes";
+import type { SelectedCustomizationSnapshot } from "@/types/customization";
 import {
   formatMoney,
   paymentMethodLabel,
@@ -176,15 +178,19 @@ export default async function AdminOrderDetailPage({
           <h2 className="font-medium">Items</h2>
           <ul className="mt-2 divide-y divide-border text-sm">
             {order.items.map((item) => {
-              // Raw field:choice IDs, not resolved labels. selectedCustomization
-              // snapshots only IDs (e.g. { shape: "round" }), and the human labels
-              // live on the product's current customizationOptions — which can be
-              // edited after this order was placed. There's no admin UI to edit
-              // them today, so a live join would happen to be accurate right now,
-              // but that's incidental, not guaranteed, and would go silently wrong
-              // the moment that editing UI exists. Showing exactly what's stored
-              // is the only thing that can't display something the customer
-              // didn't actually see.
+              // Prefer the resolved snapshot, written once at order-creation
+              // time and frozen forever after (prisma/schema.prisma's doc
+              // comment on selectedCustomizationSnapshot; DECISIONS.md
+              // 2026-08-10). Falls back to raw field:choice IDs only for
+              // orders placed before that column existed — those rows have
+              // no snapshot to read, and resolving raw IDs against the LIVE
+              // product is what DECISIONS.md warned would go silently wrong
+              // once an editing UI existed, which it now does.
+              const snapshot = item.selectedCustomizationSnapshot as unknown as
+                | SelectedCustomizationSnapshot
+                | null;
+              const snapshotEntries = snapshot ? Object.entries(snapshot) : null;
+
               const customization = (item.selectedCustomization ?? {}) as Record<string, string>;
               const customizationEntries = Object.entries(customization);
 
@@ -200,10 +206,39 @@ export default async function AdminOrderDetailPage({
                         : formatMoney(item.unitPrice * item.quantity, order.currency)}
                     </span>
                   </div>
-                  {customizationEntries.length > 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      {customizationEntries.map(([field, choice]) => `${field}: ${choice}`).join(", ")}
-                    </p>
+                  {snapshotEntries && snapshotEntries.length > 0 ? (
+                    <div className="space-y-1">
+                      {snapshotEntries.map(([fieldId, entry]) => (
+                        <div
+                          key={fieldId}
+                          className="flex items-center gap-2 text-xs text-muted-foreground"
+                        >
+                          {entry.imageUrl && (
+                            <div className="relative size-8 shrink-0 overflow-hidden rounded ring-1 ring-border">
+                              <Image src={entry.imageUrl} alt="" fill className="object-cover" />
+                            </div>
+                          )}
+                          <span>
+                            {entry.fieldLabel}: {entry.choiceLabel}
+                            {entry.priceModifier !== 0 && (
+                              <span className="opacity-70">
+                                {" "}
+                                ({entry.priceModifier > 0 ? "+" : ""}
+                                {formatMoney(entry.priceModifier, order.currency)})
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    customizationEntries.length > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        {customizationEntries
+                          .map(([field, choice]) => `${field}: ${choice}`)
+                          .join(", ")}
+                      </p>
+                    )
                   )}
                 </li>
               );

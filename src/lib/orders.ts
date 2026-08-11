@@ -6,6 +6,11 @@ import type { CreateOrderInput } from "@/lib/validations/order";
 import type { CreateCustomOrderInput } from "@/lib/validations/custom-order";
 import type { OrderNotificationData, CustomOrderNotificationData } from "@/lib/notifications/types";
 import type { Locale } from "@/i18n/locale";
+import type {
+  ProductCustomizationOptions,
+  SelectedCustomization,
+  SelectedCustomizationSnapshot,
+} from "@/types/customization";
 
 export class OrderCreationError extends Error {
   constructor(
@@ -17,6 +22,48 @@ export class OrderCreationError extends Error {
 }
 
 const MAX_ORDER_NUMBER_ATTEMPTS = 5;
+
+/**
+ * Resolves a customer's raw {fieldId: choiceId} picks against the product's
+ * customizationOptions AS THEY ARE RIGHT NOW, producing the frozen-forever
+ * snapshot shape documented on OrderItem.selectedCustomizationSnapshot.
+ * Called once, at order-creation time — never re-run against a later,
+ * possibly-edited version of the product (that's the whole point).
+ *
+ * Text fields have no predefined choice: choiceLabel holds the customer's
+ * typed value itself, priceModifier is always 0 (computeUnitPrice already
+ * skips "text" fields), and there's no imageUrl. A field with no answer, or
+ * a choice id that no longer matches anything on the product, is silently
+ * omitted — same "unmatched id contributes nothing" spirit as
+ * computeUnitPrice, not an error.
+ */
+function buildCustomizationSnapshot(
+  fields: ProductCustomizationOptions,
+  selected: SelectedCustomization
+): SelectedCustomizationSnapshot {
+  const snapshot: SelectedCustomizationSnapshot = {};
+
+  for (const field of fields) {
+    const value = selected[field.id];
+    if (value === undefined) continue;
+
+    if (field.type === "text") {
+      snapshot[field.id] = { fieldLabel: field.label, choiceLabel: value, priceModifier: 0 };
+      continue;
+    }
+
+    const choice = field.choices?.find((c) => c.id === value);
+    if (!choice) continue;
+    snapshot[field.id] = {
+      fieldLabel: field.label,
+      choiceLabel: choice.label,
+      priceModifier: choice.priceModifier,
+      ...(field.type === "image-select" && choice.imageUrl ? { imageUrl: choice.imageUrl } : {}),
+    };
+  }
+
+  return snapshot;
+}
 
 /**
  * Creates a manual-payment (Zelle/Cash App) order. Prices are always
@@ -69,6 +116,10 @@ export async function createManualOrder(input: CreateOrderInput, locale: Locale)
             create: lineItems.map(({ product, item, unitPrice }) => ({
               productId: product.id,
               selectedCustomization: item.customization,
+              selectedCustomizationSnapshot: buildCustomizationSnapshot(
+                product.customizationOptions as unknown as ProductCustomizationOptions,
+                item.customization
+              ) as unknown as Prisma.InputJsonValue,
               unitPrice,
               quantity: item.quantity,
               productNameSnapshot: product.name,
