@@ -157,10 +157,17 @@ All 12, from `prisma/migrations/`:
 
 **Admin-gated** (`requireAdminApi`/`requireAdminPage`, confirmed present in each file):
 - Pages: `/admin/(authenticated)/orders`, `/admin/(authenticated)/orders/[orderNumber]`, `/admin/(authenticated)/products`, `/admin/(authenticated)/announcements`, `/admin/(authenticated)/settings`, `/admin/(authenticated)/students`, `/admin/(authenticated)/students/[studentId]`, `/admin/(authenticated)/upload-images`.
-- API: `POST /api/admin/announcements`, `/api/admin/announcements/[id]`, `POST /api/admin/orders/[orderNumber]/{cancel,mark-not-found,mark-paid,note,quote,quote/resend}`, `GET /api/admin/orders/[orderNumber]/screenshot/[confirmationId]`, `POST /api/admin/products`, `/api/admin/products/[id]`, `POST /api/admin/seed` (its `POST`, not `GET`), `POST /api/admin/settings/password`, `POST /api/admin/students`, `/api/admin/students/[studentId]`, `/api/admin/students/[studentId]/email`, `/api/admin/students/[studentId]/resend-invite`, `POST /api/admin/update-instrument-images`, `POST /api/admin/upload-instrument-images`.
+- API: `POST /api/admin/announcements`, `/api/admin/announcements/[id]`, `POST /api/admin/orders/[orderNumber]/{cancel,mark-not-found,mark-paid,note,quote,quote/resend}`, `GET /api/admin/orders/[orderNumber]/screenshot/[confirmationId]`, `GET /api/admin/orders/[orderNumber]/custom-order-image` (missing from this list until now — verified present, admin-gated, added in Phase 3 piece 2), `POST /api/admin/products`, `/api/admin/products/[id]`, `DELETE /api/admin/products/[id]/images`, `POST /api/admin/seed` (its `POST`, not `GET`), `POST /api/admin/settings/password`, `POST /api/admin/students`, `/api/admin/students/[studentId]`, `/api/admin/students/[studentId]/email`, `/api/admin/students/[studentId]/resend-invite`, `POST /api/admin/update-instrument-images`, `POST /api/admin/upload-instrument-images`.
 
 **Student-gated** (`requireStudentPage`/proxy redirect):
 - Pages: `/student/dashboard` — reachable as a URL by anyone but redirected pre-render by `src/proxy.ts`, and the page itself additionally calls `requireStudentPage()`. Its own comment marks it a placeholder: *"the real dashboard is Phase 5"* ([src/app/student/dashboard/page.tsx:12](../src/app/student/dashboard/page.tsx#L12)).
+
+**Client vs. server rendering for product images**: `/store/[slug]` renders photos through
+[ProductGallery](../src/components/store/product-gallery.tsx) (`"use client"`, thumbnail-swap state) —
+the store grid (`/store`, via `ProductCard`) still uses the plain server-rendered
+[ProductVisual](../src/components/store/product-visual.tsx) directly and ships no gallery JavaScript. The
+two were kept as separate components deliberately, rather than making `ProductVisual` itself conditionally
+interactive, so the grid's bundle stays unaffected by the detail page's gallery.
 
 ## 8. Environment variables
 
@@ -199,7 +206,7 @@ Every `process.env.*` reference in `src/` and `scripts/`, grouped by feature:
 
 ## 9. Storage
 
-- **`product-images`** bucket — **public**. Written by [src/lib/public-image-upload.ts](../src/lib/public-image-upload.ts) (`uploadPublicImage`, service-role client) under folders like `products/`, `announcements/`, `custom-made/`. URLs are constructed directly as `${NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/product-images/${path}` — a plain unauthenticated HTTP GET, no anon key, no PostgREST call involved in viewing.
+- **`product-images`** bucket — **public**. Written by [src/lib/public-image-upload.ts](../src/lib/public-image-upload.ts) (`uploadPublicImage`, service-role client) under folders like `products/`, `announcements/`, `custom-made/`. URLs are constructed directly as `${NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/product-images/${path}` — a plain unauthenticated HTTP GET, no anon key, no PostgREST call involved in viewing. Editing a product's gallery **appends** rather than replaces — `PATCH /api/admin/products/[id]` never deletes existing images as a side effect of adding more; deletion is a separate action, `DELETE /api/admin/products/[id]/images`, which updates `Product.images` before attempting the Storage delete (a Storage failure then leaves a harmless orphaned file, never a dangling DB reference). The admin edit form ([src/components/admin/product-form.tsx](../src/components/admin/product-form.tsx)) renders each existing image as a thumbnail with its own delete control — the create form shows no gallery, since a new product has no existing images yet.
 - **`payment-screenshots`** bucket (name from `SUPABASE_PAYMENT_SCREENSHOTS_BUCKET`, default `"payment-screenshots"`) — **private**. Written/read by [src/lib/payment-screenshots.ts](../src/lib/payment-screenshots.ts) via the service-role client; only the object *path* is stored on `PaymentConfirmation.screenshotPath`, never a public URL. Viewing requires a short-lived signed URL (`getPaymentScreenshotSignedUrl`, default 300s), minted only from the admin-gated screenshot route.
 - **`custom-order-images`** bucket (name from `SUPABASE_CUSTOM_ORDER_IMAGES_BUCKET`, default
   `"custom-order-images"`) — **private**. Written/read by [src/lib/custom-order-images.ts](../src/lib/custom-order-images.ts)
@@ -239,16 +246,17 @@ Neither of these two benefits from the `{sent, error}` result-inspection hardeni
 - Locales: `en`, `am` ([src/i18n/locale.ts](../src/i18n/locale.ts)), default `en`.
 - Resolution ([src/i18n/request.ts](../src/i18n/request.ts)): an explicit `locale` param (used when sending a notification in a stored student/order locale) takes priority; otherwise falls back to the `NEXT_LOCALE` cookie; otherwise the default.
 - Message files: `messages/en.json`, `messages/am.json`.
-- **42** keys in `messages/am.json` currently carry an `[AM] ` placeholder-English prefix (counted directly
+- **43** keys in `messages/am.json` currently carry an `[AM] ` placeholder-English prefix (counted directly
   from the file): 41 as recorded in `docs/DECISIONS.md`'s 2026-08-09 entry (37 from Phases 2/4 + 4
-  pre-existing in `cart.*`), plus 1 added in the 2026-08-10 Phase 3 entry (`orderConfirmation.imageAttachFailed`).
+  pre-existing in `cart.*`), plus 1 added in the 2026-08-10 Phase 3 entry (`orderConfirmation.imageAttachFailed`),
+  plus 1 more added alongside the product photo gallery (`product.viewPhoto`).
 
 ## 12. Tests
 
 Ran `npm run test`:
 ```
 Test Files  22 passed (22)
-     Tests  175 passed (175)
+     Tests  180 passed (180)
 ```
 22 test files: `src/app/actions/sync-student-locale.test.ts`, `src/app/api/admin/orders/[orderNumber]/mark-not-found/route.test.ts`, `src/app/api/admin/orders/[orderNumber]/mark-paid/route.test.ts`, `src/app/api/admin/orders/[orderNumber]/quote/resend/route.test.ts`, `src/app/api/admin/orders/[orderNumber]/quote/route.test.ts`, `src/app/api/admin/settings/password/route.test.ts`, `src/app/api/admin/students/[studentId]/email/route.test.ts`, `src/app/api/admin/students/route.test.ts`, `src/app/api/custom-orders/route.test.ts`, `src/app/api/orders/[orderNumber]/confirm-payment/route.test.ts`, `src/app/api/orders/route.test.ts`, `src/app/api/student/forgot-password/route.test.ts`, `src/app/api/student/set-password/route.test.ts`, `src/i18n/request.test.ts`, `src/lib/admin/dal.test.ts`, `src/lib/notifications/email.test.ts`, `src/lib/notifications/index.test.ts`, `src/lib/notifications/order-notifications.test.ts`, `src/lib/notifications/templates.test.ts`, `src/lib/orders.test.ts`, `src/lib/phone.test.ts`, `src/lib/student/dal.test.ts`.
 
@@ -275,12 +283,11 @@ Only items verifiable from code/comments or `docs/DECISIONS.md`'s own "Still ope
 
 1. **Student file attachments are schema-only.** `WeeklyPracticeAttachment`/`MonthlyLogAttachment` exist with a documented "student-files" private bucket in the doc-comments, but no upload/read code exists anywhere (§9).
 2. **Contact and newsletter emails bypass the result-inspection hardening** entirely (§10) — they call `resend.emails.send()` directly and don't check the returned `{data, error}`.
-3. **42 Amharic message keys remain untranslated**, `[AM]`-prefixed (§11).
+3. **43 Amharic message keys remain untranslated**, `[AM]`-prefixed (§11).
 4. **`temp/debug-env` branch** — per `docs/DECISIONS.md`, still pending deletion (local and remote); no local ref exists as of this writing (`git branch -a` confirmed), but that doesn't establish the remote copy is gone.
 5. **`/student/dashboard` is an explicit placeholder** — its own code comment states the real dashboard is a future phase ([src/app/student/dashboard/page.tsx:12](../src/app/student/dashboard/page.tsx#L12)).
 6. **`mark-not-found` has no `CANCELLED` guard, unlike `mark-paid`.** Verified directly in [src/app/api/admin/orders/[orderNumber]/mark-not-found/route.ts](<../src/app/api/admin/orders/[orderNumber]/mark-not-found/route.ts>) — it checks only `PAID`. Deliberate, not a bug: marking a cancelled order's payment as "not found" moves no money and changes no total. Recorded in `docs/DECISIONS.md`'s 2026-08-10 entry.
-7. **`src/lib/supabase-admin.ts` has no `import "server-only"` guard.** It constructs a service-role Supabase client at module scope, referencing `SUPABASE_SERVICE_ROLE_KEY` directly ([src/lib/supabase-admin.ts:7-10](../src/lib/supabase-admin.ts#L7-L10)). An accidental import from a client component would not fail the build loudly — found while building the Custom Made reference-photo upload (`docs/DECISIONS.md`'s 2026-08-10 entry), where `custom-order-notice.tsx` deliberately avoided importing `custom-order-images.ts` for exactly this reason. Standing gap, not fixed.
-8. **Test coverage gaps remain** — see §12 for the current list of what's untested. The same 2026-08-10 `docs/DECISIONS.md` entry states this plainly so the current test count isn't mistaken for broad coverage.
+7. **Test coverage gaps remain** — see §12 for the current list of what's untested. `docs/DECISIONS.md`'s 2026-08-10 entry states this plainly so the current test count isn't mistaken for broad coverage.
 
 ## 14. Known constraints
 
@@ -288,3 +295,5 @@ Only items verifiable from code/comments or `docs/DECISIONS.md`'s own "Still ope
 - **`npm run build` cannot be run from this local machine.** It runs `prisma migrate deploy`, which fails with Prisma error P1001 (cannot reach the Supabase connection pooler) — a network limitation of this machine, not a code defect. Build verification happens via Vercel Preview deployments instead.
 - **Admin auth and Supabase Auth are fully independent** (§6) — a change to one must never be assumed to affect the other.
 - **RLS is enabled with zero policies** on 16 tables (§4) as defense-in-depth against a hypothetical future PostgREST exposure; it does not, and is not intended to, enforce any of this application's actual authorization logic — that lives entirely in `src/lib/admin/dal.ts` and `src/lib/student/dal.ts`.
+- **Vercel rejects request bodies over roughly 4.5MB before a Route Handler even runs** — below this app's own 8MB-per-file check in [src/lib/public-image-upload.ts](../src/lib/public-image-upload.ts), so a request carrying multiple images near that size can fail with a non-JSON response before any of this app's own validation or error handling ever executes (see `docs/DECISIONS.md`'s 2026-08-11 entry). The admin product-images flow accounts for this by appending one save at a time rather than batching a full gallery into one request; any other multi-file upload path added later needs the same awareness.
+- **Admin forms supporting both "add" and "edit" on the same page must give every field id a per-instance-unique prefix (`useId()`), never a hardcoded string.** `ProductForm` and `AnnouncementForm` both render an always-mounted "add" instance alongside a conditionally-mounted "edit" instance per row — a hardcoded `id` collides across them, and `label[for]` resolves to the first match in the document, silently misdirecting interaction with the second instance. See `docs/DECISIONS.md`'s 2026-08-11 entry.
