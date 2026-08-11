@@ -22,9 +22,10 @@ interface Props {
     images: string[];
     customizationOptions: ProductCustomizationOptions;
   };
+  onSelectImage?: (image: string) => void;
 }
 
-export function CustomizationForm({ product }: Props) {
+export function CustomizationForm({ product, onSelectImage }: Props) {
   const t = useTranslations("product");
   const addItem = useCartStore((s) => s.addItem);
   const [selected, setSelected] = useState<SelectedCustomization>(() => {
@@ -159,9 +160,10 @@ export function CustomizationForm({ product }: Props) {
                 <button
                   key={choice.id}
                   type="button"
-                  onClick={() =>
-                    setSelected((s) => ({ ...s, [field.id]: choice.id }))
-                  }
+                  onClick={() => {
+                    setSelected((s) => ({ ...s, [field.id]: choice.id }));
+                    if (choice.imageUrl) onSelectImage?.(choice.imageUrl);
+                  }}
                   aria-current={selected[field.id] === choice.id}
                   className={cn(
                     "overflow-hidden rounded-lg ring-2 transition-all",
