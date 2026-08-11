@@ -367,3 +367,33 @@ paths: the upload loop, the custom-made image, and the final DB write.
 quote route's region-pairing branch is unreachable through its own schema; a test asserted against a
 boundary the code does not use; and now correct markup failing because it was rendered twice. Each time
 the code read correctly in isolation. General rule extended: also check what else is on the page.
+
+---
+
+## 2026-08-11 — Four failed production builds — no type checking between editor and Vercel
+
+**What happened.** Commits `9673dd6` through `bbb084f` all failed to build on Vercel. Production stayed on
+`74e1dc7` for roughly a day while five commits stacked up unnoticed, including the entire customization
+backend and admin editor.
+
+**Root cause — a structural gap, not a mistake.** Three type errors: two Prisma `JsonValue` casts that
+needed to go through `unknown`, and a test mock spreading `unknown[]` into a single-parameter `vi.fn`.
+
+None of the three could be caught locally:
+- `eslint` does not type-check; no type-aware rules are configured.
+- `vitest` transpiles via esbuild and never type-checks, by design.
+- `next build` DOES run `tsc`, but it is banned on this machine because `prisma migrate deploy` fails with
+  P1001.
+
+So the only check that would have caught these was the one that cannot run here. The local loop had a
+blind spot, not a false negative.
+
+**Fix.** Added `"typecheck": "tsc --noEmit"` to `package.json`. Needs no database connection. Run it
+before every push.
+
+**Caveat that caused real confusion during diagnosis.** `node_modules/@prisma/client` can go stale after a
+schema change, producing dozens of phantom errors about columns that do exist. `prisma generate` is also
+offline-safe, so the routine after any schema change is `prisma generate`, then `typecheck`. Vercel
+regenerates on every build, so those errors are local-only.
+
+**Side note.** `src/generated/prisma` is a gitignored orphan from July 14 that nothing imports.
