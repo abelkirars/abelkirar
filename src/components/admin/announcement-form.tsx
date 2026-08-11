@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Announcement } from "@prisma/client";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,9 @@ export function AnnouncementForm({
   onDone?: () => void;
 }) {
   const router = useRouter();
+  // Same reasoning as ProductForm — the always-mounted "Add announcement"
+  // form and any per-row "Edit" form can both be in the DOM at once.
+  const uid = useId();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,14 +63,14 @@ export function AnnouncementForm({
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <Field>
-        <FieldLabel htmlFor="title">Title</FieldLabel>
-        <Input id="title" name="title" defaultValue={announcement?.title} required />
+        <FieldLabel htmlFor={`${uid}-title`}>Title</FieldLabel>
+        <Input id={`${uid}-title`} name="title" defaultValue={announcement?.title} required />
       </Field>
 
       <Field>
-        <FieldLabel htmlFor="description">Description</FieldLabel>
+        <FieldLabel htmlFor={`${uid}-description`}>Description</FieldLabel>
         <Textarea
-          id="description"
+          id={`${uid}-description`}
           name="description"
           defaultValue={announcement?.description}
           required
@@ -75,9 +78,9 @@ export function AnnouncementForm({
       </Field>
 
       <Field orientation="responsive">
-        <FieldLabel htmlFor="eventDate">Event date (optional)</FieldLabel>
+        <FieldLabel htmlFor={`${uid}-eventDate`}>Event date (optional)</FieldLabel>
         <Input
-          id="eventDate"
+          id={`${uid}-eventDate`}
           name="eventDate"
           type="date"
           defaultValue={toDateInputValue(announcement?.eventDate ?? null)}
@@ -85,21 +88,26 @@ export function AnnouncementForm({
       </Field>
 
       <Field>
-        <FieldLabel htmlFor="image">
+        <FieldLabel htmlFor={`${uid}-image`}>
           {announcement ? "Replace image (optional)" : "Image (optional)"}
         </FieldLabel>
-        <Input id="image" name="image" type="file" accept="image/png,image/jpeg,image/webp" />
+        <Input
+          id={`${uid}-image`}
+          name="image"
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+        />
       </Field>
 
       <Field orientation="horizontal">
         <input
-          id="published"
+          id={`${uid}-published`}
           name="published"
           type="checkbox"
           defaultChecked={announcement?.published ?? true}
           className="size-4 rounded border-input"
         />
-        <FieldLabel htmlFor="published" className="font-normal">
+        <FieldLabel htmlFor={`${uid}-published`} className="font-normal">
           Published (visible on the public Community page)
         </FieldLabel>
       </Field>

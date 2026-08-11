@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Product } from "@prisma/client";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,13 @@ export function ProductForm({
   onDone?: () => void;
 }) {
   const router = useRouter();
+  // Both the always-mounted "Add product" form and any number of per-row
+  // "Edit" forms (product-row.tsx) can be in the DOM at once — hardcoded
+  // ids collided across instances, and label[for] resolves to the FIRST
+  // matching id in the document, so clicking a field in the edit form
+  // could activate the add form's element instead. One id per mounted
+  // instance fixes it.
+  const uid = useId();
   const [category, setCategory] = useState<string>(product?.category ?? "KIRAR");
   const [isCustomMade, setIsCustomMade] = useState(product?.isCustomMade ?? false);
   const [submitting, setSubmitting] = useState(false);
@@ -66,14 +73,14 @@ export function ProductForm({
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <Field orientation="responsive">
-        <FieldLabel htmlFor="name">Name</FieldLabel>
-        <Input id="name" name="name" defaultValue={product?.name} required />
+        <FieldLabel htmlFor={`${uid}-name`}>Name</FieldLabel>
+        <Input id={`${uid}-name`} name="name" defaultValue={product?.name} required />
       </Field>
 
       <Field orientation="responsive">
-        <FieldLabel htmlFor="variantName">Variant name (optional)</FieldLabel>
+        <FieldLabel htmlFor={`${uid}-variantName`}>Variant name (optional)</FieldLabel>
         <Input
-          id="variantName"
+          id={`${uid}-variantName`}
           name="variantName"
           placeholder="e.g. Desalegn Kirar"
           defaultValue={product?.variantName ?? ""}
@@ -81,14 +88,19 @@ export function ProductForm({
       </Field>
 
       <Field>
-        <FieldLabel htmlFor="description">Description</FieldLabel>
-        <Textarea id="description" name="description" defaultValue={product?.description} required />
+        <FieldLabel htmlFor={`${uid}-description`}>Description</FieldLabel>
+        <Textarea
+          id={`${uid}-description`}
+          name="description"
+          defaultValue={product?.description}
+          required
+        />
       </Field>
 
       <Field orientation="responsive">
-        <FieldLabel htmlFor="category">Category</FieldLabel>
+        <FieldLabel htmlFor={`${uid}-category`}>Category</FieldLabel>
         <Select value={category} onValueChange={(value) => setCategory(value as string)}>
-          <SelectTrigger id="category" className="w-full">
+          <SelectTrigger id={`${uid}-category`} className="w-full">
             <SelectValue placeholder="Select a category" />
           </SelectTrigger>
           <SelectContent>
@@ -102,9 +114,9 @@ export function ProductForm({
       </Field>
 
       <Field orientation="responsive">
-        <FieldLabel htmlFor="price">Price (USD)</FieldLabel>
+        <FieldLabel htmlFor={`${uid}-price`}>Price (USD)</FieldLabel>
         <Input
-          id="price"
+          id={`${uid}-price`}
           name="price"
           type="number"
           min={0}
@@ -115,11 +127,11 @@ export function ProductForm({
       </Field>
 
       <Field>
-        <FieldLabel htmlFor="images">
+        <FieldLabel htmlFor={`${uid}-images`}>
           {product ? "Replace images (optional)" : "Images (optional)"}
         </FieldLabel>
         <Input
-          id="images"
+          id={`${uid}-images`}
           name="images"
           type="file"
           accept="image/png,image/jpeg,image/webp"
@@ -129,26 +141,26 @@ export function ProductForm({
 
       <Field orientation="horizontal">
         <input
-          id="published"
+          id={`${uid}-published`}
           name="published"
           type="checkbox"
           defaultChecked={product?.isActive ?? true}
           className="size-4 rounded border-input"
         />
-        <FieldLabel htmlFor="published" className="font-normal">
+        <FieldLabel htmlFor={`${uid}-published`} className="font-normal">
           Published (visible in the public store)
         </FieldLabel>
       </Field>
 
       <Field orientation="horizontal">
         <input
-          id="isCustomMade"
+          id={`${uid}-isCustomMade`}
           type="checkbox"
           checked={isCustomMade}
           onChange={(e) => setIsCustomMade(e.target.checked)}
           className="size-4 rounded border-input"
         />
-        <FieldLabel htmlFor="isCustomMade" className="font-normal">
+        <FieldLabel htmlFor={`${uid}-isCustomMade`} className="font-normal">
           Custom made (also available as a custom order)
         </FieldLabel>
       </Field>
@@ -156,22 +168,22 @@ export function ProductForm({
       {isCustomMade && (
         <div className="space-y-4 rounded-lg border border-border/60 bg-muted/20 p-4">
           <Field>
-            <FieldLabel htmlFor="customMadeDetails">Custom order details</FieldLabel>
+            <FieldLabel htmlFor={`${uid}-customMadeDetails`}>Custom order details</FieldLabel>
             <Textarea
-              id="customMadeDetails"
+              id={`${uid}-customMadeDetails`}
               name="customMadeDetails"
               placeholder="e.g. Customer can request custom dimensions, wood finish, engraving, etc."
               defaultValue={product?.customMadeDetails ?? ""}
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor="customMadeImage">
+            <FieldLabel htmlFor={`${uid}-customMadeImage`}>
               {product?.customMadeImageUrl
                 ? "Replace reference image (optional)"
                 : "Reference image (optional)"}
             </FieldLabel>
             <Input
-              id="customMadeImage"
+              id={`${uid}-customMadeImage`}
               name="customMadeImage"
               type="file"
               accept="image/png,image/jpeg,image/webp"
