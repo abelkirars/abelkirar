@@ -397,3 +397,90 @@ offline-safe, so the routine after any schema change is `prisma generate`, then 
 regenerates on every build, so those errors are local-only.
 
 **Side note.** `src/generated/prisma` is a gitignored orphan from July 14 that nothing imports.
+
+---
+
+## 2026-08-12 — Product customization options: admin editor, image-select, and the order-time snapshot
+
+**What shipped, in six pieces**, each built and verified independently (lint/test/typecheck green at every
+step):
+1. Migration `20260811160000_add_order_item_customization_snapshot` — additive-only
+   `OrderItem.selectedCustomizationSnapshot Json?`, schema first, nothing reading or writing it yet.
+2. Types (`src/types/customization.ts`) and a zod schema
+   (`src/lib/validations/customization-options.ts`) for the field/choice array, including the new
+   `image-select` field type.
+3. Two admin routes: `PATCH /api/admin/products/[id]/customization-options` (whole-array replace, with
+   orphan choice-image cleanup diffed against the old array) and `POST
+   /api/admin/products/[id]/customization-choice-image` (uploads one choice image ahead of save).
+4. The nested admin editor — `CustomizationOptionsEditor` / `CustomizationFieldEditor` /
+   `CustomizationChoiceEditor` (`src/components/admin/`), a dedicated page at
+   `/admin/(authenticated)/products/[id]/customization`, entered via a new "Customize" link on each
+   product row.
+5. The `image-select` rendering branch in `CustomizationForm` (customer-facing) — a tappable photo grid,
+   matching `ProductGallery`'s selection-ring language rather than `select`'s bordered-button or
+   `swatch`'s color-ring, since it's structurally a photo grid, not a color picker.
+6. The order-time snapshot: `buildCustomizationSnapshot()` in `src/lib/orders.ts:26-66`, called from
+   `createManualOrder`, and rendered on the admin order detail page in place of raw ids when present.
+
+**Decision — ids are slugified from the label and frozen, not regenerated.** `src/lib/customization-id.ts`:
+`freezeId()` computes an id from a field/choice's label the first time it has one (on blur, not on every
+keystroke, so it isn't locked in from the first character before someone finishes typing) and never
+touches it again — later label edits never change the id. Reason: the id is the join key for
+`computeUnitPrice`, the raw `selectedCustomization` map, and now `selectedCustomizationSnapshot` — letting
+it drift with a label edit would silently break pricing and historical order data. Collisions (two choices
+both slugifying to the same string) get a numeric suffix (`natural`, `natural-2`, ...), scoped to siblings
+only — two different fields may reuse the same choice id, since fields are independent id namespaces
+(confirmed against `customizationOptionsSchema`'s own uniqueness check, which is per-field for choices and
+array-wide for fields).
+
+**Decision — the snapshot resolves against the product's options AT ORDER TIME, forever.**
+`buildCustomizationSnapshot()` runs once, inside `createManualOrder`, reading whatever
+`Product.customizationOptions` says *right then* — never re-run later. Renaming a field or choice, or
+deleting a choice, after the order exists cannot change what that order's snapshot says the customer chose
+or what it cost, because nothing ever re-resolves it. This is the exact case flagged as a future risk in
+the 2026-08-10 entry ("would go silently wrong the moment that editing UI exists") — that editing UI now
+exists (piece 4), which is why this piece was never optional. Text fields are included in the snapshot
+despite having no predefined choice: `choiceLabel` holds the customer's typed value itself (e.g. the
+engraving text), `priceModifier` is always 0 (matching `computeUnitPrice`, which already skips `"text"`
+fields), no `imageUrl`. Omitting text fields would have left the exact problem unsolved for the one field
+type where the value *is* the content someone needs to actually build the instrument.
+
+**Decision — picking a design swaps the main product image; last-touched-wins is a side effect of shared
+state, not a rule.** `ProductGallery` and `CustomizationForm` are independent client components with no
+shared ancestor holding state; `ProductDisplay` (`src/components/store/product-display.tsx`) was
+introduced as a thin composing wrapper that owns one `selectedImage` `useState` and passes it into both —
+`ProductGallery` as a controlled `selectedImage`/`onSelectImage` pair (falling back to fully self-contained
+behavior when neither prop is passed, so it's still usable standalone), `CustomizationForm` as a plain
+`onSelectImage` callback fired when an image-select choice is tapped. Because both a gallery-thumbnail tap
+and a design-choice tap call the exact same setter, whichever happened most recently is simply what's in
+state — no priority flag, no locking logic; "last touched wins" falls out of using one shared setter
+rather than being implemented as a rule.
+
+**Three cases where the obvious implementation would have been wrong:**
+1. **Native `required` does nothing here.** The editor's Save button is a JS `onClick` handler, not a form
+   submit event, so HTML5 `required` never blocks anything on its own — and even if it were a real form,
+   `@base-ui/react/accordion`'s `AccordionRoot` defaults to `keepMounted: false`, so a *collapsed* field's
+   `required` input isn't even in the DOM to be validated. The actual guard is a friendly pre-check inside
+   `handleSave` (`customization-options-editor.tsx:134-143`) that blocks on an empty label before ever
+   reaching zod — which also avoids surfacing zod's own "Field id is required" message, meaningless to an
+   admin who never typed an "id".
+2. **A button cannot nest inside `AccordionTrigger`.** `AccordionTrigger` itself renders as a `<button>`;
+   move/remove controls for a field live inside `AccordionContent` instead (only reachable while
+   expanded) rather than beside the trigger, to avoid invalid nested-button HTML.
+3. **`Number("") === 0`, not `NaN`.** The price-adjustment input's first draft recomputed `priceModifier`
+   on every keystroke; clearing the field to retype a value would have silently zeroed a real price
+   adjustment — a money bug that wouldn't announce itself until an order total was wrong weeks later.
+   Fixed in `customization-choice-editor.tsx` (`handlePriceChange`/`handlePriceBlur`): the input's own
+   string is the source of truth while typing, only a non-empty, finite-parsing value ever commits to
+   `priceModifier`, and blur resets the display to the last committed value if what's left isn't valid.
+
+**Decision — store search.** `/store` gained a `?q=` param, filtering `name`/`variantName`/`description`
+case-insensitively via Prisma's `contains` + `mode: "insensitive"` (GA on `postgresql`, no preview flag —
+confirmed against `schema.prisma`'s `generator client` block, which enables no preview features at all).
+Query lives in the URL, a plain `<form action="/store">` (default GET) — no client component, no JS needed
+for the search itself. **Category and search are mutually exclusive, not ANDed.** The first version
+composed them, which meant browsing a category and then searching for something outside it silently
+returned zero results with no indication a category filter was still narrowing the query. Fixed by
+computing `categoryFilter` as `undefined` whenever a search is active — not just by dropping the category
+param from the search form (which only fixes the form path), but at the point both filters are read,
+which also closes the same trap for a bookmarked or manually-edited URL carrying both params.
