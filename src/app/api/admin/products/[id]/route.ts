@@ -49,22 +49,30 @@ export async function PATCH(
     .getAll("images")
     .filter((f): f is File => f instanceof File && f.size > 0);
 
-  let images = existingImages;
+  // Appends to the gallery rather than replacing it — deleting individual
+  // photos is its own action (DELETE /api/admin/products/[id]/images),
+  // never a side effect of adding more.
+  const uploaded: string[] = [];
   if (newFiles.length > 0) {
-    const uploaded: string[] = [];
     try {
       for (const file of newFiles) {
         uploaded.push(await uploadPublicImage(file, "products"));
       }
     } catch (err) {
+      // Whatever succeeded before the failure is now an orphan in
+      // Storage, referenced nowhere — clean it up rather than leak it.
+      await Promise.all(uploaded.map(deletePublicImage));
       if (err instanceof InvalidImageError) {
         return NextResponse.json({ error: err.message }, { status: 400 });
       }
-      throw err;
+      console.error(`[admin/products] Image upload failed for product ${id}:`, err);
+      return NextResponse.json(
+        { error: "Upload failed, please try again" },
+        { status: 500 }
+      );
     }
-    await Promise.all(existingImages.map(deletePublicImage));
-    images = uploaded;
   }
+  const images = [...existingImages, ...uploaded];
 
   const customMadeImage = formData.get("customMadeImage");
   let customMadeImageUrl = existing.customMadeImageUrl;
@@ -72,10 +80,15 @@ export async function PATCH(
     try {
       customMadeImageUrl = await uploadPublicImage(customMadeImage, "custom-made");
     } catch (err) {
+      await Promise.all(uploaded.map(deletePublicImage));
       if (err instanceof InvalidImageError) {
         return NextResponse.json({ error: err.message }, { status: 400 });
       }
-      throw err;
+      console.error(`[admin/products] Custom-made image upload failed for product ${id}:`, err);
+      return NextResponse.json(
+        { error: "Upload failed, please try again" },
+        { status: 500 }
+      );
     }
     if (existing.customMadeImageUrl) await deletePublicImage(existing.customMadeImageUrl);
   }
@@ -90,21 +103,37 @@ export async function PATCH(
     isCustomMade,
     customMadeDetails,
   } = parsed.data;
-  const product = await prisma.product.update({
-    where: { id },
-    data: {
-      name,
-      variantName: variantName || null,
-      description,
-      category,
-      basePrice: Math.round(price * 100),
-      images,
-      isActive: published,
-      isCustomMade,
-      customMadeDetails: customMadeDetails || null,
-      customMadeImageUrl,
-    },
-  });
+  let product;
+  try {
+    product = await prisma.product.update({
+      where: { id },
+      data: {
+        name,
+        variantName: variantName || null,
+        description,
+        category,
+        basePrice: Math.round(price * 100),
+        images,
+        isActive: published,
+        isCustomMade,
+        customMadeDetails: customMadeDetails || null,
+        customMadeImageUrl,
+      },
+    });
+  } catch (err) {
+    // The DB write is the last step — if it fails, every image uploaded
+    // above (gallery additions and/or a new custom-made image) is now
+    // orphaned, since nothing in the DB points at them yet.
+    await Promise.all(uploaded.map(deletePublicImage));
+    if (customMadeImageUrl && customMadeImageUrl !== existing.customMadeImageUrl) {
+      await deletePublicImage(customMadeImageUrl);
+    }
+    console.error(`[admin/products] Failed to save product ${id}:`, err);
+    return NextResponse.json(
+      { error: "Failed to save product, please try again" },
+      { status: 500 }
+    );
+  }
 
   return NextResponse.json({ ok: true, product });
 }

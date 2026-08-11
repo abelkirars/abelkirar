@@ -2,6 +2,8 @@
 
 import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
+import { X } from "lucide-react";
 import type { Product } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +38,32 @@ export function ProductForm({
   const [isCustomMade, setIsCustomMade] = useState(product?.isCustomMade ?? false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [images, setImages] = useState<string[]>((product?.images as string[]) ?? []);
+  const [deletingUrl, setDeletingUrl] = useState<string | null>(null);
+
+  async function handleDeleteImage(url: string) {
+    if (!product) return;
+    if (!window.confirm("Delete this photo? This cannot be undone.")) return;
+    setDeletingUrl(url);
+    try {
+      const res = await fetch(
+        `/api/admin/products/${product.id}/images?url=${encodeURIComponent(url)}`,
+        { method: "DELETE" }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Failed to delete photo");
+        return;
+      }
+      setImages((prev) => prev.filter((img) => img !== url));
+      router.refresh();
+    } catch (err) {
+      console.error("[ProductForm] delete image failed:", err);
+      setError("Failed to delete photo");
+    } finally {
+      setDeletingUrl(null);
+    }
+  }
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -128,8 +156,29 @@ export function ProductForm({
 
       <Field>
         <FieldLabel htmlFor={`${uid}-images`}>
-          {product ? "Replace images (optional)" : "Images (optional)"}
+          {product ? "Add images (optional)" : "Images (optional)"}
         </FieldLabel>
+        {product && images.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-2">
+            {images.map((url) => (
+              <div
+                key={url}
+                className="relative aspect-square w-16 shrink-0 overflow-hidden rounded-lg ring-1 ring-border sm:w-20"
+              >
+                <Image src={url} alt="" fill className="object-cover" />
+                <button
+                  type="button"
+                  onClick={() => handleDeleteImage(url)}
+                  disabled={deletingUrl === url}
+                  aria-label="Delete photo"
+                  className="absolute top-0.5 right-0.5 flex size-5 items-center justify-center rounded-full bg-background/90 text-foreground shadow-sm transition-colors hover:bg-destructive hover:text-destructive-foreground disabled:opacity-50"
+                >
+                  <X className="size-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
         <Input
           id={`${uid}-images`}
           name="images"
