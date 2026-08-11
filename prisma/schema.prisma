@@ -255,6 +255,22 @@ model OrderItem {
   productId             String?
   product               Product? @relation(fields: [productId], references: [id])
   selectedCustomization Json
+  /// Resolved snapshot of the customer's picks at order-creation time —
+  /// distinct from selectedCustomization above, which stays the raw
+  /// {fieldId: choiceId} map used for repricing/audit and is never
+  /// overwritten. Written once, at creation, never touched again, so a
+  /// later edit to Product.customizationOptions can never change what an
+  /// old order appears to say the customer chose or what each choice cost
+  /// at the time — the exact case this exists for (an old-invoice query
+  /// after options have since changed).
+  /// Shape: Record<fieldId, { fieldLabel: string; choiceLabel: string;
+  /// priceModifier: number; imageUrl?: string }> — imageUrl present only
+  /// when the field's type is "image-select". Nothing validates a Json
+  /// column at the database level, so this comment is the only contract;
+  /// keep it in sync with whatever writes it.
+  /// Schema only for now — no application code reads or writes this yet
+  /// (see docs/DECISIONS.md).
+  selectedCustomizationSnapshot Json?
   unitPrice             Int
   quantity              Int      @default(1)
   productNameSnapshot   String
