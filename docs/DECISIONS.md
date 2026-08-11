@@ -323,3 +323,47 @@ admin-triggered actions.
 **Test gap closed.** `adminEmailRecipients` had no direct test coverage at all despite being the single
 point of failure for every admin notification. Now covered: multiple addresses, whitespace, trailing
 commas, exact and case-differing duplicates, and unset.
+
+---
+
+## 2026-08-11 — Product image management: duplicate form ids, request size limits, and append-not-replace
+
+**What was broken.** Multi-file selection failed on the admin EDIT product form but worked on the ADD
+form. Uploading images on edit appeared to succeed while changing nothing.
+
+**Root cause 1 — duplicate DOM ids.** The add form is always mounted on `/admin/products`, and clicking
+Edit on a row mounts a second `ProductForm` without unmounting the first. Every field used a hardcoded id,
+so two elements shared `id="images"`. `label[for]` resolves to the FIRST match in document order, so
+interacting with the edit form's fields activated the add form's elements instead. Files selected there
+never reached the submitted form, which then correctly saved with zero new images. Fixed with one
+`useId()` prefix per component instance, in both `ProductForm` and `AnnouncementForm`.
+
+Worth noting: three separate investigation passes found nothing wrong with the file input, because
+nothing was wrong with it. The `multiple` attribute was present and reached the DOM. The route used
+`getAll` correctly. The failure was in how the browser resolved a correct attribute across two correct
+copies of a correct form.
+
+**Root cause 2 — Vercel request body limit.** Three photos totalling 6MB failed with a generic "Something
+went wrong." The app validates 8MB PER FILE, but Vercel rejects request bodies over roughly 4.5MB before
+the route runs at all — producing a non-JSON response, so the client's `res.json()` threw and fell into
+the hardcoded generic catch. The real reason existed only in server logs.
+
+**Decision — append, not replace.** Product images now append rather than replace. Adding photos never
+deletes existing ones as a side effect. Photos are added one or two at a time, which also keeps each
+request well under the platform limit.
+
+**Decision — deletion is its own action.** `DELETE /api/admin/products/[id]/images`. The DB write happens
+BEFORE the storage delete, so a storage failure leaves a harmless orphaned file rather than a product
+referencing an image that no longer exists.
+
+**Decision — show existing photos.** The edit form now shows existing photos as thumbnails. Previously
+there was no way to see what a product already had.
+
+**Decision — surface real errors, clean up orphans.** Upload failures now return a specific JSON error
+instead of re-throwing into a non-JSON 500, and orphaned uploads are cleaned up on all three failure
+paths: the upload loop, the custom-made image, and the final DB write.
+
+**Pattern — fourth instance.** Adding to the running list: `mark-paid`'s guard existed only in the UI; the
+quote route's region-pairing branch is unreachable through its own schema; a test asserted against a
+boundary the code does not use; and now correct markup failing because it was rendered twice. Each time
+the code read correctly in isolation. General rule extended: also check what else is on the page.
