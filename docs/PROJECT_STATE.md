@@ -85,6 +85,8 @@ All from [prisma/schema.prisma](../prisma/schema.prisma).
 | `MonthlyLog` | An admin-authored monthly progress report for one student. |
 | `MonthlyLogAttachment` | A file attached to a `MonthlyLog`. Schema only, same as above — no upload/read code exists. |
 
+**`OrderItem.selectedCustomizationSnapshot`** (nullable `Json`, [prisma/schema.prisma:273](../prisma/schema.prisma#L273), added by migration 13 in §5) — schema only as of this writing: no application code reads or writes it yet (§13).
+
 ### Enums and values
 
 | Enum | Values |
@@ -117,7 +119,7 @@ this has no effect on application behavior either way; noting it only for comple
 
 ## 5. Migrations, in order
 
-All 12, from `prisma/migrations/`:
+All 13, from `prisma/migrations/`:
 
 1. `20260721123423_manual_payments_zelle_cashapp` — introduces manual payments (Zelle/Cash App), `Admin`, `PaymentConfirmation`, `OrderNote`, `RateLimitHit`, replacing Stripe as the active checkout flow.
 2. `20260722163731_eur_bank_transfer_payment_region` — adds `EUR_BANK_TRANSFER` to `PaymentMethod`, adds `PaymentRegion` enum and `Order.paymentRegion`.
@@ -131,6 +133,7 @@ All 12, from `prisma/migrations/`:
 10. `20260729035713_add_student_activated_at` — adds `StudentProfile.activatedAt`.
 11. `20260730022327_add_admin_password_changed_at` — adds `Admin.passwordChangedAt`.
 12. `20260808160000_add_custom_quote_and_notification_log` — adds `PENDING_QUOTE`/`CUSTOM_QUOTE` enum values, `Order.customOrderDescription`/`customOrderImagePath`/`quotedAt`/`quotedById`, and the `OrderNotificationLog` table.
+13. `20260811160000_add_order_item_customization_snapshot` — adds nullable `OrderItem.selectedCustomizationSnapshot Json?`. Additive only; no code reads or writes it yet (§4, §13).
 
 ## 6. Auth — two entirely separate systems
 
@@ -157,7 +160,7 @@ All 12, from `prisma/migrations/`:
 
 **Admin-gated** (`requireAdminApi`/`requireAdminPage`, confirmed present in each file):
 - Pages: `/admin/(authenticated)/orders`, `/admin/(authenticated)/orders/[orderNumber]`, `/admin/(authenticated)/products`, `/admin/(authenticated)/announcements`, `/admin/(authenticated)/settings`, `/admin/(authenticated)/students`, `/admin/(authenticated)/students/[studentId]`, `/admin/(authenticated)/upload-images`.
-- API: `POST /api/admin/announcements`, `/api/admin/announcements/[id]`, `POST /api/admin/orders/[orderNumber]/{cancel,mark-not-found,mark-paid,note,quote,quote/resend}`, `GET /api/admin/orders/[orderNumber]/screenshot/[confirmationId]`, `GET /api/admin/orders/[orderNumber]/custom-order-image` (missing from this list until now — verified present, admin-gated, added in Phase 3 piece 2), `POST /api/admin/products`, `/api/admin/products/[id]`, `DELETE /api/admin/products/[id]/images`, `POST /api/admin/seed` (its `POST`, not `GET`), `POST /api/admin/settings/password`, `POST /api/admin/students`, `/api/admin/students/[studentId]`, `/api/admin/students/[studentId]/email`, `/api/admin/students/[studentId]/resend-invite`, `POST /api/admin/update-instrument-images`, `POST /api/admin/upload-instrument-images`.
+- API: `POST /api/admin/announcements`, `/api/admin/announcements/[id]`, `POST /api/admin/orders/[orderNumber]/{cancel,mark-not-found,mark-paid,note,quote,quote/resend}`, `GET /api/admin/orders/[orderNumber]/screenshot/[confirmationId]`, `GET /api/admin/orders/[orderNumber]/custom-order-image` (missing from this list until now — verified present, admin-gated, added in Phase 3 piece 2), `POST /api/admin/products`, `/api/admin/products/[id]`, `DELETE /api/admin/products/[id]/images`, `PATCH /api/admin/products/[id]/customization-options` (whole-array replace of `Product.customizationOptions`, validated by `customizationOptionsSchema`; §13 — no caller exists yet), `POST /api/admin/products/[id]/customization-choice-image` (uploads one choice image, returns its URL; §13 — no caller exists yet), `POST /api/admin/seed` (its `POST`, not `GET`), `POST /api/admin/settings/password`, `POST /api/admin/students`, `/api/admin/students/[studentId]`, `/api/admin/students/[studentId]/email`, `/api/admin/students/[studentId]/resend-invite`, `POST /api/admin/update-instrument-images`, `POST /api/admin/upload-instrument-images`.
 
 **Student-gated** (`requireStudentPage`/proxy redirect):
 - Pages: `/student/dashboard` — reachable as a URL by anyone but redirected pre-render by `src/proxy.ts`, and the page itself additionally calls `requireStudentPage()`. Its own comment marks it a placeholder: *"the real dashboard is Phase 5"* ([src/app/student/dashboard/page.tsx:12](../src/app/student/dashboard/page.tsx#L12)).
@@ -206,7 +209,7 @@ Every `process.env.*` reference in `src/` and `scripts/`, grouped by feature:
 
 ## 9. Storage
 
-- **`product-images`** bucket — **public**. Written by [src/lib/public-image-upload.ts](../src/lib/public-image-upload.ts) (`uploadPublicImage`, service-role client) under folders like `products/`, `announcements/`, `custom-made/`. URLs are constructed directly as `${NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/product-images/${path}` — a plain unauthenticated HTTP GET, no anon key, no PostgREST call involved in viewing. Editing a product's gallery **appends** rather than replaces — `PATCH /api/admin/products/[id]` never deletes existing images as a side effect of adding more; deletion is a separate action, `DELETE /api/admin/products/[id]/images`, which updates `Product.images` before attempting the Storage delete (a Storage failure then leaves a harmless orphaned file, never a dangling DB reference). The admin edit form ([src/components/admin/product-form.tsx](../src/components/admin/product-form.tsx)) renders each existing image as a thumbnail with its own delete control — the create form shows no gallery, since a new product has no existing images yet.
+- **`product-images`** bucket — **public**. Written by [src/lib/public-image-upload.ts](../src/lib/public-image-upload.ts) (`uploadPublicImage`, service-role client) under folders like `products/`, `announcements/`, `custom-made/`, and now `customization-choices/` (written by `POST /api/admin/products/[id]/customization-choice-image`, §7 — no caller exists yet, §13). URLs are constructed directly as `${NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/product-images/${path}` — a plain unauthenticated HTTP GET, no anon key, no PostgREST call involved in viewing. Editing a product's gallery **appends** rather than replaces — `PATCH /api/admin/products/[id]` never deletes existing images as a side effect of adding more; deletion is a separate action, `DELETE /api/admin/products/[id]/images`, which updates `Product.images` before attempting the Storage delete (a Storage failure then leaves a harmless orphaned file, never a dangling DB reference). The admin edit form ([src/components/admin/product-form.tsx](../src/components/admin/product-form.tsx)) renders each existing image as a thumbnail with its own delete control — the create form shows no gallery, since a new product has no existing images yet. `PATCH /api/admin/products/[id]/customization-options` follows the same append/orphan-cleanup shape for choice images: a whole-array replace of `Product.customizationOptions`, diffing old vs. new choice `imageUrl`s and best-effort-deleting whatever dropped out ([route.ts](../src/app/api/admin/products/[id]/customization-options/route.ts)), same DB-write-first-then-cleanup ordering as the two routes above.
 - **`payment-screenshots`** bucket (name from `SUPABASE_PAYMENT_SCREENSHOTS_BUCKET`, default `"payment-screenshots"`) — **private**. Written/read by [src/lib/payment-screenshots.ts](../src/lib/payment-screenshots.ts) via the service-role client; only the object *path* is stored on `PaymentConfirmation.screenshotPath`, never a public URL. Viewing requires a short-lived signed URL (`getPaymentScreenshotSignedUrl`, default 300s), minted only from the admin-gated screenshot route.
 - **`custom-order-images`** bucket (name from `SUPABASE_CUSTOM_ORDER_IMAGES_BUCKET`, default
   `"custom-order-images"`) — **private**. Written/read by [src/lib/custom-order-images.ts](../src/lib/custom-order-images.ts)
@@ -255,10 +258,10 @@ Neither of these two benefits from the `{sent, error}` result-inspection hardeni
 
 Ran `npm run test`:
 ```
-Test Files  22 passed (22)
-     Tests  180 passed (180)
+Test Files  23 passed (23)
+     Tests  201 passed (201)
 ```
-22 test files: `src/app/actions/sync-student-locale.test.ts`, `src/app/api/admin/orders/[orderNumber]/mark-not-found/route.test.ts`, `src/app/api/admin/orders/[orderNumber]/mark-paid/route.test.ts`, `src/app/api/admin/orders/[orderNumber]/quote/resend/route.test.ts`, `src/app/api/admin/orders/[orderNumber]/quote/route.test.ts`, `src/app/api/admin/settings/password/route.test.ts`, `src/app/api/admin/students/[studentId]/email/route.test.ts`, `src/app/api/admin/students/route.test.ts`, `src/app/api/custom-orders/route.test.ts`, `src/app/api/orders/[orderNumber]/confirm-payment/route.test.ts`, `src/app/api/orders/route.test.ts`, `src/app/api/student/forgot-password/route.test.ts`, `src/app/api/student/set-password/route.test.ts`, `src/i18n/request.test.ts`, `src/lib/admin/dal.test.ts`, `src/lib/notifications/email.test.ts`, `src/lib/notifications/index.test.ts`, `src/lib/notifications/order-notifications.test.ts`, `src/lib/notifications/templates.test.ts`, `src/lib/orders.test.ts`, `src/lib/phone.test.ts`, `src/lib/student/dal.test.ts`.
+23 test files: `src/app/actions/sync-student-locale.test.ts`, `src/app/api/admin/orders/[orderNumber]/mark-not-found/route.test.ts`, `src/app/api/admin/orders/[orderNumber]/mark-paid/route.test.ts`, `src/app/api/admin/orders/[orderNumber]/quote/resend/route.test.ts`, `src/app/api/admin/orders/[orderNumber]/quote/route.test.ts`, `src/app/api/admin/settings/password/route.test.ts`, `src/app/api/admin/students/[studentId]/email/route.test.ts`, `src/app/api/admin/students/route.test.ts`, `src/app/api/custom-orders/route.test.ts`, `src/app/api/orders/[orderNumber]/confirm-payment/route.test.ts`, `src/app/api/orders/route.test.ts`, `src/app/api/student/forgot-password/route.test.ts`, `src/app/api/student/set-password/route.test.ts`, `src/i18n/request.test.ts`, `src/lib/admin/dal.test.ts`, `src/lib/notifications/email.test.ts`, `src/lib/notifications/index.test.ts`, `src/lib/notifications/order-notifications.test.ts`, `src/lib/notifications/templates.test.ts`, `src/lib/orders.test.ts`, `src/lib/phone.test.ts`, `src/lib/student/dal.test.ts`, `src/lib/validations/customization-options.test.ts`.
 
 For the Prisma-mocking, `$transaction`, and `next-intl` conventions these route tests follow (and when
 `@/lib/orders` needs a full mock vs. can be imported for real), see `docs/DECISIONS.md`'s 2026-08-10
@@ -270,6 +273,7 @@ For the Prisma-mocking, `$transaction`, and `next-intl` conventions these route 
 - Every admin CRUD route for products and announcements.
 - `/api/contact`, `/api/newsletter`, `/api/admin/seed`, `/api/admin/upload-instrument-images`, `/api/admin/update-instrument-images`, `/api/admin/students/[studentId]/route.ts`, `/api/admin/students/[studentId]/resend-invite`.
 - `src/lib/rate-limit.ts`, `src/lib/order-number.ts`, `src/lib/pricing.ts`, `src/lib/payment-screenshots.ts`, `src/lib/custom-order-images.ts`, `src/lib/public-image-upload.ts`.
+- Both new customization-options routes (§7) — `src/lib/validations/customization-options.ts` (the zod schema itself) is covered by `src/lib/validations/customization-options.test.ts`, but neither `PATCH /api/admin/products/[id]/customization-options` nor `POST /api/admin/products/[id]/customization-choice-image` has a route-level test.
 - `src/proxy.ts` itself (its locale-resolution dependency, `src/i18n/request.ts`, has a test; the routing/redirect/cookie-refresh logic in `proxy.ts` does not).
 - **Every React component** — zero `*.test.tsx` files exist anywhere in the repo.
 
@@ -288,6 +292,7 @@ Only items verifiable from code/comments or `docs/DECISIONS.md`'s own "Still ope
 5. **`/student/dashboard` is an explicit placeholder** — its own code comment states the real dashboard is a future phase ([src/app/student/dashboard/page.tsx:12](../src/app/student/dashboard/page.tsx#L12)).
 6. **`mark-not-found` has no `CANCELLED` guard, unlike `mark-paid`.** Verified directly in [src/app/api/admin/orders/[orderNumber]/mark-not-found/route.ts](<../src/app/api/admin/orders/[orderNumber]/mark-not-found/route.ts>) — it checks only `PAID`. Deliberate, not a bug: marking a cancelled order's payment as "not found" moves no money and changes no total. Recorded in `docs/DECISIONS.md`'s 2026-08-10 entry.
 7. **Test coverage gaps remain** — see §12 for the current list of what's untested. `docs/DECISIONS.md`'s 2026-08-10 entry states this plainly so the current test count isn't mistaken for broad coverage.
+8. **Product customization options: backend pieces exist, nothing calls them yet.** As of this writing: the types ([src/types/customization.ts](../src/types/customization.ts)), the validation schema ([src/lib/validations/customization-options.ts](../src/lib/validations/customization-options.ts)), both admin routes (`PATCH .../customization-options`, `POST .../customization-choice-image`, §7), and `OrderItem.selectedCustomizationSnapshot` (§4, migration 13 in §5) all exist — verified by repo-wide search (§7, §9) that nothing in `src/` calls either route, and nothing writes or reads the snapshot column. Still missing: an admin page to edit `Product.customizationOptions` (still only settable from the hardcoded constant in [prisma/seed.ts](../prisma/seed.ts)), and an `image-select` rendering branch in `CustomizationForm` ([src/components/store/customization-form.tsx:94-153](../src/components/store/customization-form.tsx#L94-L153) has branches for `select`, `swatch`, and `text` only, no `default`/fallback case). **Live footgun until that branch ships**: `missingRequired` ([src/components/store/customization-form.tsx:46-48](../src/components/store/customization-form.tsx#L46-L48)) blocks "Add to cart" for any required field with no selection, regardless of type — an `image-select` field marked `required: true` would render its label and no picker at all, permanently blocking checkout with no way for the customer to satisfy it. No product currently has an `image-select` field (the seed data doesn't define one), so this cannot yet occur in practice, but it will the moment one is added before the rendering branch ships.
 
 ## 14. Known constraints
 
