@@ -78,14 +78,19 @@ export default async function StorePage({
   searchParams,
 }: PageProps<"/store">) {
   const { category, q } = await searchParams;
-  const categoryFilter = typeof category === "string" ? category : undefined;
   const searchQuery = typeof q === "string" && q.trim() ? q.trim() : undefined;
+  // A search always searches the whole catalogue — category and search
+  // never combine. If a URL somehow carries both (e.g. stale/manually
+  // edited), search wins and category is dropped, not ANDed in, since an
+  // AND made "browsing a category, then searching" silently return nothing
+  // whenever the match lived outside that category.
+  const categoryFilter =
+    !searchQuery && typeof category === "string" ? category : undefined;
   const t = await getTranslations("store");
 
   const products = await prisma.product.findMany({
     where: {
       isActive: true,
-      ...(categoryFilter ? { category: categoryFilter as never } : {}),
       ...(searchQuery
         ? {
             OR: [
@@ -94,7 +99,9 @@ export default async function StorePage({
               { description: { contains: searchQuery, mode: "insensitive" as const } },
             ],
           }
-        : {}),
+        : categoryFilter
+          ? { category: categoryFilter as never }
+          : {}),
     },
     orderBy: [{ createdAt: "asc" }, { id: "asc" }],
   });
@@ -136,9 +143,6 @@ export default async function StorePage({
         <Container>
           <div className="mx-auto mb-12 max-w-md">
             <form action="/store" className="flex items-center gap-2">
-              {categoryFilter && (
-                <input type="hidden" name="category" value={categoryFilter} />
-              )}
               <Input
                 type="search"
                 name="q"
@@ -151,10 +155,7 @@ export default async function StorePage({
               </Button>
             </form>
             {searchQuery && (
-              <Link
-                href={categoryFilter ? `/store?category=${categoryFilter}` : "/store"}
-                className="mt-2 inline-block text-sm text-muted-foreground hover:underline"
-              >
+              <Link href="/store" className="mt-2 inline-block text-sm text-muted-foreground hover:underline">
                 {t("clearSearch")}
               </Link>
             )}
