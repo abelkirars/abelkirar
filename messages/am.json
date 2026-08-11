@@ -84,7 +84,8 @@
   "product": {
     "qty": "ብዛት",
     "addToCart": "ወደ ቅርጫት ጨምር",
-    "addedToCart": "ወደ ቅርጫት ተጨምሯል"
+    "addedToCart": "ወደ ቅርጫት ተጨምሯል",
+    "viewPhoto": "[AM] View photo {index} of {count}"
   },
   "customOrderNotice": {
     "toggleLabel": "[AM] Custom Order Available",

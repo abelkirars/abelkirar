@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { Container } from "@/components/marketing/container";
-import { ProductVisual } from "@/components/store/product-visual";
+import { ProductGallery } from "@/components/store/product-gallery";
 import { CustomizationForm } from "@/components/store/customization-form";
 import { CustomOrderNotice } from "@/components/store/custom-order-notice";
 import type { ProductCustomizationOptions } from "@/types/customization";
@@ -32,11 +32,11 @@ export default async function ProductDetailPage({
   return (
     <section className="py-16 sm:py-20">
       <Container className="grid gap-12 lg:grid-cols-2">
-        <ProductVisual
+        <ProductGallery
           images={product.images as string[]}
           category={product.category}
           name={product.name}
-          className="aspect-4/5 lg:sticky lg:top-24"
+          className="aspect-4/5"
         />
 
         <div>

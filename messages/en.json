@@ -84,7 +84,8 @@
   "product": {
     "qty": "Qty",
     "addToCart": "Add to cart",
-    "addedToCart": "Added to cart"
+    "addedToCart": "Added to cart",
+    "viewPhoto": "View photo {index} of {count}"
   },
   "customOrderNotice": {
     "toggleLabel": "Custom Order Available",
