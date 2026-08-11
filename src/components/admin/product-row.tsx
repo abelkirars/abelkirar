@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Product } from "@prisma/client";
 import { Button } from "@/components/ui/button";
@@ -83,6 +84,14 @@ export function ProductRow({ product }: { product: Product }) {
       <div className="flex shrink-0 gap-2">
         <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
           Edit
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          nativeButton={false}
+          render={<Link href={`/admin/products/${product.id}/customization`} />}
+        >
+          Customize
         </Button>
         <Button size="sm" variant="outline" disabled={busy !== null} onClick={togglePublish}>
           {product.isActive ? "Unpublish" : "Publish"}
