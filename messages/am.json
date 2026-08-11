@@ -79,7 +79,11 @@
     "empty": "አዳዲስ መሣሪያዎች በቅርቡ ይጨመራሉ — እባክዎን ትንሽ ቆይተው ይመልከቱ።",
     "from": "ከ ${price} ጀምሮ",
     "view": "ይመልከቱ",
-    "chooseOptions": "በእጅ ከተሰሩና እንደፍላጎትዎ ከሚበጁ {count} የ{label} አማራጮች ይምረጡ።"
+    "chooseOptions": "በእጅ ከተሰሩና እንደፍላጎትዎ ከሚበጁ {count} የ{label} አማራጮች ይምረጡ።",
+    "searchPlaceholder": "[AM] Search instruments…",
+    "searchLabel": "[AM] Search",
+    "clearSearch": "[AM] Clear search",
+    "noResults": "[AM] No instruments found for “{query}”."
   },
   "product": {
     "qty": "ብዛት",

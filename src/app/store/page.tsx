@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { Search } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/db";
 import { Container } from "@/components/marketing/container";
 import { CrossPattern } from "@/components/marketing/cross-pattern";
 import { ProductCard } from "@/components/store/product-card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { categoryLabel } from "@/lib/category-gradients";
 import type { Product } from "@prisma/client";
 
@@ -73,19 +77,33 @@ function groupIntoCards(
 export default async function StorePage({
   searchParams,
 }: PageProps<"/store">) {
-  const { category } = await searchParams;
+  const { category, q } = await searchParams;
   const categoryFilter = typeof category === "string" ? category : undefined;
+  const searchQuery = typeof q === "string" && q.trim() ? q.trim() : undefined;
   const t = await getTranslations("store");
 
   const products = await prisma.product.findMany({
     where: {
       isActive: true,
       ...(categoryFilter ? { category: categoryFilter as never } : {}),
+      ...(searchQuery
+        ? {
+            OR: [
+              { name: { contains: searchQuery, mode: "insensitive" as const } },
+              { variantName: { contains: searchQuery, mode: "insensitive" as const } },
+              { description: { contains: searchQuery, mode: "insensitive" as const } },
+            ],
+          }
+        : {}),
     },
     orderBy: [{ createdAt: "asc" }, { id: "asc" }],
   });
 
-  const cards: ProductCardData[] = categoryFilter
+  // Grouping only applies to the default, unfiltered browse view — any
+  // active filter (category or search) shows individual products. Decided:
+  // a search must surface the specific matching product, never a grouped
+  // "N options" card that hides the thing someone searched for.
+  const cards: ProductCardData[] = categoryFilter || searchQuery
     ? products.map((product) => ({
         key: product.id,
         href: `/store/${product.slug}`,
@@ -116,8 +134,36 @@ export default async function StorePage({
 
       <section className="py-20 sm:py-28">
         <Container>
+          <div className="mx-auto mb-12 max-w-md">
+            <form action="/store" className="flex items-center gap-2">
+              {categoryFilter && (
+                <input type="hidden" name="category" value={categoryFilter} />
+              )}
+              <Input
+                type="search"
+                name="q"
+                defaultValue={searchQuery ?? ""}
+                placeholder={t("searchPlaceholder")}
+                aria-label={t("searchLabel")}
+              />
+              <Button type="submit" size="icon" aria-label={t("searchLabel")}>
+                <Search className="size-4" />
+              </Button>
+            </form>
+            {searchQuery && (
+              <Link
+                href={categoryFilter ? `/store?category=${categoryFilter}` : "/store"}
+                className="mt-2 inline-block text-sm text-muted-foreground hover:underline"
+              >
+                {t("clearSearch")}
+              </Link>
+            )}
+          </div>
+
           {cards.length === 0 ? (
-            <p className="text-center text-muted-foreground">{t("empty")}</p>
+            <p className="text-center text-muted-foreground">
+              {searchQuery ? t("noResults", { query: searchQuery }) : t("empty")}
+            </p>
           ) : (
             <div className="grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
               {cards.map((card) => (

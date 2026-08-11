@@ -79,7 +79,11 @@
     "empty": "New instruments are being added soon — check back shortly.",
     "from": "From ${price}",
     "view": "View",
-    "chooseOptions": "Choose from {count} {label} options, each handcrafted and customizable."
+    "chooseOptions": "Choose from {count} {label} options, each handcrafted and customizable.",
+    "searchPlaceholder": "Search instruments…",
+    "searchLabel": "Search",
+    "clearSearch": "Clear search",
+    "noResults": "No instruments found for “{query}”."
   },
   "product": {
     "qty": "Qty",
