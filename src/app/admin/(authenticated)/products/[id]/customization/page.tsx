@@ -39,7 +39,7 @@ export default async function AdminProductCustomizationPage({
         <div className="mt-6">
           <CustomizationOptionsEditor
             productId={product.id}
-            initialOptions={(product.customizationOptions as ProductCustomizationOptions) ?? []}
+            initialOptions={(product.customizationOptions as unknown as ProductCustomizationOptions) ?? []}
           />
         </div>
       </Container>

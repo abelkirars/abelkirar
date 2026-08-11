@@ -46,7 +46,7 @@ export async function PATCH(
   // write succeeds — the write is what matters; a failed cleanup just
   // leaves a harmless orphaned file, logged, never surfaced to the admin.
   const oldUrls = collectImageUrls(
-    (existing.customizationOptions ?? []) as ProductCustomizationOptions
+    (existing.customizationOptions ?? []) as unknown as ProductCustomizationOptions
   );
   const newUrls = collectImageUrls(parsed.data as ProductCustomizationOptions);
   const orphaned = [...oldUrls].filter((url) => !newUrls.has(url));

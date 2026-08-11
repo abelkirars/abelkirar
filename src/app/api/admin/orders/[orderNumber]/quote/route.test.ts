@@ -19,7 +19,7 @@ const mockUpdateManyOrderItem = vi.fn();
 const mockTransaction = vi.fn((ops: unknown[]) => Promise.all(ops));
 vi.mock("@/lib/db", () => ({
   prisma: {
-    $transaction: (...args: unknown[]) => mockTransaction(...args),
+    $transaction: (ops: unknown[]) => mockTransaction(ops),
     order: {
       findUnique: (...args: unknown[]) => mockFindUniqueOrder(...args),
       findUniqueOrThrow: (...args: unknown[]) => mockFindUniqueOrThrowOrder(...args),
