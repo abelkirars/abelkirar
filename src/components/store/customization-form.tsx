@@ -13,6 +13,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
+// Types the four dedicated rendering branches below recognize. Anything
+// else falls back to plain choice buttons rather than rendering nothing —
+// deliberately NOT typed as CustomizationFieldType[], so this stays a real
+// runtime check against arbitrary stored data instead of something
+// TypeScript could "prove" is always true from the type alone.
+const KNOWN_FIELD_TYPES = ["select", "swatch", "text", "image-select"];
+
 interface Props {
   product: {
     id: string;
@@ -83,7 +90,17 @@ export function CustomizationForm({ product, onSelectImage }: Props) {
 
   return (
     <div className="space-y-8">
-      {product.customizationOptions.map((field) => (
+      {product.customizationOptions.map((field) => {
+        const isKnownType = KNOWN_FIELD_TYPES.includes(field.type);
+        const showsFallback = !isKnownType && !!field.choices?.length;
+
+        if (showsFallback) {
+          console.warn(
+            `[CustomizationForm] Unrecognised customization field type "${field.type}" on product "${product.slug}" (field "${field.id}") — rendering plain choice buttons as a fallback. Until now this field had no visible picker at all, so a default choice (if any) may have already been silently applied with the customer never seeing or choosing it.`
+          );
+        }
+
+        return (
         <div key={field.id}>
           <p className="text-sm font-medium">
             {field.label}
@@ -190,8 +207,37 @@ export function CustomizationForm({ product, onSelectImage }: Props) {
               ))}
             </div>
           )}
+
+          {showsFallback && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {field.choices?.map((choice) => (
+                <button
+                  key={choice.id}
+                  type="button"
+                  onClick={() =>
+                    setSelected((s) => ({ ...s, [field.id]: choice.id }))
+                  }
+                  className={cn(
+                    "rounded-md border px-3 py-2 text-sm transition-colors",
+                    selected[field.id] === choice.id
+                      ? "border-primary bg-primary/10 text-foreground"
+                      : "border-border text-muted-foreground hover:border-primary/50"
+                  )}
+                >
+                  {choice.label}
+                  {choice.priceModifier !== 0 && (
+                    <span className="ml-1 text-xs opacity-70">
+                      {choice.priceModifier > 0 ? "+" : ""}
+                      ${(choice.priceModifier / 100).toFixed(0)}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
-      ))}
+        );
+      })}
 
       <div className="flex items-center gap-4 border-t border-border pt-6">
         <label className="text-sm font-medium" htmlFor="quantity">
