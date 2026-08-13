@@ -484,3 +484,44 @@ returned zero results with no indication a category filter was still narrowing t
 computing `categoryFilter` as `undefined` whenever a search is active — not just by dropping the category
 param from the search form (which only fixes the form path), but at the point both filters are read,
 which also closes the same trap for a bookmarked or manually-edited URL carrying both params.
+
+---
+
+## 2026-08-12 — Unrecognised customization field types rendered nothing — and silently pre-selected a choice
+
+**What was found.** A product's "Shape" field showed its label and an empty space on the store page, while
+"Size" on the same product rendered fine. The choices were present and correct in the admin editor.
+
+**Root cause.** `CustomizationForm` branches on `field.type` with four independent exact-match `if` blocks
+and no default case, so a type string matching none of them renders the label and nothing else. The admin
+editor's own gate is `showsChoices = field.type !== "text"` — permissive — so the same field looks
+completely normal there. Both read identical stored JSON; the asymmetry is entirely in how each decides
+what counts as having choices.
+
+**The part that matters more than the blank render.** The default-selection logic pre-selects `choices[0]`
+for any non-text field. So a customer would silently order the first choice, having never seen a picker or
+made a decision. That is worse than a visibly broken field — it produces a wrong order that looks like a
+correct one.
+
+**Fix.** `CustomizationForm` now falls back to plain select-style buttons for any unrecognised type that
+has choices, and warns to the console naming the product, field, and type. `KNOWN_FIELD_TYPES` is
+deliberately untyped — annotating it as `CustomizationFieldType[]` would let TypeScript narrow the fallback
+branch away, defeating a runtime check against arbitrary stored JSON.
+
+**Checked and NOT changed.** Every other branch on `field.type` (`pricing.ts`, `buildCustomizationSnapshot`,
+`missingRequired`, `summarize`) special-cases only `"text"` and treats everything else uniformly, so an
+unrecognised type already prices, snapshots, and summarises correctly. Rendering was the only place
+needing an exact match.
+
+**Deferred, with reasoning.** Tightening the admin editor's permissive check. Naively requiring one of the
+three choice-bearing types would hide the choices from an admin trying to repair a broken field — making
+recovery harder. Needs its own design pass.
+
+**Residual gap.** A required field with an unrecognised type AND no choices still renders nothing and
+blocks add-to-cart permanently, since there is no fallback UI possible with zero choices.
+
+**Pattern — fifth instance.** Adding to the running list: `mark-paid`'s guard existed only in the UI; the
+quote route's region-pairing branch is unreachable through its own schema; a test asserted against a
+boundary the code does not use; correct markup failed because it was rendered twice; and now two
+components reading the same data disagreed about what it meant, because one matched exactly and the other
+matched loosely.
