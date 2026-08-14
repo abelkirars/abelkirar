@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { Container } from "@/components/marketing/container";
 import { requireStudentPage } from "@/lib/student/dal";
-import { getCurrentAssignment } from "@/lib/student/queries";
+import { getCurrentAssignment, listMyPracticeLogEntries } from "@/lib/student/queries";
+import { PracticeLogForm } from "@/components/student/practice-log-form";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,7 @@ export default async function StudentDashboardPage() {
   const session = await requireStudentPage();
   const t = await getTranslations("studentDashboard");
   const assignment = await getCurrentAssignment(session);
+  const practiceLogEntries = await listMyPracticeLogEntries(session);
 
   return (
     <section className="py-16 sm:py-24">
@@ -66,6 +68,37 @@ export default async function StudentDashboardPage() {
           ) : (
             <p className="mt-4 text-sm text-muted-foreground">{t("noAssignment")}</p>
           )}
+        </div>
+
+        <div className="mt-8 rounded-lg border border-border p-6">
+          <h2 className="font-heading text-xl font-semibold">{t("practiceLogHeading")}</h2>
+
+          <div className="mt-4">
+            <PracticeLogForm />
+          </div>
+
+          <div className="mt-6 space-y-3">
+            {practiceLogEntries.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t("noPracticeLogEntries")}</p>
+            ) : (
+              practiceLogEntries.map((entry) => (
+                <div key={entry.id} className="rounded-md border border-border/60 p-3 text-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-medium">{entry.practicedAt.toLocaleDateString()}</span>
+                    <span className="text-muted-foreground">
+                      {t("practiceLogMinutes", { minutes: entry.durationMinutes })}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-foreground">{entry.focus}</p>
+                  {entry.selfRating && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {t("practiceLogSelfRatingLabel")}: {entry.selfRating}
+                    </p>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </Container>
     </section>

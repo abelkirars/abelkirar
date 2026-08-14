@@ -165,3 +165,56 @@ export async function listAchievedMilestones(session: StudentSessionPayload) {
     },
   });
 }
+
+/** All of the calling student's own practice log entries, most recent
+ *  practice first. PracticeLogEntry carries no admin-only field — nothing to
+ *  exclude here beyond studentId itself, same situation as StudentNote. */
+export async function listMyPracticeLogEntries(session: StudentSessionPayload) {
+  return prisma.practiceLogEntry.findMany({
+    where: { studentId: session.studentId },
+    orderBy: { practicedAt: "desc" },
+    select: {
+      id: true,
+      practicedAt: true,
+      durationMinutes: true,
+      focus: true,
+      selfRating: true,
+      weeklyPracticeId: true,
+    },
+  });
+}
+
+/**
+ * Records a practice log entry under the calling student's own id.
+ * weeklyPracticeId is never taken from the caller — it is always inferred
+ * as the student's current assignment (getCurrentAssignment) at write time,
+ * or null if there isn't one right now. This mirrors addMyNote's ownership
+ * check but goes one step further: there is no client-supplied
+ * weeklyPracticeId parameter to validate at all, so there is nothing for a
+ * caller to get wrong or spoof.
+ */
+export async function addMyPracticeLogEntry(
+  session: StudentSessionPayload,
+  input: { practicedAt: Date; durationMinutes: number; focus: string; selfRating?: string }
+) {
+  const currentAssignment = await getCurrentAssignment(session);
+
+  return prisma.practiceLogEntry.create({
+    data: {
+      studentId: session.studentId,
+      weeklyPracticeId: currentAssignment?.id ?? null,
+      practicedAt: input.practicedAt,
+      durationMinutes: input.durationMinutes,
+      focus: input.focus,
+      selfRating: input.selfRating ?? null,
+    },
+    select: {
+      id: true,
+      practicedAt: true,
+      durationMinutes: true,
+      focus: true,
+      selfRating: true,
+      weeklyPracticeId: true,
+    },
+  });
+}

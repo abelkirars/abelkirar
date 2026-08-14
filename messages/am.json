@@ -253,7 +253,10 @@
     "enterMessage": "የሚፈልጉትን ነገር በጥቂቱ ይንገሩን",
     "enterPassword": "የይለፍ ቃልዎን ያስገቡ",
     "passwordMinLength": "የይለፍ ቃል ቢያንስ 8 ፊደላት ሊኖረው ይገባል",
-    "passwordsDontMatch": "የይለፍ ቃላት አይመሳሰሉም"
+    "passwordsDontMatch": "የይለፍ ቃላት አይመሳሰሉም",
+    "enterValidPracticeDate": "[AM] Enter a valid practice date",
+    "enterValidDuration": "[AM] Enter a duration between 1 and 600 minutes",
+    "enterFocus": "[AM] Describe what you practiced"
   },
   "studentLogin": {
     "title": "የተማሪ መግቢያ",
@@ -301,7 +304,17 @@
       "reviewed": "[AM] Reviewed",
       "completed": "[AM] Completed",
       "missed": "[AM] Missed"
-    }
+    },
+    "practiceLogHeading": "[AM] Practice log",
+    "practiceLogDateLabel": "[AM] Date",
+    "practiceLogDurationLabel": "[AM] Minutes practiced",
+    "practiceLogFocusLabel": "[AM] What did you practice?",
+    "practiceLogSelfRatingLabel": "[AM] How did it go? (optional)",
+    "practiceLogSubmit": "[AM] Log practice",
+    "practiceLogSubmitting": "[AM] Saving…",
+    "practiceLogGenericError": "[AM] Something went wrong. Please try again.",
+    "noPracticeLogEntries": "[AM] No practice logged yet.",
+    "practiceLogMinutes": "[AM] {minutes} min"
   },
   "emails": {
     "orderPending": {

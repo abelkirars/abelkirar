@@ -87,6 +87,20 @@ interface StudentNoteRow {
 
 let studentNoteRows: StudentNoteRow[];
 
+interface PracticeLogEntryRow {
+  id: string;
+  studentId: string;
+  weeklyPracticeId: string | null;
+  practicedAt: Date;
+  durationMinutes: number;
+  focus: string;
+  selfRating: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+let practiceLogEntryRows: PracticeLogEntryRow[];
+
 interface MilestoneRow {
   id: string;
   level: string;
@@ -231,6 +245,40 @@ const mockCreateStudentNote = vi.fn(
   }
 );
 
+const mockFindManyPracticeLogEntry = vi.fn(
+  ({ where, select }: { where: WhereClause; select?: SelectShape }) => {
+    return practiceLogEntryRows
+      .filter((r) => r.studentId === where.studentId)
+      .map((r) => applySelect(r, select));
+  }
+);
+
+const mockCreatePracticeLogEntry = vi.fn(
+  ({
+    data,
+    select,
+  }: {
+    data: {
+      studentId: string;
+      weeklyPracticeId: string | null;
+      practicedAt: Date;
+      durationMinutes: number;
+      focus: string;
+      selfRating: string | null;
+    };
+    select?: SelectShape;
+  }) => {
+    const row: PracticeLogEntryRow = {
+      id: `ple-${practiceLogEntryRows.length + 1}`,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      ...data,
+    };
+    practiceLogEntryRows.push(row);
+    return applySelect(row, select);
+  }
+);
+
 function matchesStatus(row: StudentMilestoneRow, status?: WhereClause["status"]) {
   if (!status) return true;
   if (typeof status === "string") return row.status === status;
@@ -267,6 +315,10 @@ vi.mock("@/lib/db", () => ({
       findMany: (args: unknown) => mockFindManyStudentMilestone(args as never),
       findFirst: (args: unknown) => mockFindFirstStudentMilestone(args as never),
     },
+    practiceLogEntry: {
+      findMany: (args: unknown) => mockFindManyPracticeLogEntry(args as never),
+      create: (args: unknown) => mockCreatePracticeLogEntry(args as never),
+    },
     // No `milestone`, no `teacherPrivateNote` — see the note at the top of
     // this file.
   },
@@ -279,6 +331,8 @@ import {
   listMyMilestones,
   getCurrentMilestone,
   listAchievedMilestones,
+  listMyPracticeLogEntries,
+  addMyPracticeLogEntry,
   StudentAuthorizationError,
 } from "@/lib/student/queries";
 
@@ -313,6 +367,30 @@ beforeEach(() => {
       weeklyPracticeId: null,
       body: "Student 2's note",
       createdAt: new Date("2026-08-11"),
+    },
+  ];
+  practiceLogEntryRows = [
+    {
+      id: "ple-1",
+      studentId: "student-1",
+      weeklyPracticeId: "wp-student1-current",
+      practicedAt: new Date("2026-08-11"),
+      durationMinutes: 20,
+      focus: "String crossing",
+      selfRating: "Focused",
+      createdAt: new Date("2026-08-11"),
+      updatedAt: new Date("2026-08-11"),
+    },
+    {
+      id: "ple-2",
+      studentId: "student-2",
+      weeklyPracticeId: null,
+      practicedAt: new Date("2026-08-11"),
+      durationMinutes: 15,
+      focus: "Student 2's practice",
+      selfRating: null,
+      createdAt: new Date("2026-08-11"),
+      updatedAt: new Date("2026-08-11"),
     },
   ];
 });
@@ -420,6 +498,59 @@ describe("Milestones — go through StudentMilestone only", () => {
   });
 });
 
+describe("listMyPracticeLogEntries / addMyPracticeLogEntry", () => {
+  it("only returns the calling student's own entries", async () => {
+    const entries = await listMyPracticeLogEntries(sessionStudent1);
+    expect(entries).toHaveLength(1);
+    expect(entries[0].id).toBe("ple-1");
+  });
+
+  it("a student cannot read another student's PracticeLogEntry", async () => {
+    const entries = await listMyPracticeLogEntries(sessionStudent1);
+    expect(entries.every((e) => e.id !== "ple-2")).toBe(true);
+  });
+
+  it("writes a new entry under session.studentId, never a caller-supplied id", async () => {
+    const entry = await addMyPracticeLogEntry(sessionStudent1, {
+      practicedAt: new Date("2026-08-12"),
+      durationMinutes: 30,
+      focus: "Tizita scale",
+    });
+    const call = mockCreatePracticeLogEntry.mock.calls.at(-1)?.[0] as {
+      data: { studentId: string };
+    };
+    expect(call.data.studentId).toBe("student-1");
+    expect(entry.focus).toBe("Tizita scale");
+  });
+
+  it("infers weeklyPracticeId from the current assignment at write time, per student", async () => {
+    const entry1 = await addMyPracticeLogEntry(sessionStudent1, {
+      practicedAt: new Date("2026-08-12"),
+      durationMinutes: 10,
+      focus: "Warm-up",
+    });
+    expect(entry1.weeklyPracticeId).toBe("wp-student1-current");
+
+    const entry2 = await addMyPracticeLogEntry(sessionStudent2, {
+      practicedAt: new Date("2026-08-12"),
+      durationMinutes: 10,
+      focus: "Warm-up",
+    });
+    expect(entry2.weeklyPracticeId).toBe("wp-student2-current");
+  });
+
+  it("the returned entry contains no admin-only field and no studentId", async () => {
+    const entry = await addMyPracticeLogEntry(sessionStudent1, {
+      practicedAt: new Date("2026-08-12"),
+      durationMinutes: 10,
+      focus: "Warm-up",
+    });
+    expect(Object.keys(entry).sort()).toEqual(
+      ["durationMinutes", "focus", "id", "practicedAt", "selfRating", "weeklyPracticeId"].sort()
+    );
+  });
+});
+
 describe("TeacherPrivateNote is unreachable from the student side", () => {
   it("every exported student query function runs without touching prisma.teacherPrivateNote or prisma.milestone", async () => {
     // @/lib/db is mocked above WITHOUT `teacherPrivateNote` or `milestone`
@@ -430,6 +561,12 @@ describe("TeacherPrivateNote is unreachable from the student side", () => {
     await listMyMilestones(sessionStudent1);
     await getCurrentMilestone(sessionStudent1);
     await listAchievedMilestones(sessionStudent1);
+    await listMyPracticeLogEntries(sessionStudent1);
+    await addMyPracticeLogEntry(sessionStudent1, {
+      practicedAt: new Date("2026-08-12"),
+      durationMinutes: 5,
+      focus: "x",
+    });
     expect(true).toBe(true);
   });
 });

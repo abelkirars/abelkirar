@@ -253,7 +253,10 @@
     "enterMessage": "Tell us a little about what you need",
     "enterPassword": "Enter your password",
     "passwordMinLength": "Password must be at least 8 characters",
-    "passwordsDontMatch": "Passwords don't match"
+    "passwordsDontMatch": "Passwords don't match",
+    "enterValidPracticeDate": "Enter a valid practice date",
+    "enterValidDuration": "Enter a duration between 1 and 600 minutes",
+    "enterFocus": "Describe what you practiced"
   },
   "studentLogin": {
     "title": "Student Login",
@@ -301,7 +304,17 @@
       "reviewed": "Reviewed",
       "completed": "Completed",
       "missed": "Missed"
-    }
+    },
+    "practiceLogHeading": "Practice log",
+    "practiceLogDateLabel": "Date",
+    "practiceLogDurationLabel": "Minutes practiced",
+    "practiceLogFocusLabel": "What did you practice?",
+    "practiceLogSelfRatingLabel": "How did it go? (optional)",
+    "practiceLogSubmit": "Log practice",
+    "practiceLogSubmitting": "Saving…",
+    "practiceLogGenericError": "Something went wrong. Please try again.",
+    "noPracticeLogEntries": "No practice logged yet.",
+    "practiceLogMinutes": "{minutes} min"
   },
   "emails": {
     "orderPending": {
