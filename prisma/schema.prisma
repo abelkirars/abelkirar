@@ -185,6 +185,9 @@ model Admin {
 
   createdWeeklyPractices WeeklyPractice[]
   createdMonthlyLogs     MonthlyLog[]
+  assignedStudents       StudentProfile[]
+  teacherPrivateNotes    TeacherPrivateNote[]
+  signedOffMilestones    StudentMilestone[]
 }
 
 /// Customer-submitted proof of a Zelle/Cash App payment. Submitting one does
@@ -345,6 +348,12 @@ enum AttachmentUploadedBy {
   STUDENT
 }
 
+enum StudentMilestoneStatus {
+  IN_PROGRESS
+  SUBMITTED
+  ACHIEVED
+}
+
 model StudentProfile {
   id             String @id @default(cuid())
   /// Supabase Auth's auth.users.id — the actual login identity for this student.
@@ -371,15 +380,36 @@ model StudentProfile {
   /// history), which over-counted "clicked but abandoned" as activated.
   activatedAt DateTime?
 
+  /// The teacher this student is currently associated with — one field, not
+  /// a feature: no multi-teacher management UI is built on top of this yet.
+  /// Nullable rather than backfilled, so existing students aren't silently
+  /// assigned to whichever admin id a migration might otherwise hardcode.
+  teacherId String?
+  teacher   Admin?  @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   weeklyPractices WeeklyPractice[]
   monthlyLogs     MonthlyLog[]
+  studentNotes        StudentNote[]
+  teacherPrivateNotes TeacherPrivateNote[]
+  studentMilestones   StudentMilestone[]
 
   @@index([status])
 }
 
+/// SECURITY NOTE — read before touching any student-facing query (Stage 4+).
+/// This table carries THREE admin-only fields: internalCurriculumRef,
+/// currentTechnique, teacherNotes. Unlike Milestone (structurally invisible
+/// to a student, since a student route only ever joins through
+/// StudentMilestone), WeeklyPractice IS queried directly by the student's
+/// own assignment route — there is no structural barrier here. Protection
+/// is an explicit `select` naming only the safe fields on every
+/// student-facing query against this table. A bare `findUnique`/`findMany`
+/// with no `select` (or a `select` that forgets to exclude these three)
+/// leaks admin-only content straight into a student session. Never assume
+/// this is handled elsewhere — check the query itself, every time.
 model WeeklyPractice {
   id            String               @id @default(cuid())
   studentId     String
@@ -389,12 +419,32 @@ model WeeklyPractice {
   weekEndDate   DateTime
   instructions  String?
   goals         String?
+  /// ADMIN-ONLY — see the model-level security note above.
   teacherNotes  String?
   status        WeeklyPracticeStatus @default(NOT_STARTED)
+
+  /// --- Hybrid assignment model additions (Student Dashboard MVP) ---
+  /// Optional internal curriculum skill/exercise/reference id. ADMIN-ONLY —
+  /// see the model-level security note above. Plain string: no curriculum
+  /// catalog table exists or is being built as part of this MVP.
+  internalCurriculumRef String?
+  /// Neutral internal technique reference, per CLAUDE.md's hard rule: do
+  /// not rename or rewrite the curriculum, and do not attach the old
+  /// E32/E33/C18/E34 mapping (unresolved). ADMIN-ONLY — see the model-level
+  /// security note above. A student sees only teacher-authored text
+  /// (weekTitle / instructions), never this field's raw value.
+  currentTechnique String?
+  /// Whether the student must upload a recording for this assignment.
+  recordingRequired Boolean @default(false)
 
   studentSubmission String?
   submittedAt       DateTime?
   adminFeedback     String?
+  /// Plain string, not an enum — same reasoning as StudentProfile.locale /
+  /// OrderNotificationLog.kind: this set (On track / Needs more practice /
+  /// Milestone met, per the brief) is expected to evolve without an
+  /// ALTER TYPE migration every time.
+  feedbackStatus    String?
   feedbackAt        DateTime?
   reviewedAt        DateTime?
   completedAt       DateTime?
@@ -411,7 +461,8 @@ model WeeklyPractice {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  attachments WeeklyPracticeAttachment[]
+  attachments  WeeklyPracticeAttachment[]
+  studentNotes StudentNote[]
 
   @@index([studentId, weekStartDate])
   @@index([status])
@@ -427,9 +478,104 @@ model WeeklyPracticeAttachment {
   fileName         String
   mimeType         String
   fileSize         Int
+  /// Teacher-written or date-based label ONLY — per the spec, this must
+  /// never be auto-generated from internal curriculum text. Enforced by
+  /// authoring discipline in the route/UI that writes this, not by the
+  /// database.
+  label             String?
+  /// Teacher can flag a recording as a milestone marker for later
+  /// comparison (the comparison UI itself is Phase 2 — this just captures
+  /// the flag from day one, per the spec).
+  isMilestoneMarker Boolean @default(false)
   createdAt        DateTime             @default(now())
 
   @@index([weeklyPracticeId])
+}
+
+/// Short, student-authored note attached to a submission (or standalone —
+/// weeklyPracticeId is nullable because Session History doesn't have its
+/// own table yet in this MVP; a note can exist without one). Distinct from
+/// WeeklyPractice.studentSubmission (the practice content itself) and from
+/// StudentProfile.notes (an admin-editable flat field, unrelated). A
+/// student may only ever read/write their own rows.
+model StudentNote {
+  id               String          @id @default(cuid())
+  studentId        String
+  student          StudentProfile  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  weeklyPracticeId String?
+  weeklyPractice   WeeklyPractice? @relation(fields: [weeklyPracticeId], references: [id], onDelete: SetNull)
+  body             String
+  createdAt        DateTime        @default(now())
+
+  @@index([studentId, createdAt])
+  @@index([weeklyPracticeId])
+}
+
+/// Private per-student teacher observations — teaching strategy, personal
+/// context, prep reminders. NEVER expose through any student-facing route,
+/// API, server action, page payload, or export, by any path. See CLAUDE.md
+/// hard rules and docs/dashboard/student-dashboard-spec-v1.md §7.J.
+/// Distinct from StudentProfile.notes (a single admin-editable flat field)
+/// and from StudentNote (student-authored).
+model TeacherPrivateNote {
+  id        String         @id @default(cuid())
+  studentId String
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  teacherId String
+  teacher   Admin          @relation(fields: [teacherId], references: [id], onDelete: Restrict)
+  body      String
+  createdAt DateTime       @default(now())
+
+  @@index([studentId, createdAt])
+}
+
+/// Admin-managed milestone catalog, scoped per level. NEVER shipped whole
+/// to a student client — a student route must only ever read this table by
+/// joining through StudentMilestone for their own rows, never query it
+/// directly. A milestone with no matching StudentMilestone row for a given
+/// student is, structurally, invisible to that student — that IS the
+/// "future milestones hidden" enforcement, not a flag to check.
+model Milestone {
+  id               String       @id @default(cuid())
+  level            StudentLevel
+  /// Plain-language, student-facing name. The teacher authoring this must
+  /// write it safely — same authoring discipline as WeeklyPractice.weekTitle.
+  label            String
+  /// Plain-language description shown to the student.
+  description      String?
+  /// Internal pass criteria — NEVER shown to a student.
+  internalCriteria String?
+  /// "order" is a reserved word in Postgres — quotable but avoidable, and
+  /// nothing depends on the name "order" yet.
+  sortOrder        Int
+  active           Boolean      @default(true)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  studentMilestones StudentMilestone[]
+
+  @@index([level, sortOrder])
+}
+
+/// Per-student milestone status. Teacher sign-off required for ACHIEVED —
+/// no automatic completion (spec §7.G).
+model StudentMilestone {
+  id             String                 @id @default(cuid())
+  studentId      String
+  student        StudentProfile         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  milestoneId    String
+  milestone      Milestone              @relation(fields: [milestoneId], references: [id], onDelete: Restrict)
+  status         StudentMilestoneStatus @default(IN_PROGRESS)
+  assignedAt     DateTime               @default(now())
+  achievedAt     DateTime?
+  /// Shown to the student alongside an achieved milestone (spec §7.G:
+  /// "achieved milestones with dates and teacher comment").
+  teacherComment String?
+  signedOffById  String?
+  signedOffBy    Admin?                 @relation(fields: [signedOffById], references: [id], onDelete: Restrict)
+
+  @@unique([studentId, milestoneId])
+  @@index([studentId, status])
 }
 
 model MonthlyLog {
