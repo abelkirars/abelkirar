@@ -291,7 +291,17 @@
   "studentDashboard": {
     "title": "የተማሪ ዳሽቦርድ",
     "greeting": "እንኳን ደህና መጡ፣ {fullName}።",
-    "placeholderNotice": "የእርስዎ ዳሽቦርድ በቅርቡ ይመጣል — ቆይተው ይመልከቱ።"
+    "currentAssignmentHeading": "[AM] This week's assignment",
+    "noAssignment": "[AM] No assignment right now — check back soon.",
+    "goalLabel": "[AM] Goal",
+    "status": {
+      "notStarted": "[AM] Not started yet",
+      "inProgress": "[AM] In progress",
+      "submitted": "[AM] Submitted",
+      "reviewed": "[AM] Reviewed",
+      "completed": "[AM] Completed",
+      "missed": "[AM] Missed"
+    }
   },
   "emails": {
     "orderPending": {

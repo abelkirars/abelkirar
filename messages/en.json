@@ -291,7 +291,17 @@
   "studentDashboard": {
     "title": "Student Dashboard",
     "greeting": "Welcome, {fullName}.",
-    "placeholderNotice": "Your dashboard is coming soon — check back later."
+    "currentAssignmentHeading": "This week's assignment",
+    "noAssignment": "No assignment right now — check back soon.",
+    "goalLabel": "Goal",
+    "status": {
+      "notStarted": "Not started yet",
+      "inProgress": "In progress",
+      "submitted": "Submitted",
+      "reviewed": "Reviewed",
+      "completed": "Completed",
+      "missed": "Missed"
+    }
   },
   "emails": {
     "orderPending": {
