@@ -7,6 +7,8 @@ import { StudentForm } from "@/components/admin/student-form";
 import { StudentStatusToggle } from "@/components/admin/student-status-toggle";
 import { ResendInviteButton } from "@/components/admin/resend-invite-button";
 import { StudentEmailCorrection } from "@/components/admin/student-email-correction";
+import { WeeklyPracticeForm } from "@/components/admin/weekly-practice-form";
+import { WeeklyPracticeRow } from "@/components/admin/weekly-practice-row";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +20,15 @@ export default async function AdminStudentProfilePage({
   const { studentId } = await params;
   const student = await prisma.studentProfile.findUnique({ where: { id: studentId } });
   if (!student) notFound();
+
+  // Admin side — no restrictive `select` needed or wanted here, unlike
+  // src/lib/student/queries.ts. This page is allowed to see
+  // teacherNotes/internalCurriculumRef/currentTechnique; that boundary is
+  // specifically about the student-facing path, not this one.
+  const weeklyPractices = await prisma.weeklyPractice.findMany({
+    where: { studentId },
+    orderBy: { weekStartDate: "desc" },
+  });
 
   return (
     <section className="py-10">
@@ -55,6 +66,24 @@ export default async function AdminStudentProfilePage({
         <div className="mt-8 rounded-lg border border-border p-4">
           <h2 className="mb-4 font-medium">Edit details</h2>
           <StudentForm student={student} />
+        </div>
+
+        <div className="mt-8 rounded-lg border border-border p-4">
+          <h2 className="mb-4 font-medium">Weekly assignments</h2>
+          <WeeklyPracticeForm studentId={student.id} />
+
+          <div className="mt-6 space-y-3">
+            {weeklyPractices.map((weeklyPractice) => (
+              <WeeklyPracticeRow
+                key={weeklyPractice.id}
+                studentId={student.id}
+                weeklyPractice={weeklyPractice}
+              />
+            ))}
+            {weeklyPractices.length === 0 && (
+              <p className="py-4 text-center text-muted-foreground">No assignments yet.</p>
+            )}
+          </div>
         </div>
       </Container>
     </section>
