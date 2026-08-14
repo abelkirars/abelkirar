@@ -190,6 +190,45 @@ model Admin {
   signedOffMilestones    StudentMilestone[]
 }
 
+/// A single logged practice session — duration and a short note on what
+/// was worked on, self-rated by the student. Minutes and the self-rating
+/// are informative for the student and the teacher, never a score: no
+/// streaks, no gamification, no automatic scoring, no quality rating
+/// derived from minutes, and nothing here should ever be aggregated into a
+/// judgement of the student. A future reader adding any of that needs a
+/// fresh decision, not an "improvement" to this comment.
+///
+/// No unique constraint on (studentId, practicedAt) — a student may log
+/// more than one session in a day; aggregation by date happens in the
+/// query, not by constraining the row.
+model PracticeLogEntry {
+  id               String          @id @default(cuid())
+  studentId        String
+  student          StudentProfile  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  weeklyPracticeId String?
+  weeklyPractice   WeeklyPractice? @relation(fields: [weeklyPracticeId], references: [id], onDelete: SetNull)
+  /// The date/time the practice actually happened — distinct from
+  /// createdAt (when the row was written, which may be later).
+  practicedAt      DateTime
+  durationMinutes  Int
+  /// What the student worked on, in their own words.
+  focus            String
+  /// Self-reported, short free text — e.g. "Struggled", "OK", "Good" — how
+  /// the session felt, not a skill/quality grade. A plain string, not an
+  /// enum: the suggested values are hardcoded client-side in the practice
+  /// log form (no admin editor for them — nobody has asked for one), not
+  /// modeled here. MUST NEVER be averaged, scored, or turned into any kind
+  /// of metric — an average of even named states is still a grade, which
+  /// is exactly what this field must not become. This is the field a
+  /// future reader is most likely to try to "improve"; don't.
+  selfRating       String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@index([studentId, practicedAt])
+  @@index([weeklyPracticeId])
+}
+
 /// Customer-submitted proof of a Zelle/Cash App payment. Submitting one does
 /// NOT mark the order as paid — an admin must still confirm it manually.
 model PaymentConfirmation {
@@ -395,6 +434,7 @@ model StudentProfile {
   studentNotes        StudentNote[]
   teacherPrivateNotes TeacherPrivateNote[]
   studentMilestones   StudentMilestone[]
+  practiceLogEntries  PracticeLogEntry[]
 
   @@index([status])
 }
@@ -463,6 +503,7 @@ model WeeklyPractice {
 
   attachments  WeeklyPracticeAttachment[]
   studentNotes StudentNote[]
+  practiceLogEntries PracticeLogEntry[]
 
   @@index([studentId, weekStartDate])
   @@index([status])
