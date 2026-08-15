@@ -30,6 +30,29 @@ import type { StudentSessionPayload } from "@/lib/student/dal";
 
 export class StudentAuthorizationError extends Error {}
 
+/**
+ * Thrown by submitCurrentAssignment for expected, student-facing refusals —
+ * the route surfaces `.message` directly rather than a generic failure, and
+ * uses `.code` to pick the HTTP status. See submitCurrentAssignment for what
+ * each code means.
+ */
+export class AssignmentSubmissionError extends Error {
+  constructor(
+    message: string,
+    public code: "NOT_FOUND" | "ALREADY_SUBMITTED" | "RECORDING_REQUIRED"
+  ) {
+    super(message);
+  }
+}
+
+/**
+ * Statuses that mean "already submitted, not resubmittable without an admin
+ * reopen." Exported so the dashboard page can decide whether to render the
+ * submit form at all — that's a UX nicety only; submitCurrentAssignment
+ * enforces the same rule server-side regardless of what the page renders.
+ */
+export const SUBMITTED_ASSIGNMENT_STATUSES = ["SUBMITTED", "REVIEWED", "COMPLETED"] as const;
+
 /** Fields a student may see on the Milestone catalog, reached only through
  *  StudentMilestone. Excludes internalCriteria, sortOrder, active. */
 const SAFE_MILESTONE_SELECT = {
@@ -228,5 +251,56 @@ export async function addMyPracticeLogEntry(
       selfRating: true,
       weeklyPracticeId: true,
     },
+  });
+}
+
+/**
+ * Submits the student's current assignment. Two refusals, each with its own
+ * plain, student-facing message (never a generic failure):
+ *
+ * - Already SUBMITTED/REVIEWED/COMPLETED: there is no separate resubmission
+ *   system. The only way back to a submittable state is an admin using the
+ *   existing WeeklyPractice.reopenedAt/reopenCount mechanism to move status
+ *   back to IN_PROGRESS — this function only ever reads `status` to decide
+ *   eligibility, so a reopened row becomes submittable again automatically,
+ *   with no special-casing needed here.
+ * - recordingRequired is true: recording upload doesn't exist until Stage 8,
+ *   so this is refused unconditionally, every time, for every such
+ *   assignment, until that stage ships. This is a missing feature, not a
+ *   validation failure — the message says so, and the route must not turn
+ *   it into a generic error. Do not fake, stub, or bypass this check.
+ */
+export async function submitCurrentAssignment(
+  session: StudentSessionPayload,
+  input: { studentSubmission: string }
+) {
+  const assignment = await getCurrentAssignment(session);
+
+  if (!assignment) {
+    throw new AssignmentSubmissionError("No assignment to submit.", "NOT_FOUND");
+  }
+
+  if ((SUBMITTED_ASSIGNMENT_STATUSES as readonly string[]).includes(assignment.status)) {
+    throw new AssignmentSubmissionError(
+      "This assignment has already been submitted. Ask your teacher to reopen it before submitting again.",
+      "ALREADY_SUBMITTED"
+    );
+  }
+
+  if (assignment.recordingRequired) {
+    throw new AssignmentSubmissionError(
+      "This assignment requires a recording, and recording upload isn't available yet. Ask your teacher for guidance.",
+      "RECORDING_REQUIRED"
+    );
+  }
+
+  return prisma.weeklyPractice.update({
+    where: { id: assignment.id },
+    data: {
+      studentSubmission: input.studentSubmission,
+      submittedAt: new Date(),
+      status: "SUBMITTED",
+    },
+    select: SAFE_WEEKLY_PRACTICE_SELECT,
   });
 }

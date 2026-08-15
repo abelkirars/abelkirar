@@ -75,6 +75,53 @@ const weeklyPracticeRows: WeeklyPracticeRow[] = [
     feedbackStatus: null,
     feedbackAt: null,
   },
+  // Already submitted — resubmission must be blocked until an admin reopens
+  // it. recordingRequired is false here specifically so the resubmission
+  // test isolates that one rule, rather than also tripping the recording
+  // check.
+  {
+    id: "wp-student3-submitted",
+    studentId: "student-3",
+    weekTitle: "Week of Aug 3 — Student 3",
+    weekStartDate: new Date("2026-08-03"),
+    weekEndDate: new Date("2026-08-09"),
+    instructions: "Practice the etude.",
+    goals: "10 minutes",
+    teacherNotes: null,
+    internalCurriculumRef: null,
+    currentTechnique: null,
+    recordingRequired: false,
+    status: "SUBMITTED",
+    studentSubmission: "Practiced the etude at 60bpm.",
+    submittedAt: new Date("2026-08-09"),
+    adminFeedback: null,
+    feedbackStatus: null,
+    feedbackAt: null,
+  },
+  // Status is back to IN_PROGRESS, representing "an admin reopened this."
+  // submitCurrentAssignment only ever reads `status` to decide eligibility —
+  // it does not read reopenedAt/reopenCount (those are admin-side audit
+  // fields) — so this fixture models a reopened row purely by status, which
+  // is what actually makes resubmission possible.
+  {
+    id: "wp-student4-reopened",
+    studentId: "student-4",
+    weekTitle: "Week of Aug 3 — Student 4",
+    weekStartDate: new Date("2026-08-03"),
+    weekEndDate: new Date("2026-08-09"),
+    instructions: "Practice the etude again.",
+    goals: "10 minutes",
+    teacherNotes: null,
+    internalCurriculumRef: null,
+    currentTechnique: null,
+    recordingRequired: false,
+    status: "IN_PROGRESS",
+    studentSubmission: "Previous attempt, now editable again.",
+    submittedAt: new Date("2026-08-05"),
+    adminFeedback: null,
+    feedbackStatus: null,
+    feedbackAt: null,
+  },
 ];
 
 interface StudentNoteRow {
@@ -221,6 +268,23 @@ const mockFindFirstWeeklyPractice = vi.fn(
   }
 );
 
+const mockUpdateWeeklyPractice = vi.fn(
+  ({
+    where,
+    data,
+    select,
+  }: {
+    where: { id: string };
+    data: Partial<WeeklyPracticeRow>;
+    select?: SelectShape;
+  }) => {
+    const row = weeklyPracticeRows.find((r) => r.id === where.id);
+    if (!row) throw new Error(`No WeeklyPractice row with id ${where.id}`);
+    Object.assign(row, data);
+    return applySelect(row, select);
+  }
+);
+
 const mockFindManyStudentNote = vi.fn(
   ({ where, select }: { where: WhereClause; select?: SelectShape }) => {
     return studentNoteRows
@@ -323,6 +387,7 @@ vi.mock("@/lib/db", () => ({
   prisma: {
     weeklyPractice: {
       findFirst: (args: unknown) => mockFindFirstWeeklyPractice(args as never),
+      update: (args: unknown) => mockUpdateWeeklyPractice(args as never),
     },
     studentNote: {
       findMany: (args: unknown) => mockFindManyStudentNote(args as never),
@@ -350,7 +415,9 @@ import {
   listAchievedMilestones,
   listMyPracticeLogEntries,
   addMyPracticeLogEntry,
+  submitCurrentAssignment,
   StudentAuthorizationError,
+  AssignmentSubmissionError,
 } from "@/lib/student/queries";
 
 const sessionStudent1: StudentSessionPayload = {
@@ -365,6 +432,20 @@ const sessionStudent2: StudentSessionPayload = {
   supabaseUserId: "sb-2",
   email: "student2@example.com",
   fullName: "Student Two",
+  locale: "en",
+};
+const sessionStudent3: StudentSessionPayload = {
+  studentId: "student-3",
+  supabaseUserId: "sb-3",
+  email: "student3@example.com",
+  fullName: "Student Three",
+  locale: "en",
+};
+const sessionStudent4: StudentSessionPayload = {
+  studentId: "student-4",
+  supabaseUserId: "sb-4",
+  email: "student4@example.com",
+  fullName: "Student Four",
   locale: "en",
 };
 
@@ -447,6 +528,27 @@ describe("getCurrentAssignment", () => {
     expect("currentTechnique" in (result as object)).toBe(false);
   });
 
+  // Not a red-first test — the select already includes all five of these
+  // (recordingRequired since Stage 3; studentSubmission/submittedAt/
+  // adminFeedback/feedbackStatus since Stage 2). Nothing changes here to
+  // make it fail. It closes a real coverage gap instead: the test above
+  // only ever proved the three admin fields are ABSENT, nothing proved
+  // these five are actually PRESENT — a future accidental narrowing of
+  // SAFE_WEEKLY_PRACTICE_SELECT would have broken the dashboard silently.
+  it("includes recordingRequired, studentSubmission, submittedAt, adminFeedback, and feedbackStatus", async () => {
+    const result = await getCurrentAssignment(sessionStudent1);
+    expect(result).not.toBeNull();
+    for (const key of [
+      "recordingRequired",
+      "studentSubmission",
+      "submittedAt",
+      "adminFeedback",
+      "feedbackStatus",
+    ]) {
+      expect(key in (result as object)).toBe(true);
+    }
+  });
+
   it("scopes the query using session.studentId, nothing else", async () => {
     await getCurrentAssignment(sessionStudent1);
     const call = mockFindFirstWeeklyPractice.mock.calls.at(-1)?.[0] as { where: WhereClause };
@@ -495,6 +597,14 @@ describe("listMyNotes / addMyNote", () => {
       data: { visibleToStudent: boolean };
     };
     expect(call.data.visibleToStudent).toBe(true);
+  });
+
+  it("a student cannot reach another student's notes, including a visible admin-authored one", async () => {
+    // note-2 belongs to student-2 and is visible — the scoping that matters
+    // here is studentId, not visibility, and it must hold regardless of who
+    // authored the row.
+    const notes = await listMyNotes(sessionStudent1);
+    expect(notes.some((n) => n.id === "note-2")).toBe(false);
   });
 });
 
@@ -592,6 +702,40 @@ describe("listMyPracticeLogEntries / addMyPracticeLogEntry", () => {
     expect(Object.keys(entry).sort()).toEqual(
       ["durationMinutes", "focus", "id", "practicedAt", "selfRating", "weeklyPracticeId"].sort()
     );
+  });
+});
+
+describe("submitCurrentAssignment", () => {
+  it("is refused when recordingRequired is true", async () => {
+    // wp-student1-current: IN_PROGRESS, recordingRequired: true.
+    await expect(
+      submitCurrentAssignment(sessionStudent1, { studentSubmission: "Practiced today." })
+    ).rejects.toThrow(AssignmentSubmissionError);
+    // Nothing should have been written.
+    expect(mockUpdateWeeklyPractice).not.toHaveBeenCalled();
+  });
+
+  it("is refused when status is SUBMITTED, REVIEWED, or COMPLETED", async () => {
+    // wp-student3-submitted: status SUBMITTED, recordingRequired: false —
+    // isolates the resubmission rule from the recording rule.
+    await expect(
+      submitCurrentAssignment(sessionStudent3, { studentSubmission: "Trying again." })
+    ).rejects.toThrow(AssignmentSubmissionError);
+    expect(mockUpdateWeeklyPractice).not.toHaveBeenCalled();
+  });
+
+  it("succeeds after reopen", async () => {
+    // wp-student4-reopened: status IN_PROGRESS (modeling "an admin reopened
+    // this"), recordingRequired: false.
+    const result = await submitCurrentAssignment(sessionStudent4, {
+      studentSubmission: "Second attempt, much steadier.",
+    });
+    expect(result.status).toBe("SUBMITTED");
+    expect(result.studentSubmission).toBe("Second attempt, much steadier.");
+    expect(result.submittedAt).not.toBeNull();
+
+    const call = mockUpdateWeeklyPractice.mock.calls.at(-1)?.[0] as { where: { id: string } };
+    expect(call.where.id).toBe("wp-student4-reopened");
   });
 });
 

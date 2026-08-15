@@ -256,7 +256,8 @@
     "passwordsDontMatch": "የይለፍ ቃላት አይመሳሰሉም",
     "enterValidPracticeDate": "[AM] Enter a valid practice date",
     "enterValidDuration": "[AM] Enter a duration between 1 and 600 minutes",
-    "enterFocus": "[AM] Describe what you practiced"
+    "enterFocus": "[AM] Describe what you practiced",
+    "enterSubmission": "[AM] Describe what you practiced before submitting"
   },
   "studentLogin": {
     "title": "የተማሪ መግቢያ",
@@ -314,7 +315,19 @@
     "practiceLogSubmitting": "[AM] Saving…",
     "practiceLogGenericError": "[AM] Something went wrong. Please try again.",
     "noPracticeLogEntries": "[AM] No practice logged yet.",
-    "practiceLogMinutes": "[AM] {minutes} min"
+    "practiceLogMinutes": "[AM] {minutes} min",
+    "notesHeading": "[AM] Notes from your teacher",
+    "noNotes": "[AM] No notes yet.",
+    "submissionReceived": "[AM] Submitted — your teacher will review it.",
+    "recordingRequiredNotice": "[AM] This assignment requires a recording. Recording upload isn't available yet, so this assignment can't be submitted until it is — check back soon.",
+    "submissionPlaceholder": "[AM] What did you practice, and how did it go?",
+    "submitAssignment": "[AM] Submit assignment",
+    "submitAssignmentSubmitting": "[AM] Submitting…",
+    "submitGenericError": "[AM] Something went wrong. Please try again.",
+    "yourSubmissionLabel": "[AM] What you submitted",
+    "submittedOnLabel": "[AM] Submitted {date}",
+    "feedbackLabel": "[AM] Feedback from your teacher",
+    "feedbackOnLabel": "[AM] Given {date}"
   },
   "emails": {
     "orderPending": {

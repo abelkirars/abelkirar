@@ -9,6 +9,8 @@ import { ResendInviteButton } from "@/components/admin/resend-invite-button";
 import { StudentEmailCorrection } from "@/components/admin/student-email-correction";
 import { WeeklyPracticeForm } from "@/components/admin/weekly-practice-form";
 import { WeeklyPracticeRow } from "@/components/admin/weekly-practice-row";
+import { StudentNoteForm } from "@/components/admin/student-note-form";
+import { StudentNoteRow } from "@/components/admin/student-note-row";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +30,15 @@ export default async function AdminStudentProfilePage({
   const weeklyPractices = await prisma.weeklyPractice.findMany({
     where: { studentId },
     orderBy: { weekStartDate: "desc" },
+  });
+
+  // Admin side — same as above, no restrictive select. Includes both
+  // student-authored (via addMyNote) and teacher-authored notes; there is
+  // no field yet distinguishing the two (see the report accompanying this
+  // change), so this list simply shows every note for this student.
+  const notes = await prisma.studentNote.findMany({
+    where: { studentId },
+    orderBy: { createdAt: "desc" },
   });
 
   return (
@@ -82,6 +93,20 @@ export default async function AdminStudentProfilePage({
             ))}
             {weeklyPractices.length === 0 && (
               <p className="py-4 text-center text-muted-foreground">No assignments yet.</p>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-8 rounded-lg border border-border p-4">
+          <h2 className="mb-4 font-medium">Notes</h2>
+          <StudentNoteForm studentId={student.id} />
+
+          <div className="mt-6 space-y-3">
+            {notes.map((note) => (
+              <StudentNoteRow key={note.id} studentId={student.id} note={note} />
+            ))}
+            {notes.length === 0 && (
+              <p className="py-4 text-center text-muted-foreground">No notes yet.</p>
             )}
           </div>
         </div>

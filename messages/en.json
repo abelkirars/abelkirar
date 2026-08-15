@@ -256,7 +256,8 @@
     "passwordsDontMatch": "Passwords don't match",
     "enterValidPracticeDate": "Enter a valid practice date",
     "enterValidDuration": "Enter a duration between 1 and 600 minutes",
-    "enterFocus": "Describe what you practiced"
+    "enterFocus": "Describe what you practiced",
+    "enterSubmission": "Describe what you practiced before submitting"
   },
   "studentLogin": {
     "title": "Student Login",
@@ -314,7 +315,19 @@
     "practiceLogSubmitting": "Saving…",
     "practiceLogGenericError": "Something went wrong. Please try again.",
     "noPracticeLogEntries": "No practice logged yet.",
-    "practiceLogMinutes": "{minutes} min"
+    "practiceLogMinutes": "{minutes} min",
+    "notesHeading": "Notes from your teacher",
+    "noNotes": "No notes yet.",
+    "submissionReceived": "Submitted — your teacher will review it.",
+    "recordingRequiredNotice": "This assignment requires a recording. Recording upload isn't available yet, so this assignment can't be submitted until it is — check back soon.",
+    "submissionPlaceholder": "What did you practice, and how did it go?",
+    "submitAssignment": "Submit assignment",
+    "submitAssignmentSubmitting": "Submitting…",
+    "submitGenericError": "Something went wrong. Please try again.",
+    "yourSubmissionLabel": "What you submitted",
+    "submittedOnLabel": "Submitted {date}",
+    "feedbackLabel": "Feedback from your teacher",
+    "feedbackOnLabel": "Given {date}"
   },
   "emails": {
     "orderPending": {
