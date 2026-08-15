@@ -509,6 +509,15 @@ model WeeklyPractice {
   @@index([status])
 }
 
+/// Files attached to a WeeklyPractice. As of Stage 8, exclusively
+/// student-uploaded practice recordings (uploadedBy: STUDENT) — one per
+/// assignment by application convention (see confirmMyRecordingUpload in
+/// src/lib/student/queries.ts, which replaces rather than accumulates).
+/// No @@unique enforces that; it's deliberately left possible to allow
+/// several per assignment later with no migration. Reached only through
+/// its WeeklyPractice relation — there is no direct studentId column, so
+/// every student-facing query must scope through weeklyPractice.studentId,
+/// same pattern as StudentNote.
 model WeeklyPracticeAttachment {
   id               String               @id @default(cuid())
   weeklyPracticeId String
@@ -517,6 +526,14 @@ model WeeklyPracticeAttachment {
   /// Object path in the private student-files bucket, not a public URL.
   storagePath      String
   fileName         String
+  /// Client-declared (File.type from the browser) — NOT verified against
+  /// the actual bytes. Safe as display metadata only. Checked against an
+  /// allowlist at upload-URL-mint time (src/lib/student-recordings.ts) to
+  /// reject obviously-wrong content early, but that check is a courtesy
+  /// filter, not the security boundary — access control here is entirely
+  /// requireStudentApi() + the server-derived, ownership-scoped storage
+  /// path + the private bucket + short-lived signed URLs, independent of
+  /// whatever this column says.
   mimeType         String
   fileSize         Int
   /// Teacher-written or date-based label ONLY — per the spec, this must
