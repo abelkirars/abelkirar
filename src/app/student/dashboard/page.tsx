@@ -146,7 +146,7 @@ export default async function StudentDashboardPage() {
                         <video
                           controls
                           src={`/api/student/recordings/${recording.id}`}
-                          className="h-auto max-w-xl rounded-md object-contain"
+                          className="h-auto w-auto max-w-xl max-h-[500px] rounded-md object-contain"
                         />
                       </div>
                     ) : (

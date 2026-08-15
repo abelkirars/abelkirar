@@ -19,12 +19,19 @@ function toDateOnly(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
+// Only what the player needs — never storagePath. See the query comment in
+// students/[studentId]/page.tsx for why this is select-restricted even
+// though the rest of that page's admin queries aren't.
+type WeeklyPracticeWithRecording = WeeklyPractice & {
+  attachments: { id: string; mimeType: string }[];
+};
+
 export function WeeklyPracticeRow({
   studentId,
   weeklyPractice,
 }: {
   studentId: string;
-  weeklyPractice: WeeklyPractice;
+  weeklyPractice: WeeklyPracticeWithRecording;
 }) {
   const [editing, setEditing] = useState(false);
 
@@ -59,6 +66,34 @@ export function WeeklyPracticeRow({
         </p>
         {weeklyPractice.instructions && (
           <p className="mt-1 text-sm text-muted-foreground">{weeklyPractice.instructions}</p>
+        )}
+        {/* attachments[0] carries only id + mimeType (see the query comment
+            in students/[studentId]/page.tsx) — no storagePath ever reaches
+            this client component. The signed URL is minted on demand by the
+            existing admin route when the browser requests this src; nothing
+            is embedded here. Same sizing rule as the student player: dual
+            max-width/max-height with auto width/height lets the browser
+            satisfy both constraints while preserving whatever aspect ratio
+            the recording actually has — no orientation detection needed. */}
+        {weeklyPractice.attachments[0] && (
+          <div className="mt-2">
+            <p className="text-xs font-medium text-muted-foreground">Student recording</p>
+            {weeklyPractice.attachments[0].mimeType.startsWith("video/") ? (
+              <div className="mt-1 w-fit max-w-full">
+                <video
+                  controls
+                  src={`/api/admin/students/${studentId}/weekly-practice/${weeklyPractice.id}/recordings/${weeklyPractice.attachments[0].id}`}
+                  className="h-auto w-auto max-w-xl max-h-[500px] rounded-md object-contain"
+                />
+              </div>
+            ) : (
+              <audio
+                controls
+                src={`/api/admin/students/${studentId}/weekly-practice/${weeklyPractice.id}/recordings/${weeklyPractice.attachments[0].id}`}
+                className="mt-1 w-full"
+              />
+            )}
+          </div>
         )}
       </div>
       <Button size="sm" variant="outline" onClick={() => setEditing(true)}>

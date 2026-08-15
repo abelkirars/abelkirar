@@ -27,9 +27,26 @@ export default async function AdminStudentProfilePage({
   // src/lib/student/queries.ts. This page is allowed to see
   // teacherNotes/internalCurriculumRef/currentTechnique; that boundary is
   // specifically about the student-facing path, not this one.
+  //
+  // attachments IS restricted, deliberately: WeeklyPracticeRow (below) is a
+  // "use client" component, so whatever this query returns for `attachments`
+  // becomes a client-component prop. id + mimeType are all the player needs
+  // to build a URL and pick video-vs-audio — storagePath must never be in
+  // that list. The signed URL itself is minted on demand by the existing
+  // admin route (.../recordings/[attachmentId]) when the browser requests
+  // the player's src, never embedded here. uploadedBy: "STUDENT" excludes
+  // any future admin-uploaded attachment from ever showing up mislabeled as
+  // a student recording — no such row exists yet, but costs nothing to
+  // exclude now.
   const weeklyPractices = await prisma.weeklyPractice.findMany({
     where: { studentId },
     orderBy: { weekStartDate: "desc" },
+    include: {
+      attachments: {
+        where: { uploadedBy: "STUDENT" },
+        select: { id: true, mimeType: true },
+      },
+    },
   });
 
   // Admin side — same as above, no restrictive select. Includes both
