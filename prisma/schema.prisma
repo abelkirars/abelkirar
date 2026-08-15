@@ -533,12 +533,19 @@ model WeeklyPracticeAttachment {
   @@index([weeklyPracticeId])
 }
 
-/// Short, student-authored note attached to a submission (or standalone —
-/// weeklyPracticeId is nullable because Session History doesn't have its
-/// own table yet in this MVP; a note can exist without one). Distinct from
-/// WeeklyPractice.studentSubmission (the practice content itself) and from
-/// StudentProfile.notes (an admin-editable flat field, unrelated). A
-/// student may only ever read/write their own rows.
+/// A note attached to a submission (or standalone — weeklyPracticeId is
+/// nullable because Session History doesn't have its own table yet in this
+/// MVP). Historically student-authored only; visibleToStudent (added
+/// 2026-08-15) makes room for teacher-authored entries too — e.g. a private
+/// observation ("avoiding the harder qignit") kept out of the student's
+/// view without a second table. No teacher-facing write path into this
+/// table exists yet — today every row still comes from addMyNote
+/// (student-authored, always visibleToStudent: true, hardcoded, not a
+/// parameter). Distinct from WeeklyPractice.studentSubmission (the practice
+/// content itself) and from StudentProfile.notes (an admin-editable flat
+/// field, unrelated). A student may only ever READ their own rows, and only
+/// those with visibleToStudent: true — see listMyNotes in
+/// src/lib/student/queries.ts.
 model StudentNote {
   id               String          @id @default(cuid())
   studentId        String
@@ -546,6 +553,11 @@ model StudentNote {
   weeklyPracticeId String?
   weeklyPractice   WeeklyPractice? @relation(fields: [weeklyPracticeId], references: [id], onDelete: SetNull)
   body             String
+  /// Per-row visibility, not a second table. Default true so every existing
+  /// row keeps behaving exactly as it did before this column existed. A
+  /// false row can only ever be teacher-authored, since addMyNote never
+  /// accepts this as input — see the model comment above.
+  visibleToStudent Boolean         @default(true)
   createdAt        DateTime        @default(now())
 
   @@index([studentId, createdAt])
@@ -619,6 +631,15 @@ model StudentMilestone {
   @@index([studentId, status])
 }
 
+/// UNUSED as of the Student Dashboard MVP. Evaluated for storing per-note
+/// feedback (Stage 7 decision, 2026-08-15) and rejected: this model is
+/// shaped for a monthly cadence — one row per student per calendar month
+/// (@@unique([studentId, month, year])) with a fixed set of summary fields
+/// and file attachments — not the per-submission, freeform-visibility notes
+/// Stage 7 needs. Feedback went on StudentNote instead (see its
+/// visibleToStudent field). Retained, not deleted: this shape may still fit
+/// a future monthly-summary feature. No application code reads or writes it
+/// today.
 model MonthlyLog {
   id        String         @id @default(cuid())
   studentId String
@@ -650,6 +671,7 @@ model MonthlyLog {
   @@index([studentId, year, month])
 }
 
+/// Unused, same as MonthlyLog above — see that model's comment.
 model MonthlyLogAttachment {
   id           String     @id @default(cuid())
   monthlyLogId String

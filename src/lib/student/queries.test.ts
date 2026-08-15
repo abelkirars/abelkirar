@@ -82,6 +82,7 @@ interface StudentNoteRow {
   studentId: string;
   weeklyPracticeId: string | null;
   body: string;
+  visibleToStudent: boolean;
   createdAt: Date;
 }
 
@@ -206,6 +207,7 @@ interface WhereClause {
   studentId: string;
   id?: string;
   status?: string | { in: string[] };
+  visibleToStudent?: boolean;
 }
 
 const mockFindFirstWeeklyPractice = vi.fn(
@@ -222,7 +224,17 @@ const mockFindFirstWeeklyPractice = vi.fn(
 const mockFindManyStudentNote = vi.fn(
   ({ where, select }: { where: WhereClause; select?: SelectShape }) => {
     return studentNoteRows
-      .filter((r) => r.studentId === where.studentId)
+      .filter((r) => {
+        if (r.studentId !== where.studentId) return false;
+        // Mirrors real Prisma: a `where` key that isn't present doesn't
+        // filter at all. This is deliberate — it's what makes the
+        // visibility test below fail for the right reason before
+        // listMyNotes actually passes visibleToStudent in its where clause.
+        if (where.visibleToStudent !== undefined && r.visibleToStudent !== where.visibleToStudent) {
+          return false;
+        }
+        return true;
+      })
       .map((r) => applySelect(r, select));
   }
 );
@@ -232,7 +244,12 @@ const mockCreateStudentNote = vi.fn(
     data,
     select,
   }: {
-    data: { studentId: string; body: string; weeklyPracticeId: string | null };
+    data: {
+      studentId: string;
+      body: string;
+      weeklyPracticeId: string | null;
+      visibleToStudent: boolean;
+    };
     select?: SelectShape;
   }) => {
     const row: StudentNoteRow = {
@@ -359,6 +376,7 @@ beforeEach(() => {
       studentId: "student-1",
       weeklyPracticeId: "wp-student1-current",
       body: "Struggled with string 4",
+      visibleToStudent: true,
       createdAt: new Date("2026-08-11"),
     },
     {
@@ -366,7 +384,20 @@ beforeEach(() => {
       studentId: "student-2",
       weeklyPracticeId: null,
       body: "Student 2's note",
+      visibleToStudent: true,
       createdAt: new Date("2026-08-11"),
+    },
+    // A teacher-authored observation about student-1, deliberately hidden —
+    // exactly the "avoiding the harder qignit" scenario. No code path
+    // creates rows like this yet (no teacher-facing writer exists), but the
+    // read side must already refuse to leak one if it ever appears.
+    {
+      id: "note-3-hidden",
+      studentId: "student-1",
+      weeklyPracticeId: null,
+      body: "Avoiding the harder qignit — private observation",
+      visibleToStudent: false,
+      createdAt: new Date("2026-08-12"),
     },
   ];
   practiceLogEntryRows = [
@@ -451,6 +482,19 @@ describe("listMyNotes / addMyNote", () => {
         weeklyPracticeId: "wp-student2-current",
       })
     ).rejects.toThrow(StudentAuthorizationError);
+  });
+
+  it("a note with visibleToStudent=false is unreachable through listMyNotes", async () => {
+    const notes = await listMyNotes(sessionStudent1);
+    expect(notes.some((n) => n.id === "note-3-hidden")).toBe(false);
+  });
+
+  it("addMyNote always creates a visible note — a student has no parameter to hide their own note", async () => {
+    await addMyNote(sessionStudent1, { body: "New note" });
+    const call = mockCreateStudentNote.mock.calls.at(-1)?.[0] as {
+      data: { visibleToStudent: boolean };
+    };
+    expect(call.data.visibleToStudent).toBe(true);
   });
 });
 

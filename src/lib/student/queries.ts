@@ -72,10 +72,16 @@ export async function getCurrentAssignment(session: StudentSessionPayload) {
   });
 }
 
-/** All of the calling student's own notes, most recent first. */
+/**
+ * All of the calling student's own VISIBLE notes, most recent first.
+ * visibleToStudent: true is part of the where clause, not a post-filter —
+ * a hidden (teacher-authored) row must never even leave the database for
+ * this student, let alone reach a select. See the StudentNote model
+ * comment in prisma/schema.prisma for what visibleToStudent is for.
+ */
 export async function listMyNotes(session: StudentSessionPayload) {
   return prisma.studentNote.findMany({
-    where: { studentId: session.studentId },
+    where: { studentId: session.studentId, visibleToStudent: true },
     orderBy: { createdAt: "desc" },
     select: { id: true, body: true, createdAt: true, weeklyPracticeId: true },
   });
@@ -88,6 +94,11 @@ export async function listMyNotes(session: StudentSessionPayload) {
  * though it only ever links a note, since a wrong link would still let a
  * student's note attach to (and imply knowledge of) another student's
  * assignment.
+ *
+ * visibleToStudent is hardcoded true here, not a parameter — there is no
+ * way for a student to write a hidden note about themselves through this
+ * function. A false row can only ever come from a teacher-facing write
+ * path, which does not exist yet.
  */
 export async function addMyNote(
   session: StudentSessionPayload,
@@ -110,6 +121,7 @@ export async function addMyNote(
       studentId: session.studentId,
       body: input.body,
       weeklyPracticeId: input.weeklyPracticeId ?? null,
+      visibleToStudent: true,
     },
     select: { id: true, body: true, createdAt: true, weeklyPracticeId: true },
   });
