@@ -565,3 +565,37 @@ should be soft-delete or deactivate-and-reassign-email.
 **Operational note.** Invite links use `NEXT_PUBLIC_SITE_URL` as an explicit `redirectTo`, which overrides
 Supabase's dashboard Site URL. An invite sent from the dev server therefore points at localhost by design.
 Send invites from production.
+
+---
+
+## 2026-08-16 — Stage 8 recording upload: a missing bucket env var, masked by a generic error
+
+**What happened.** The first manual test of recording upload failed with "Failed to prepare upload." A
+later attempt succeeded, with no code change and no redeploy triggered by hand.
+
+**Root cause, confirmed.** `SUPABASE_STUDENT_FILES_BUCKET` was unset in `.env.local`, so `RECORDING_BUCKET`
+fell back to the literal `"student-files"` — a bucket that doesn't exist; the real one is
+`student-recordings`. Confirmed two ways, not inferred: `git diff HEAD` showed zero changes to any
+recording-related file since the last commit, and a direct before/after read of `.env.local` showed
+`SUPABASE_STUDENT_FILES_BUCKET="student-recordings"` present on the second read, absent on the first.
+
+**The real problem.** The cause was invisible after the fact because the sign-upload route's catch-all
+returned one generic message ("Failed to prepare upload") for every unexpected failure, collapsing five
+distinguishable outcomes — unauthenticated, assignment not owned, invalid type/size, storage signing
+failure, and genuinely unexpected — into one indistinguishable 500. The client itself was not at fault:
+it already surfaces whatever message the server sends; there was simply nothing specific for it to
+surface. Same shape as the "Something went wrong" masking a real Vercel body-size limit on product image
+upload, 2026-08-11: a generic catch turning a specific, diagnosable failure into an unsolvable one.
+
+**Deployment risk — not a footnote.** `.env.local` is git-ignored. This fix exists on one machine. It is
+not, and cannot be, in Vercel's Preview or Production environment variables — those are configured
+separately and were never touched by this fix. Production and Preview will fail identically the first time
+a recording is uploaded there, unless `SUPABASE_STUDENT_FILES_BUCKET` is set in Vercel before that happens.
+
+**Process.** A specific cause — a migration name, an enum value, a claim about client-side error handling —
+was asserted from memory rather than checked against the repository, and built into a causal story before
+any verification. Caught by checking `git diff` and the actual file contents rather than accepting the
+story because it was plausible. Distinct from the "Pattern — Nth instance" list above (guards and code
+reading stronger than they enforce, currently at five) — this is the same discipline applied to an
+asserted premise rather than to implemented behavior. Recorded as the fourth time it has mattered on this
+project.
