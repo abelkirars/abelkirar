@@ -525,3 +525,43 @@ quote route's region-pairing branch is unreachable through its own schema; a tes
 boundary the code does not use; correct markup failed because it was rendered twice; and now two
 components reading the same data disagreed about what it meant, because one matched exactly and the other
 matched loosely.
+
+---
+
+## 2026-08-15 — Student dashboard MVP: Stages 1–6 verified end to end
+
+**What was built.** Stages 1–6: codebase audit, the data model foundation, the student authorization
+layer, admin assignment authoring, the student assignment view, and the practice log.
+
+**Verified by inspection, not only by tests.** A real assignment was authored with deliberately
+recognisable markers in all three admin-only fields, then viewed as a logged-in student.
+`SECRET-CURRICULUM-123`, `SECRET-TECHNIQUE-123`, and the private rationale were absent from the page
+source and from the practice-log POST response. The practice entry saved and listed.
+
+**Why the page source is the whole surface.** The student dashboard has no `"use client"` anywhere in its
+tree, so the assignment object is never serialised as props. The HTML document is the only response
+carrying assignment data — there is no separate client fetch to inspect. The single student-facing JSON
+response in the feature is the practice-log POST, which was checked separately.
+
+**Decisions worth keeping.**
+- No DAL function takes a `studentId` parameter; every one reads it from the session, so a route cannot
+  pass through a caller-supplied id. Structural, not disciplined.
+- Milestone reads go through `StudentMilestone` only, so an unassigned milestone has no row to reach —
+  future milestones are hidden by the access pattern, not by a flag someone must remember to set.
+- Assignment visibility is `weekStartDate <= now()`, enforced in the query. A future-dated assignment does
+  not match; there is no publish flag to forget.
+- The practice-log Zod schema is strict, so a body containing `studentProfileId` is rejected with 400
+  rather than stripped. A client sending one is told, not given a success response for something that did
+  not happen as asked.
+- `teacherNotes`, `internalCurriculumRef` and `currentTechnique` share a row the student's own query
+  reads. Protection there is an explicit `select`, not structure — noted in the schema so a later stage
+  cannot forget.
+
+**Not built, deliberately.** No hard-delete for `StudentProfile`. `PracticeLogEntry` and `StudentNote`
+cascade, so a delete button would destroy a student's entire practice history on one misclick, and
+re-inviting an existing email already works via upsert on `supabaseUserId`. If removal is ever needed it
+should be soft-delete or deactivate-and-reassign-email.
+
+**Operational note.** Invite links use `NEXT_PUBLIC_SITE_URL` as an explicit `redirectTo`, which overrides
+Supabase's dashboard Site URL. An invite sent from the dev server therefore points at localhost by design.
+Send invites from production.
