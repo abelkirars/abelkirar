@@ -257,7 +257,11 @@
     "enterValidPracticeDate": "Enter a valid practice date",
     "enterValidDuration": "Enter a duration between 1 and 600 minutes",
     "enterFocus": "Describe what you practiced",
-    "enterSubmission": "Describe what you practiced before submitting"
+    "enterSubmission": "Describe what you practiced before submitting",
+    "selectAssignment": "Select an assignment to attach this recording to",
+    "invalidRecordingType": "Unsupported recording type",
+    "invalidRecordingSize": "Invalid recording size",
+    "invalidRecordingPath": "This recording could not be confirmed"
   },
   "studentLogin": {
     "title": "Student Login",
@@ -319,7 +323,7 @@
     "notesHeading": "Notes from your teacher",
     "noNotes": "No notes yet.",
     "submissionReceived": "Submitted — your teacher will review it.",
-    "recordingRequiredNotice": "This assignment requires a recording. Recording upload isn't available yet, so this assignment can't be submitted until it is — check back soon.",
+    "recordingRequiredNotice": "This assignment requires a recording. Upload one below before you can submit.",
     "submissionPlaceholder": "What did you practice, and how did it go?",
     "submitAssignment": "Submit assignment",
     "submitAssignmentSubmitting": "Submitting…",
@@ -327,7 +331,12 @@
     "yourSubmissionLabel": "What you submitted",
     "submittedOnLabel": "Submitted {date}",
     "feedbackLabel": "Feedback from your teacher",
-    "feedbackOnLabel": "Given {date}"
+    "feedbackOnLabel": "Given {date}",
+    "recordingLabel": "Recording",
+    "noRecordingYet": "No recording yet.",
+    "recordingUploadLabel": "Upload a recording",
+    "recordingUploading": "Uploading…",
+    "recordingGenericError": "Something went wrong. Please try again."
   },
   "emails": {
     "orderPending": {

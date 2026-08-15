@@ -1,5 +1,10 @@
 import { prisma } from "@/lib/db";
 import type { StudentSessionPayload } from "@/lib/student/dal";
+import {
+  createRecordingUploadUrl,
+  deleteRecordingObject,
+  verifyRecordingObject,
+} from "@/lib/student-recordings";
 
 /**
  * Student-facing data access layer — the authorization shape every later
@@ -264,11 +269,10 @@ export async function addMyPracticeLogEntry(
  *   back to IN_PROGRESS — this function only ever reads `status` to decide
  *   eligibility, so a reopened row becomes submittable again automatically,
  *   with no special-casing needed here.
- * - recordingRequired is true: recording upload doesn't exist until Stage 8,
- *   so this is refused unconditionally, every time, for every such
- *   assignment, until that stage ships. This is a missing feature, not a
- *   validation failure — the message says so, and the route must not turn
- *   it into a generic error. Do not fake, stub, or bypass this check.
+ * - recordingRequired is true AND no recording has been uploaded: checked
+ *   against WeeklyPracticeAttachment (Stage 8) — this used to be an
+ *   unconditional refusal before Stage 8 existed; now it's a real existence
+ *   check. Do not fake, stub, or bypass this check.
  */
 export async function submitCurrentAssignment(
   session: StudentSessionPayload,
@@ -288,10 +292,16 @@ export async function submitCurrentAssignment(
   }
 
   if (assignment.recordingRequired) {
-    throw new AssignmentSubmissionError(
-      "This assignment requires a recording, and recording upload isn't available yet. Ask your teacher for guidance.",
-      "RECORDING_REQUIRED"
-    );
+    const hasRecording = await prisma.weeklyPracticeAttachment.findFirst({
+      where: { weeklyPracticeId: assignment.id, uploadedBy: "STUDENT" },
+      select: { id: true },
+    });
+    if (!hasRecording) {
+      throw new AssignmentSubmissionError(
+        "This assignment requires a recording. Please upload one before submitting.",
+        "RECORDING_REQUIRED"
+      );
+    }
   }
 
   return prisma.weeklyPractice.update({
@@ -302,5 +312,159 @@ export async function submitCurrentAssignment(
       status: "SUBMITTED",
     },
     select: SAFE_WEEKLY_PRACTICE_SELECT,
+  });
+}
+
+/** Fields a student may see on their own recording attachment. Never
+ *  includes storagePath — that never leaves the server, only a signed URL
+ *  derived from it does (see getMyRecordingAttachment for the one
+ *  exception, and why). Never includes label/isMilestoneMarker — both are
+ *  teacher-authored fields with no defined student-visibility rule yet, and
+ *  this stage only concerns the student's own uploaded recording. */
+const SAFE_RECORDING_SELECT = {
+  id: true,
+  fileName: true,
+  mimeType: true,
+  fileSize: true,
+  createdAt: true,
+} as const;
+
+/**
+ * Mints a signed upload URL for a new recording, scoped to an assignment
+ * the caller must already own. weeklyPracticeId is client-supplied (the
+ * student picks which assignment they're recording for), so — unlike
+ * addMyPracticeLogEntry's inferred weeklyPracticeId — it is verified here
+ * exactly like addMyNote verifies its own client-supplied weeklyPracticeId,
+ * never trusted blindly. The actual storage path is still entirely
+ * server-derived inside createRecordingUploadUrl; only the assignment
+ * choice comes from the caller.
+ */
+export async function createMyRecordingUploadUrl(
+  session: StudentSessionPayload,
+  input: { weeklyPracticeId: string; mimeType: string; fileSize: number }
+) {
+  const owns = await prisma.weeklyPractice.findFirst({
+    where: { id: input.weeklyPracticeId, studentId: session.studentId },
+    select: { id: true },
+  });
+  if (!owns) {
+    throw new StudentAuthorizationError(
+      "Cannot upload a recording to an assignment that isn't yours"
+    );
+  }
+
+  return createRecordingUploadUrl(session.studentId, input.weeklyPracticeId, {
+    mimeType: input.mimeType,
+    fileSize: input.fileSize,
+  });
+}
+
+/**
+ * Records a completed direct-to-storage upload as a WeeklyPracticeAttachment
+ * row. Checks before anything is written, none optional:
+ *
+ * 1. Ownership of the assignment (same pattern as
+ *    createMyRecordingUploadUrl/addMyNote).
+ * 2. The client-echoed `path` actually starts with this student's own
+ *    prefix — the path was server-generated in the mint step, but a
+ *    client could in principle echo back a DIFFERENT valid-looking path
+ *    it was never issued, so it's re-validated here rather than trusted
+ *    because we handed out something like it once.
+ * 3. verifyRecordingObject — the actual stored size AND content-type,
+ *    checked against what Supabase really has, not what the client
+ *    declared in this request. The declared fileSize/mimeType in `input`
+ *    are used for nothing beyond routing to this point; the values
+ *    actually stored come from verification.
+ *
+ * "One recording per submission" (a product decision, not a schema
+ * constraint — see the WeeklyPracticeAttachment model comment): if a
+ * STUDENT-uploaded attachment already exists for this assignment, this
+ * REPLACES it — the old storage object AND row are deleted (object
+ * deletion is best-effort; a cleanup failure must not fail this request),
+ * then a fresh row is written, rather than a second row accumulating
+ * alongside it or the existing row being mutated in place.
+ */
+export async function confirmMyRecordingUpload(
+  session: StudentSessionPayload,
+  input: {
+    weeklyPracticeId: string;
+    path: string;
+    fileName: string;
+    mimeType: string;
+    fileSize: number;
+  }
+) {
+  const owns = await prisma.weeklyPractice.findFirst({
+    where: { id: input.weeklyPracticeId, studentId: session.studentId },
+    select: { id: true },
+  });
+  if (!owns) {
+    throw new StudentAuthorizationError(
+      "Cannot attach a recording to an assignment that isn't yours"
+    );
+  }
+
+  const expectedPrefix = `students/${session.studentId}/weekly-practice/${input.weeklyPracticeId}/`;
+  if (!input.path.startsWith(expectedPrefix)) {
+    throw new StudentAuthorizationError("Recording path does not match this assignment");
+  }
+
+  const verified = await verifyRecordingObject(input.path);
+
+  const existing = await prisma.weeklyPracticeAttachment.findFirst({
+    where: { weeklyPracticeId: input.weeklyPracticeId, uploadedBy: "STUDENT" },
+  });
+
+  if (existing) {
+    await deleteRecordingObject(existing.storagePath);
+    await prisma.weeklyPracticeAttachment.delete({ where: { id: existing.id } });
+  }
+
+  return prisma.weeklyPracticeAttachment.create({
+    data: {
+      weeklyPracticeId: input.weeklyPracticeId,
+      uploadedBy: "STUDENT",
+      storagePath: input.path,
+      fileName: input.fileName,
+      mimeType: verified.mimeType,
+      fileSize: verified.fileSize,
+    },
+    select: SAFE_RECORDING_SELECT,
+  });
+}
+
+/**
+ * The calling student's own recording for the given attachment id, or null
+ * if it doesn't exist or belongs to someone else. Unlike every other
+ * student-facing select in this file, this one DOES include storagePath —
+ * it's the one place a signed URL actually needs to be minted from it. The
+ * caller (the viewing route) must never return storagePath itself to the
+ * client, only a signed URL derived from it.
+ */
+export async function getMyRecordingAttachment(session: StudentSessionPayload, attachmentId: string) {
+  const attachment = await prisma.weeklyPracticeAttachment.findUnique({
+    where: { id: attachmentId },
+    select: {
+      storagePath: true,
+      weeklyPractice: { select: { studentId: true } },
+    },
+  });
+
+  if (!attachment || attachment.weeklyPractice.studentId !== session.studentId) {
+    return null;
+  }
+
+  return { storagePath: attachment.storagePath };
+}
+
+/** The recording attached to the student's current assignment, or null —
+ *  "one per submission," so findFirst rather than findMany. */
+export async function getMyCurrentAssignmentRecording(session: StudentSessionPayload) {
+  const assignment = await getCurrentAssignment(session);
+  if (!assignment) return null;
+
+  return prisma.weeklyPracticeAttachment.findFirst({
+    where: { weeklyPracticeId: assignment.id, uploadedBy: "STUDENT" },
+    select: SAFE_RECORDING_SELECT,
   });
 }

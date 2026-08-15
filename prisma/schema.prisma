@@ -526,15 +526,19 @@ model WeeklyPracticeAttachment {
   /// Object path in the private student-files bucket, not a public URL.
   storagePath      String
   fileName         String
-  /// Client-declared (File.type from the browser) — NOT verified against
-  /// the actual bytes. Safe as display metadata only. Checked against an
-  /// allowlist at upload-URL-mint time (src/lib/student-recordings.ts) to
-  /// reject obviously-wrong content early, but that check is a courtesy
-  /// filter, not the security boundary — access control here is entirely
-  /// requireStudentApi() + the server-derived, ownership-scoped storage
-  /// path + the private bucket + short-lived signed URLs, independent of
-  /// whatever this column says.
+  /// Verified against the actual stored object at confirm time
+  /// (verifyRecordingObject in src/lib/student-recordings.ts), not merely
+  /// client-declared — createSignedUploadUrl enforces no content-type
+  /// constraint of its own, so a client could otherwise declare an allowed
+  /// type at sign-upload and upload something else entirely. This column
+  /// still isn't the access-control boundary — that's requireStudentApi()
+  /// + the server-derived, ownership-scoped storage path + the private
+  /// bucket + short-lived signed URLs — but it does now reflect what
+  /// Supabase actually reports the object to be.
   mimeType         String
+  /// Same verification as mimeType, same function, same reasoning: the
+  /// value stored here is the ACTUAL uploaded object's size, not the
+  /// client's declared File.size.
   fileSize         Int
   /// Teacher-written or date-based label ONLY — per the spec, this must
   /// never be auto-generated from internal curriculum text. Enforced by

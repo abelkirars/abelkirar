@@ -122,6 +122,29 @@ const weeklyPracticeRows: WeeklyPracticeRow[] = [
     feedbackStatus: null,
     feedbackAt: null,
   },
+  // recordingRequired: true, WITH a matching attachment (see
+  // weeklyPracticeAttachmentRows below) — the "should succeed" counterpart
+  // to wp-student1-current's "should be refused" (which deliberately stays
+  // attachment-less).
+  {
+    id: "wp-student5-recording-required",
+    studentId: "student-5",
+    weekTitle: "Week of Aug 3 — Student 5",
+    weekStartDate: new Date("2026-08-03"),
+    weekEndDate: new Date("2026-08-09"),
+    instructions: "Record your scale practice.",
+    goals: "5 minutes",
+    teacherNotes: null,
+    internalCurriculumRef: null,
+    currentTechnique: null,
+    recordingRequired: true,
+    status: "IN_PROGRESS",
+    studentSubmission: null,
+    submittedAt: null,
+    adminFeedback: null,
+    feedbackStatus: null,
+    feedbackAt: null,
+  },
 ];
 
 interface StudentNoteRow {
@@ -148,6 +171,21 @@ interface PracticeLogEntryRow {
 }
 
 let practiceLogEntryRows: PracticeLogEntryRow[];
+
+interface WeeklyPracticeAttachmentRow {
+  id: string;
+  weeklyPracticeId: string;
+  uploadedBy: string; // "ADMIN" | "STUDENT"
+  storagePath: string;
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
+  label: string | null;
+  isMilestoneMarker: boolean;
+  createdAt: Date;
+}
+
+let weeklyPracticeAttachmentRows: WeeklyPracticeAttachmentRow[];
 
 interface MilestoneRow {
   id: string;
@@ -257,6 +295,24 @@ interface WhereClause {
   visibleToStudent?: boolean;
 }
 
+/** Mirrors applyStudentMilestoneSelect's nested-relation handling, for
+ *  WeeklyPracticeAttachment's `weeklyPractice: { select: { studentId } }`. */
+function applyAttachmentSelect(row: WeeklyPracticeAttachmentRow, select?: SelectShape) {
+  if (!select) return row;
+  const result: Record<string, unknown> = {};
+  for (const key of Object.keys(select)) {
+    const value = select[key];
+    if (!value) continue;
+    if (key === "weeklyPractice" && typeof value === "object") {
+      const wp = weeklyPracticeRows.find((r) => r.id === row.weeklyPracticeId);
+      result.weeklyPractice = wp ? applySelect(wp, value.select) : null;
+    } else {
+      result[key] = (row as unknown as Record<string, unknown>)[key];
+    }
+  }
+  return result;
+}
+
 const mockFindFirstWeeklyPractice = vi.fn(
   ({ where, select }: { where: WhereClause; select?: SelectShape }) => {
     const row = weeklyPracticeRows.find((r) => {
@@ -360,6 +416,81 @@ const mockCreatePracticeLogEntry = vi.fn(
   }
 );
 
+interface AttachmentWhereClause {
+  id?: string;
+  weeklyPracticeId?: string;
+  uploadedBy?: string;
+}
+
+const mockFindFirstWeeklyPracticeAttachment = vi.fn(
+  ({ where, select }: { where: AttachmentWhereClause; select?: SelectShape }) => {
+    const row = weeklyPracticeAttachmentRows.find(
+      (r) =>
+        (!where.weeklyPracticeId || r.weeklyPracticeId === where.weeklyPracticeId) &&
+        (!where.uploadedBy || r.uploadedBy === where.uploadedBy)
+    );
+    return row ? applyAttachmentSelect(row, select) : null;
+  }
+);
+
+const mockFindUniqueWeeklyPracticeAttachment = vi.fn(
+  ({ where, select }: { where: AttachmentWhereClause; select?: SelectShape }) => {
+    const row = weeklyPracticeAttachmentRows.find((r) => r.id === where.id);
+    return row ? applyAttachmentSelect(row, select) : null;
+  }
+);
+
+const mockCreateWeeklyPracticeAttachment = vi.fn(
+  ({
+    data,
+    select,
+  }: {
+    data: {
+      weeklyPracticeId: string;
+      uploadedBy: string;
+      storagePath: string;
+      fileName: string;
+      mimeType: string;
+      fileSize: number;
+    };
+    select?: SelectShape;
+  }) => {
+    const row: WeeklyPracticeAttachmentRow = {
+      id: `attachment-${weeklyPracticeAttachmentRows.length + 1}`,
+      label: null,
+      isMilestoneMarker: false,
+      createdAt: new Date(),
+      ...data,
+    };
+    weeklyPracticeAttachmentRows.push(row);
+    return applyAttachmentSelect(row, select);
+  }
+);
+
+const mockUpdateWeeklyPracticeAttachment = vi.fn(
+  ({
+    where,
+    data,
+    select,
+  }: {
+    where: { id: string };
+    data: Partial<WeeklyPracticeAttachmentRow>;
+    select?: SelectShape;
+  }) => {
+    const row = weeklyPracticeAttachmentRows.find((r) => r.id === where.id);
+    if (!row) throw new Error(`No WeeklyPracticeAttachment row with id ${where.id}`);
+    Object.assign(row, data);
+    return applyAttachmentSelect(row, select);
+  }
+);
+
+const mockDeleteWeeklyPracticeAttachment = vi.fn(({ where }: { where: { id: string } }) => {
+  const index = weeklyPracticeAttachmentRows.findIndex((r) => r.id === where.id);
+  if (index === -1) throw new Error(`No WeeklyPracticeAttachment row with id ${where.id}`);
+  const [row] = weeklyPracticeAttachmentRows.splice(index, 1);
+  return row;
+});
+
 function matchesStatus(row: StudentMilestoneRow, status?: WhereClause["status"]) {
   if (!status) return true;
   if (typeof status === "string") return row.status === status;
@@ -401,10 +532,37 @@ vi.mock("@/lib/db", () => ({
       findMany: (args: unknown) => mockFindManyPracticeLogEntry(args as never),
       create: (args: unknown) => mockCreatePracticeLogEntry(args as never),
     },
+    weeklyPracticeAttachment: {
+      findFirst: (args: unknown) => mockFindFirstWeeklyPracticeAttachment(args as never),
+      findUnique: (args: unknown) => mockFindUniqueWeeklyPracticeAttachment(args as never),
+      create: (args: unknown) => mockCreateWeeklyPracticeAttachment(args as never),
+      update: (args: unknown) => mockUpdateWeeklyPracticeAttachment(args as never),
+      delete: (args: unknown) => mockDeleteWeeklyPracticeAttachment(args as never),
+    },
     // No `milestone`, no `teacherPrivateNote` — see the note at the top of
     // this file.
   },
 }));
+
+const mockCreateRecordingUploadUrl = vi.fn();
+const mockGetRecordingSignedUrl = vi.fn();
+const mockDeleteRecordingObject = vi.fn();
+const mockVerifyRecordingObject = vi.fn();
+// student-recordings.ts has `import "server-only"`, same as
+// supabase-admin-auth.ts — mocked at the boundary queries.ts actually
+// imports, matching the established convention (see DECISIONS.md's
+// server-only-guard entry). InvalidRecordingError is hand-rolled inline,
+// same pattern as StudentInviteError/OrderCreationError elsewhere.
+vi.mock("@/lib/student-recordings", () => {
+  class InvalidRecordingError extends Error {}
+  return {
+    createRecordingUploadUrl: (...args: unknown[]) => mockCreateRecordingUploadUrl(...args),
+    getRecordingSignedUrl: (...args: unknown[]) => mockGetRecordingSignedUrl(...args),
+    deleteRecordingObject: (...args: unknown[]) => mockDeleteRecordingObject(...args),
+    verifyRecordingObject: (...args: unknown[]) => mockVerifyRecordingObject(...args),
+    InvalidRecordingError,
+  };
+});
 
 import {
   getCurrentAssignment,
@@ -416,6 +574,10 @@ import {
   listMyPracticeLogEntries,
   addMyPracticeLogEntry,
   submitCurrentAssignment,
+  createMyRecordingUploadUrl,
+  confirmMyRecordingUpload,
+  getMyRecordingAttachment,
+  getMyCurrentAssignmentRecording,
   StudentAuthorizationError,
   AssignmentSubmissionError,
 } from "@/lib/student/queries";
@@ -448,9 +610,20 @@ const sessionStudent4: StudentSessionPayload = {
   fullName: "Student Four",
   locale: "en",
 };
+const sessionStudent5: StudentSessionPayload = {
+  studentId: "student-5",
+  supabaseUserId: "sb-5",
+  email: "student5@example.com",
+  fullName: "Student Five",
+  locale: "en",
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Default: the actual uploaded object is within policy on both size and
+  // mimeType. Tests that specifically exercise verification failure
+  // override this.
+  mockVerifyRecordingObject.mockResolvedValue({ fileSize: 500000, mimeType: "audio/webm" });
   studentNoteRows = [
     {
       id: "note-1",
@@ -503,6 +676,25 @@ beforeEach(() => {
       selfRating: null,
       createdAt: new Date("2026-08-11"),
       updatedAt: new Date("2026-08-11"),
+    },
+  ];
+  weeklyPracticeAttachmentRows = [
+    // Belongs to student-5's assignment — recordingRequired: true AND has
+    // an attachment, so submission should succeed. Deliberately NOT on
+    // wp-student1-current, which stays attachment-less so the existing
+    // "is refused when recordingRequired is true" test keeps proving the
+    // no-attachment case.
+    {
+      id: "attachment-student5",
+      weeklyPracticeId: "wp-student5-recording-required",
+      uploadedBy: "STUDENT",
+      storagePath: "students/student-5/weekly-practice/wp-student5-recording-required/existing.webm",
+      fileName: "practice-take-1.webm",
+      mimeType: "audio/webm",
+      fileSize: 500000,
+      label: null,
+      isMilestoneMarker: false,
+      createdAt: new Date("2026-08-12"),
     },
   ];
 });
@@ -736,6 +928,199 @@ describe("submitCurrentAssignment", () => {
 
     const call = mockUpdateWeeklyPractice.mock.calls.at(-1)?.[0] as { where: { id: string } };
     expect(call.where.id).toBe("wp-student4-reopened");
+  });
+
+  it("succeeds when recordingRequired is true and a recording has been uploaded", async () => {
+    // wp-student5-recording-required: recordingRequired true, WITH
+    // attachment-student5 present — the "unblocked" case Stage 8 adds.
+    const result = await submitCurrentAssignment(sessionStudent5, {
+      studentSubmission: "Recorded and practiced.",
+    });
+    expect(result.status).toBe("SUBMITTED");
+  });
+});
+
+describe("createMyRecordingUploadUrl", () => {
+  it("mints an upload URL for the calling student's own assignment", async () => {
+    mockCreateRecordingUploadUrl.mockResolvedValue({
+      signedUrl: "https://signed.example/upload",
+      token: "upload-token",
+      path: "students/student-1/weekly-practice/wp-student1-current/new.webm",
+      bucket: "student-files",
+    });
+
+    const result = await createMyRecordingUploadUrl(sessionStudent1, {
+      weeklyPracticeId: "wp-student1-current",
+      mimeType: "audio/webm",
+      fileSize: 1000,
+    });
+
+    expect(result.path).toContain("wp-student1-current");
+    expect(mockCreateRecordingUploadUrl).toHaveBeenCalledWith("student-1", "wp-student1-current", {
+      mimeType: "audio/webm",
+      fileSize: 1000,
+    });
+  });
+
+  it("a student cannot sign an upload for another student's assignment", async () => {
+    await expect(
+      createMyRecordingUploadUrl(sessionStudent1, {
+        weeklyPracticeId: "wp-student2-current",
+        mimeType: "audio/webm",
+        fileSize: 1000,
+      })
+    ).rejects.toThrow(StudentAuthorizationError);
+    expect(mockCreateRecordingUploadUrl).not.toHaveBeenCalled();
+  });
+});
+
+describe("confirmMyRecordingUpload", () => {
+  it("creates a new attachment when none exists yet", async () => {
+    const result = await confirmMyRecordingUpload(sessionStudent2, {
+      weeklyPracticeId: "wp-student2-current",
+      path: "students/student-2/weekly-practice/wp-student2-current/new.webm",
+      fileName: "take1.webm",
+      mimeType: "audio/webm",
+      fileSize: 2000,
+    });
+
+    expect(result.fileName).toBe("take1.webm");
+    const call = mockCreateWeeklyPracticeAttachment.mock.calls.at(-1)?.[0] as {
+      data: { weeklyPracticeId: string; uploadedBy: string };
+    };
+    expect(call.data.weeklyPracticeId).toBe("wp-student2-current");
+    expect(call.data.uploadedBy).toBe("STUDENT");
+  });
+
+  it("replaces, not accumulates, an existing recording for the same assignment — deletes the previous object and row, writes a fresh one", async () => {
+    await confirmMyRecordingUpload(sessionStudent5, {
+      weeklyPracticeId: "wp-student5-recording-required",
+      path: "students/student-5/weekly-practice/wp-student5-recording-required/replacement.webm",
+      fileName: "take2.webm",
+      mimeType: "audio/webm",
+      fileSize: 3000,
+    });
+
+    const forAssignment = weeklyPracticeAttachmentRows.filter(
+      (r) => r.weeklyPracticeId === "wp-student5-recording-required" && r.uploadedBy === "STUDENT"
+    );
+    expect(forAssignment).toHaveLength(1);
+    expect(forAssignment[0]?.fileName).toBe("take2.webm");
+    expect(mockDeleteWeeklyPracticeAttachment).toHaveBeenCalledWith({
+      where: { id: "attachment-student5" },
+    });
+    expect(mockCreateWeeklyPracticeAttachment).toHaveBeenCalled();
+    expect(mockUpdateWeeklyPracticeAttachment).not.toHaveBeenCalled();
+    expect(mockDeleteRecordingObject).toHaveBeenCalledWith(
+      "students/student-5/weekly-practice/wp-student5-recording-required/existing.webm"
+    );
+  });
+
+  it("rejects when the ACTUAL uploaded object exceeds the size cap, and writes nothing — the client-declared fileSize is not trusted", async () => {
+    const { InvalidRecordingError } = await import("@/lib/student-recordings");
+    mockVerifyRecordingObject.mockRejectedValue(new InvalidRecordingError("Recording is too large"));
+
+    await expect(
+      confirmMyRecordingUpload(sessionStudent2, {
+        weeklyPracticeId: "wp-student2-current",
+        path: "students/student-2/weekly-practice/wp-student2-current/huge.webm",
+        fileName: "huge.webm",
+        mimeType: "audio/webm",
+        fileSize: 1000, // declares a small size — the mock proves this is irrelevant
+      })
+    ).rejects.toThrow(InvalidRecordingError);
+
+    expect(mockCreateWeeklyPracticeAttachment).not.toHaveBeenCalled();
+    expect(mockUpdateWeeklyPracticeAttachment).not.toHaveBeenCalled();
+    expect(mockDeleteWeeklyPracticeAttachment).not.toHaveBeenCalled();
+  });
+
+  it("rejects when the ACTUAL stored content-type is not on the allowlist, even though the client declared an allowed one — createSignedUploadUrl enforces no content-type constraint of its own, so the sign-time allowlist alone cannot be trusted", async () => {
+    const { InvalidRecordingError } = await import("@/lib/student-recordings");
+    mockVerifyRecordingObject.mockRejectedValue(new InvalidRecordingError("Unsupported recording type"));
+
+    await expect(
+      confirmMyRecordingUpload(sessionStudent2, {
+        weeklyPracticeId: "wp-student2-current",
+        path: "students/student-2/weekly-practice/wp-student2-current/sneaky.exe",
+        fileName: "sneaky.exe",
+        mimeType: "audio/webm", // declared an allowed type — the mock proves this is irrelevant
+        fileSize: 1000,
+      })
+    ).rejects.toThrow(InvalidRecordingError);
+
+    expect(mockCreateWeeklyPracticeAttachment).not.toHaveBeenCalled();
+    expect(mockUpdateWeeklyPracticeAttachment).not.toHaveBeenCalled();
+    expect(mockDeleteWeeklyPracticeAttachment).not.toHaveBeenCalled();
+  });
+
+  it("stores the server-verified size and mimeType, not the client-declared ones", async () => {
+    mockVerifyRecordingObject.mockResolvedValue({ fileSize: 987654, mimeType: "audio/mp4" });
+    const result = await confirmMyRecordingUpload(sessionStudent2, {
+      weeklyPracticeId: "wp-student2-current",
+      path: "students/student-2/weekly-practice/wp-student2-current/new.webm",
+      fileName: "take1.webm",
+      mimeType: "audio/webm", // deliberately wrong — the stored value must come from verification
+      fileSize: 1, // deliberately wrong — the stored value must come from verification
+    });
+    expect(result.fileSize).toBe(987654);
+    expect(result.mimeType).toBe("audio/mp4");
+  });
+
+  it("the confirm route cannot attach to an assignment the student does not own", async () => {
+    await expect(
+      confirmMyRecordingUpload(sessionStudent1, {
+        weeklyPracticeId: "wp-student2-current",
+        path: "students/student-1/weekly-practice/wp-student2-current/sneaky.webm",
+        fileName: "sneaky.webm",
+        mimeType: "audio/webm",
+        fileSize: 1000,
+      })
+    ).rejects.toThrow(StudentAuthorizationError);
+    expect(mockCreateWeeklyPracticeAttachment).not.toHaveBeenCalled();
+  });
+
+  it("rejects a path that doesn't match the calling student's own prefix, even for an assignment they own", async () => {
+    await expect(
+      confirmMyRecordingUpload(sessionStudent1, {
+        weeklyPracticeId: "wp-student1-current",
+        path: "students/student-2/weekly-practice/wp-student1-current/mismatched.webm",
+        fileName: "mismatched.webm",
+        mimeType: "audio/webm",
+        fileSize: 1000,
+      })
+    ).rejects.toThrow(StudentAuthorizationError);
+    expect(mockCreateWeeklyPracticeAttachment).not.toHaveBeenCalled();
+  });
+});
+
+describe("getMyRecordingAttachment", () => {
+  it("returns the calling student's own recording", async () => {
+    const result = await getMyRecordingAttachment(sessionStudent5, "attachment-student5");
+    expect(result).not.toBeNull();
+    expect(result?.storagePath).toContain("wp-student5-recording-required");
+  });
+
+  it("a student cannot fetch another student's recording", async () => {
+    const result = await getMyRecordingAttachment(sessionStudent1, "attachment-student5");
+    expect(result).toBeNull();
+  });
+
+  it("returns null for a nonexistent attachment id", async () => {
+    const result = await getMyRecordingAttachment(sessionStudent1, "attachment-does-not-exist");
+    expect(result).toBeNull();
+  });
+});
+
+describe("getMyCurrentAssignmentRecording", () => {
+  it("returns the recording attached to the student's current assignment", async () => {
+    const result = await getMyCurrentAssignmentRecording(sessionStudent5);
+    expect(result?.id).toBe("attachment-student5");
+  });
+
+  it("returns null when the current assignment has no recording yet", async () => {
+    const result = await getMyCurrentAssignmentRecording(sessionStudent1);
+    expect(result).toBeNull();
   });
 });
 

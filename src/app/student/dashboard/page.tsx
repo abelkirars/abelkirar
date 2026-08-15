@@ -6,10 +6,12 @@ import {
   getCurrentAssignment,
   listMyPracticeLogEntries,
   listMyNotes,
+  getMyCurrentAssignmentRecording,
   SUBMITTED_ASSIGNMENT_STATUSES,
 } from "@/lib/student/queries";
 import { PracticeLogForm } from "@/components/student/practice-log-form";
 import { AssignmentSubmitForm } from "@/components/student/assignment-submit-form";
+import { RecordingUpload } from "@/components/student/recording-upload";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +45,11 @@ export default async function StudentDashboardPage() {
   const assignment = await getCurrentAssignment(session);
   const practiceLogEntries = await listMyPracticeLogEntries(session);
   const notes = await listMyNotes(session);
+  // Only queried when relevant — "optional recording upload if requested"
+  // per the brief, so this only matters when recordingRequired is true.
+  const recording = assignment?.recordingRequired
+    ? await getMyCurrentAssignmentRecording(session)
+    : null;
 
   const isSubmitted =
     assignment !== null &&
@@ -121,6 +128,41 @@ export default async function StudentDashboardPage() {
                 </div>
               )}
 
+              {/* Recording: server decides existing-vs-not from real data,
+                  same as everything else on this page. The player is plain
+                  server-rendered HTML — its `src` is a same-origin route
+                  that does its own auth + ownership check and redirects to
+                  the real (never-exposed-to-props) signed URL, so no
+                  client component ever touches a path or a signed URL.
+                  RecordingUpload (when mounted) receives only
+                  assignment.id — an opaque id, not content — see its own
+                  file comment. */}
+              {assignment.recordingRequired && (
+                <div className="border-t border-border/60 pt-3">
+                  <p className="text-sm font-medium">{t("recordingLabel")}</p>
+                  {recording ? (
+                    (recording.mimeType.startsWith("video/") ? (
+                      <video
+                        controls
+                        src={`/api/student/recordings/${recording.id}`}
+                        className="mt-2 w-full rounded-md"
+                      />
+                    ) : (
+                      <audio
+                        controls
+                        src={`/api/student/recordings/${recording.id}`}
+                        className="mt-2 w-full"
+                      />
+                    ))
+                  ) : (
+                    <p className="mt-1 text-sm text-muted-foreground">{t("noRecordingYet")}</p>
+                  )}
+                  <div className="mt-2">
+                    <RecordingUpload weeklyPracticeId={assignment.id} />
+                  </div>
+                </div>
+              )}
+
               {/* Submission: which of these three renders is decided here,
                   server-side, from real assignment data. The form itself
                   (when shown) carries no assignment data as props — see
@@ -130,7 +172,7 @@ export default async function StudentDashboardPage() {
               <div className="border-t border-border/60 pt-3">
                 {isSubmitted ? (
                   <p className="text-sm text-muted-foreground">{t("submissionReceived")}</p>
-                ) : assignment.recordingRequired ? (
+                ) : assignment.recordingRequired && !recording ? (
                   <p className="text-sm text-muted-foreground">{t("recordingRequiredNotice")}</p>
                 ) : (
                   <AssignmentSubmitForm />

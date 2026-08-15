@@ -257,7 +257,11 @@
     "enterValidPracticeDate": "[AM] Enter a valid practice date",
     "enterValidDuration": "[AM] Enter a duration between 1 and 600 minutes",
     "enterFocus": "[AM] Describe what you practiced",
-    "enterSubmission": "[AM] Describe what you practiced before submitting"
+    "enterSubmission": "[AM] Describe what you practiced before submitting",
+    "selectAssignment": "[AM] Select an assignment to attach this recording to",
+    "invalidRecordingType": "[AM] Unsupported recording type",
+    "invalidRecordingSize": "[AM] Invalid recording size",
+    "invalidRecordingPath": "[AM] This recording could not be confirmed"
   },
   "studentLogin": {
     "title": "የተማሪ መግቢያ",
@@ -319,7 +323,7 @@
     "notesHeading": "[AM] Notes from your teacher",
     "noNotes": "[AM] No notes yet.",
     "submissionReceived": "[AM] Submitted — your teacher will review it.",
-    "recordingRequiredNotice": "[AM] This assignment requires a recording. Recording upload isn't available yet, so this assignment can't be submitted until it is — check back soon.",
+    "recordingRequiredNotice": "[AM] This assignment requires a recording. Upload one below before you can submit.",
     "submissionPlaceholder": "[AM] What did you practice, and how did it go?",
     "submitAssignment": "[AM] Submit assignment",
     "submitAssignmentSubmitting": "[AM] Submitting…",
@@ -327,7 +331,12 @@
     "yourSubmissionLabel": "[AM] What you submitted",
     "submittedOnLabel": "[AM] Submitted {date}",
     "feedbackLabel": "[AM] Feedback from your teacher",
-    "feedbackOnLabel": "[AM] Given {date}"
+    "feedbackOnLabel": "[AM] Given {date}",
+    "recordingLabel": "[AM] Recording",
+    "noRecordingYet": "[AM] No recording yet.",
+    "recordingUploadLabel": "[AM] Upload a recording",
+    "recordingUploading": "[AM] Uploading…",
+    "recordingGenericError": "[AM] Something went wrong. Please try again."
   },
   "emails": {
     "orderPending": {
