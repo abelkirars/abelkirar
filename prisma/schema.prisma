@@ -623,12 +623,36 @@ model Milestone {
   /// nothing depends on the name "order" yet.
   sortOrder        Int
   active           Boolean      @default(true)
+  /// When this milestone entered its level's effective set for percentage
+  /// calculations (Stage 9). Defaults to creation time but is
+  /// admin-settable separately from it — an admin may draft a milestone
+  /// (active: false) before deciding when it should actually start
+  /// counting. A student's effective set is frozen to milestones with
+  /// effectiveFrom at or before their own first assignment at this level
+  /// (their baseline, derived from StudentMilestone.assignedAt — there is
+  /// no persisted per-student "entry date" field anywhere, deliberately;
+  /// see getMyLevelProgress in src/lib/student/queries.ts). A milestone
+  /// added after a student's baseline never joins their denominator, only
+  /// a student whose baseline comes later.
+  effectiveFrom    DateTime     @default(now())
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
 
   studentMilestones StudentMilestone[]
 
   @@index([level, sortOrder])
+}
+
+/// Per-level readiness for showing a milestone-progress PERCENTAGE rather
+/// than "In Progress" (Stage 9). A level with no row here defaults to not
+/// ready. Admin-toggleable — see the Stage 9 admin UI. Not load-bearing
+/// for the freeze mechanism on Milestone.effectiveFrom above — that runs
+/// entirely off each student's own assignment history, independent of
+/// when (or whether) a level is marked ready.
+model LevelReadiness {
+  level     StudentLevel @id
+  ready     Boolean      @default(true)
+  updatedAt DateTime     @updatedAt
 }
 
 /// Per-student milestone status. Teacher sign-off required for ACHIEVED —
