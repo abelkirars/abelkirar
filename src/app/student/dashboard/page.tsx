@@ -142,11 +142,13 @@ export default async function StudentDashboardPage() {
                   <p className="text-sm font-medium">{t("recordingLabel")}</p>
                   {recording ? (
                     (recording.mimeType.startsWith("video/") ? (
-                      <video
-                        controls
-                        src={`/api/student/recordings/${recording.id}`}
-                        className="mt-2 w-full rounded-md"
-                      />
+                      <div className="mt-2 w-fit max-w-full">
+                        <video
+                          controls
+                          src={`/api/student/recordings/${recording.id}`}
+                          className="h-auto max-w-xl rounded-md object-contain"
+                        />
+                      </div>
                     ) : (
                       <audio
                         controls
