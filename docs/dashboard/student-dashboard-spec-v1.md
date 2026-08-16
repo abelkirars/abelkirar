@@ -243,6 +243,8 @@ Deliberately kept simple: text + optional voice + one tag. Templated quick-respo
 | **Protection** | **Future milestones hidden** (Decision 2) · internal pass criteria hidden · assessment logic and evaluation reasoning hidden |
 | **Tier** | **MVP** — current + achieved + teacher sign-off. Certificates: **Phase 2** |
 
+**Exactly one unachieved milestone label is ever student-visible: the current focus.** "Future milestones hidden" (Decision 2) is not the same rule as "unachieved milestones hidden" — the current focus is unachieved by definition and is shown anyway, deliberately, so a student has a sense of direction rather than only a rear-view list of what they've already done. "Current focus" means specifically the single most-recently-assigned not-yet-achieved milestone. Everything beyond that one label is not shown: milestones not yet assigned to the student (future, per Decision 2), and — a narrower case worth stating explicitly — any other milestone already assigned to the student that isn't the current focus (for example, if a teacher assigns a new milestone before an older one is marked achieved, the older one is not shown until it becomes achieved). The spec previously implied both "current is visible" (this section) and "unachieved is hidden" (the informal reading of Decision 2) without reconciling them; this paragraph is the reconciliation.
+
 **Teacher approval is required for milestone achievement.** This is deliberate: it is both pedagogically correct and the thing a copied curriculum cannot replicate.
 
 ---

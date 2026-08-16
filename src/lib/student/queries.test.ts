@@ -255,6 +255,29 @@ const milestoneRows: MilestoneRow[] = [
     internalCriteria: "INTERNAL: advanced criteria",
     effectiveFrom: new Date("2026-07-01"),
   },
+  // The pair below exist ONLY to prove getCurrentMilestone excludes a
+  // second unapproved milestone for the right reason. Both are assigned to
+  // student-13 (see studentMilestoneRows), unlike m-3-unassigned above —
+  // so this milestone's absence from getCurrentMilestone's result can only
+  // be explained by "not the most recently assigned," never by "not
+  // reachable at all." A fixture using an unassigned milestone here would
+  // pass the exclusion test for the wrong reason.
+  {
+    id: "m-7-older-unapproved",
+    level: "BEGINNER",
+    label: "Older unapproved milestone",
+    description: "Assigned before student-13's current focus; must never be returned as current.",
+    internalCriteria: "INTERNAL: older milestone criteria",
+    effectiveFrom: new Date("2026-07-01"),
+  },
+  {
+    id: "m-8-current-focus",
+    level: "BEGINNER",
+    label: "Current focus milestone",
+    description: "The one unapproved milestone label student-13 is meant to see.",
+    internalCriteria: "INTERNAL: current focus criteria",
+    effectiveFrom: new Date("2026-07-01"),
+  },
 ];
 
 interface StudentMilestoneRow {
@@ -388,6 +411,27 @@ const studentMilestoneRows: StudentMilestoneRow[] = [
       teacherComment: null,
     })
   ),
+  // student-13: TWO simultaneously unapproved (IN_PROGRESS) milestones,
+  // assigned at different times. m-8-current-focus is the more recent —
+  // it alone should ever come back from getCurrentMilestone.
+  {
+    id: "sm-13-older",
+    studentId: "student-13",
+    milestoneId: "m-7-older-unapproved",
+    status: "IN_PROGRESS",
+    assignedAt: new Date("2026-08-01"),
+    achievedAt: null,
+    teacherComment: null,
+  },
+  {
+    id: "sm-13-current",
+    studentId: "student-13",
+    milestoneId: "m-8-current-focus",
+    status: "IN_PROGRESS",
+    assignedAt: new Date("2026-08-10"),
+    achievedAt: null,
+    teacherComment: null,
+  },
 ];
 
 interface StudentProfileRow {
@@ -656,6 +700,27 @@ function matchesStatus(row: StudentMilestoneRow, status?: WhereClause["status"])
   return status.in.includes(row.status);
 }
 
+type OrderByClause = Record<string, "asc" | "desc">;
+
+/** Real Prisma sorts by orderBy; until now nothing in this file's mocks
+ *  needed to, since every findFirst call site here had at most one
+ *  candidate row per test. getCurrentMilestone's "most recently assigned"
+ *  behavior is the first thing that genuinely depends on it — without this,
+ *  a findFirst mock silently falls back to array insertion order, which
+ *  would make an orderBy-dependent test pass or fail by fixture-ordering
+ *  coincidence rather than by proving the real orderBy clause works. */
+function sortByOrderBy<T extends object>(rows: T[], orderBy?: OrderByClause): T[] {
+  if (!orderBy) return rows;
+  const [[key, direction]] = Object.entries(orderBy);
+  return [...rows].sort((a, b) => {
+    const av = (a as Record<string, unknown>)[key] as Date;
+    const bv = (b as Record<string, unknown>)[key] as Date;
+    if (av < bv) return direction === "asc" ? -1 : 1;
+    if (av > bv) return direction === "asc" ? 1 : -1;
+    return 0;
+  });
+}
+
 const mockFindManyStudentMilestone = vi.fn(
   ({ where, select }: { where: WhereClause; select?: SelectShape }) => {
     return studentMilestoneRows
@@ -670,13 +735,22 @@ const mockFindManyStudentMilestone = vi.fn(
 );
 
 const mockFindFirstStudentMilestone = vi.fn(
-  ({ where, select }: { where: WhereClause; select?: SelectShape }) => {
-    const row = studentMilestoneRows.find(
+  ({
+    where,
+    select,
+    orderBy,
+  }: {
+    where: WhereClause;
+    select?: SelectShape;
+    orderBy?: OrderByClause;
+  }) => {
+    const matches = studentMilestoneRows.filter(
       (r) =>
         r.studentId === where.studentId &&
         matchesStatus(r, where.status) &&
         matchesMilestoneLevel(r, where.milestone)
     );
+    const [row] = sortByOrderBy(matches, orderBy);
     return row ? applyStudentMilestoneSelect(row, select) : null;
   }
 );
@@ -849,6 +923,13 @@ const sessionStudent12: StudentSessionPayload = {
   supabaseUserId: "sb-12",
   email: "student12@example.com",
   fullName: "Student Twelve",
+  locale: "en",
+};
+const sessionStudent13: StudentSessionPayload = {
+  studentId: "student-13",
+  supabaseUserId: "sb-13",
+  email: "student13@example.com",
+  fullName: "Student Thirteen",
   locale: "en",
 };
 
@@ -1068,6 +1149,35 @@ describe("Milestones — go through StudentMilestone only", () => {
   it("getCurrentMilestone returns the in-progress milestone, not the achieved one", async () => {
     const current = await getCurrentMilestone(sessionStudent1);
     expect((current as { milestone: { id: string } } | null)?.milestone.id).toBe("m-2");
+  });
+
+  // Per spec Decision 2 / §7.G and §9: students see Achieved + Current,
+  // nothing else — "current" (the most recently assigned, not-yet-achieved
+  // milestone) is a deliberate, spec-mandated exception to "unachieved
+  // labels never appear," not an oversight. The two tests below exercise
+  // that exception explicitly, with a fixture built to rule out the false
+  // pass a simpler one would allow: student-13 has TWO milestones assigned
+  // and unapproved at once (unlike m-3-unassigned elsewhere in this file,
+  // which is never assigned to anyone). If the exclusion test used an
+  // unassigned milestone instead, it would pass merely because
+  // getCurrentMilestone can't reach unassigned milestones at all — that
+  // would be testing reachability, not "only the current one is exposed."
+  it("excludes an older, still-unapproved milestone that IS assigned to the student — the exclusion is 'not the current focus,' not 'never assigned'", async () => {
+    const current = await getCurrentMilestone(sessionStudent13);
+    expect(current?.id).toBe("sm-13-current");
+    expect(current?.milestone.label).toBe("Current focus milestone");
+    // The stronger assertion: if getCurrentMilestone ever regressed to
+    // returning every unapproved milestone (e.g. findMany instead of
+    // findFirst), this specific label — assigned to the same student,
+    // structurally reachable — would leak through. It must not.
+    expect(current?.milestone.label).not.toBe("Older unapproved milestone");
+  });
+
+  it("the current focus IS present and IS an unapproved label — this is the one deliberate exception, not a leak", async () => {
+    const current = await getCurrentMilestone(sessionStudent13);
+    expect(current).not.toBeNull();
+    expect(current?.status).toBe("IN_PROGRESS");
+    expect(current?.milestone.label).toBe("Current focus milestone");
   });
 
   it("listAchievedMilestones returns only ACHIEVED rows, with the teacher comment", async () => {
