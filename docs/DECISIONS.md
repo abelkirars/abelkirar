@@ -599,3 +599,46 @@ story because it was plausible. Distinct from the "Pattern — Nth instance" lis
 reading stronger than they enforce, currently at five) — this is the same discipline applied to an
 asserted premise rather than to implemented behavior. Recorded as the fourth time it has mattered on this
 project.
+
+---
+
+## 2026-08-16 — Current focus is a deliberate exception — and the test mock never implemented orderBy
+
+**Context.** Manual testing showed an unapproved milestone label on the student dashboard. It looked like
+a leak. It was not — two separate findings came out of chasing it down.
+
+**Finding 1 — a spec contradiction, not a bug.** The spec asked for "current focus" as student-facing
+(§7.G), while the negative tests specified for this stage required that unachieved milestone labels never
+reach the student. A current focus IS an unachieved label. Both requirements could not hold at once.
+
+**Decision.** Resolved in favour of showing exactly one — the most recently assigned unachieved milestone.
+A student who sees only past achievements has no sense of direction, and one label ahead is a narrow
+window: they learn the next thing, not the sequence. `student-dashboard-spec-v1.md` §7.G now states this
+explicitly, including that an OLDER still-in-progress milestone superseded by a newer assignment is also
+hidden — not only future/unassigned ones.
+
+**Finding 2 — the harness was not testing what it appeared to.** The new test written to prove the
+current-focus exception is exactly one label failed on first run, for a reason neither the request nor the
+response anticipated. The in-memory `findFirst` mock for `StudentMilestone` never implemented `orderBy` at
+all — it returned array insertion order and silently ignored the `orderBy: { assignedAt: "desc" }` the real
+query passes. No prior test had two same-student candidates for `getCurrentMilestone`, so nothing about its
+ordering had ever actually been verified; every earlier green run proved less than it appeared to.
+
+**Fix — the mock, not the fixture.** `mockFindFirstStudentMilestone` now sorts matches by whatever
+`orderBy` clause it is actually given, the same way Prisma would. Reordering the fixture instead would have
+made the test pass by fixture-order coincidence rather than by proving the real `orderBy` clause works —
+the same wrong-reason failure the test exists to prevent, one layer deeper, and in the test infrastructure
+itself rather than in a single test.
+
+**Pattern — sixth and seventh instances.** Six: a spec that stated two requirements which could not both
+hold, so an implementation satisfying one looked like it was violating the other. Seven: a test harness
+silently ignoring a clause the real code depends on, so every test touching that query proved less than its
+name implied.
+
+The running list is now: a guard that existed only in the UI; an unreachable schema branch; a test mocking
+the wrong boundary; correct markup rendered twice; two components matching the same data with different
+strictness; a self-contradicting spec; and a mock that dropped `orderBy`.
+
+**General rule.** Extends the standing one: verify what the code actually does against what you can see,
+not against what the names say. Of these seven, five were found by someone looking carefully at something
+that appeared to be working.
