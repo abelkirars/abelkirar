@@ -11,6 +11,8 @@ import { WeeklyPracticeForm } from "@/components/admin/weekly-practice-form";
 import { WeeklyPracticeRow } from "@/components/admin/weekly-practice-row";
 import { StudentNoteForm } from "@/components/admin/student-note-form";
 import { StudentNoteRow } from "@/components/admin/student-note-row";
+import { StudentMilestoneAssignForm } from "@/components/admin/student-milestone-assign-form";
+import { StudentMilestoneRow } from "@/components/admin/student-milestone-row";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +59,31 @@ export default async function AdminStudentProfilePage({
     where: { studentId },
     orderBy: { createdAt: "desc" },
   });
+
+  // Admin side — full include is fine here (same boundary reasoning as
+  // above); this never crosses into src/lib/student/queries.ts's path.
+  const studentMilestones = await prisma.studentMilestone.findMany({
+    where: { studentId },
+    include: { milestone: true },
+    orderBy: [{ milestone: { level: "asc" } }, { milestone: { sortOrder: "asc" } }],
+  });
+
+  // Only milestones at the student's own level, not already assigned to
+  // them — assigning outside their level would just sit invisibly in the
+  // progress denominator (getMyLevelProgress filters by level too), so
+  // there's no reason to offer it here.
+  const assignedMilestoneIds = new Set(studentMilestones.map((sm) => sm.milestoneId));
+  const availableMilestones = student.level
+    ? await prisma.milestone.findMany({
+        where: {
+          level: student.level,
+          active: true,
+          id: { notIn: [...assignedMilestoneIds] },
+        },
+        orderBy: { sortOrder: "asc" },
+        select: { id: true, label: true },
+      })
+    : [];
 
   return (
     <section className="py-10">
@@ -110,6 +137,31 @@ export default async function AdminStudentProfilePage({
             ))}
             {weeklyPractices.length === 0 && (
               <p className="py-4 text-center text-muted-foreground">No assignments yet.</p>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-8 rounded-lg border border-border p-4">
+          <h2 className="mb-4 font-medium">Milestones</h2>
+          {student.level ? (
+            <StudentMilestoneAssignForm
+              studentId={student.id}
+              availableMilestones={availableMilestones}
+            />
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Set this student&apos;s level above before assigning milestones.
+            </p>
+          )}
+
+          <div className="mt-6 space-y-3">
+            {studentMilestones.map((sm) => (
+              <StudentMilestoneRow key={sm.id} studentId={student.id} studentMilestone={sm} />
+            ))}
+            {studentMilestones.length === 0 && (
+              <p className="py-4 text-center text-muted-foreground">
+                No milestones assigned yet.
+              </p>
             )}
           </div>
         </div>

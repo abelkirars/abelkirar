@@ -7,6 +7,9 @@ import {
   listMyPracticeLogEntries,
   listMyNotes,
   getMyCurrentAssignmentRecording,
+  getMyLevelProgress,
+  getCurrentMilestone,
+  listAchievedMilestones,
   SUBMITTED_ASSIGNMENT_STATUSES,
 } from "@/lib/student/queries";
 import { PracticeLogForm } from "@/components/student/practice-log-form";
@@ -50,6 +53,9 @@ export default async function StudentDashboardPage() {
   const recording = assignment?.recordingRequired
     ? await getMyCurrentAssignmentRecording(session)
     : null;
+  const progress = await getMyLevelProgress(session);
+  const currentMilestone = await getCurrentMilestone(session);
+  const achievedMilestones = await listAchievedMilestones(session);
 
   const isSubmitted =
     assignment !== null &&
@@ -184,6 +190,68 @@ export default async function StudentDashboardPage() {
           ) : (
             <p className="mt-4 text-sm text-muted-foreground">{t("noAssignment")}</p>
           )}
+        </div>
+
+        {/* Progress: milestone-based, current level only — never a
+            whole-curriculum fraction (spec §9). getMyLevelProgress already
+            resolves to either a rounded percent or "In Progress" server-side;
+            this page never sees or could leak the underlying counts.
+            Achieved milestone labels are teacher-authored and student-facing
+            by design (see Milestone.label's schema comment) — only
+            achieved/current ones ever reach this query layer at all. */}
+        <div className="mt-8 rounded-lg border border-border p-6">
+          <h2 className="font-heading text-xl font-semibold">{t("progressHeading")}</h2>
+
+          <div className="mt-4">
+            {progress.display === "PERCENT" ? (
+              <div>
+                <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-primary"
+                    style={{ width: `${progress.percent}%` }}
+                  />
+                </div>
+                <p className="mt-1 text-sm text-muted-foreground">{progress.percent}%</p>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">{t("progressInProgress")}</p>
+            )}
+          </div>
+
+          {currentMilestone && (
+            <div className="mt-4 border-t border-border/60 pt-3">
+              <p className="text-sm font-medium">{t("currentMilestoneLabel")}</p>
+              <p className="mt-1 text-sm text-foreground">{currentMilestone.milestone.label}</p>
+              {currentMilestone.milestone.description && (
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {currentMilestone.milestone.description}
+                </p>
+              )}
+            </div>
+          )}
+
+          <div className="mt-4 border-t border-border/60 pt-3">
+            <p className="text-sm font-medium">{t("achievedMilestonesLabel")}</p>
+            {achievedMilestones.length === 0 ? (
+              <p className="mt-1 text-sm text-muted-foreground">{t("noAchievedMilestones")}</p>
+            ) : (
+              <div className="mt-2 space-y-2">
+                {achievedMilestones.map((m) => (
+                  <div key={m.id} className="rounded-md border border-border/60 p-3 text-sm">
+                    <p className="font-medium text-foreground">{m.milestone.label}</p>
+                    {m.achievedAt && (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {t("achievedOnLabel", { date: m.achievedAt.toLocaleDateString() })}
+                      </p>
+                    )}
+                    {m.teacherComment && (
+                      <p className="mt-1 text-sm text-foreground">{m.teacherComment}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="mt-8 rounded-lg border border-border p-6">

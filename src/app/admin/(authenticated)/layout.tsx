@@ -17,6 +17,7 @@ export default async function AuthenticatedAdminLayout({
           <nav className="flex items-center gap-6 text-sm font-medium">
             <Link href="/admin/orders">Orders</Link>
             <Link href="/admin/students">Students</Link>
+            <Link href="/admin/milestones">Milestones</Link>
             <Link href="/admin/products">Products</Link>
             <Link href="/admin/announcements">Announcements</Link>
             <Link href="/admin/upload-images">Upload images</Link>

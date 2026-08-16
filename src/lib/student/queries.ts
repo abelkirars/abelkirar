@@ -5,6 +5,7 @@ import {
   deleteRecordingObject,
   verifyRecordingObject,
 } from "@/lib/student-recordings";
+import { PERCENT_READY } from "@/lib/level-readiness";
 
 /**
  * Student-facing data access layer — the authorization shape every later
@@ -467,4 +468,70 @@ export async function getMyCurrentAssignmentRecording(session: StudentSessionPay
     where: { weeklyPracticeId: assignment.id, uploadedBy: "STUDENT" },
     select: SAFE_RECORDING_SELECT,
   });
+}
+
+/**
+ * The student's milestone-based progress within their CURRENT level only
+ * — never against the whole curriculum (spec §9: "horizon-limited and
+ * milestone-based, not denominator-based... provided the denominator does
+ * not reveal total curriculum scope"). Returns either a rounded
+ * percentage or "In Progress" — never the raw counts that produced it,
+ * and never a `percent` key at all in the "In Progress" case.
+ *
+ * Gate 1 — PERCENT_READY (src/lib/level-readiness.ts): until a level's
+ * milestone structure is marked ready, every student at that level sees
+ * "In Progress" regardless of what the math would say.
+ *
+ * Gate 2 — the effective set: denominator/numerator are built ONLY from
+ * StudentMilestone rows this student already has — never from the
+ * Milestone catalog directly, which would leak the existence of
+ * milestones the student hasn't been assigned yet. Within that, a
+ * milestone only counts if its effectiveFrom is at or before this
+ * student's own baseline (the earliest assignedAt among their own
+ * StudentMilestone rows at this level) — a milestone added to the
+ * catalog after a student's baseline never moves their denominator, even
+ * if it's later explicitly assigned to them. See
+ * Milestone.effectiveFrom's schema comment for the full reasoning.
+ *
+ * Rounds to the nearest 5%; any nonzero progress is floored at 5% so real
+ * progress never displays as 0%.
+ */
+export async function getMyLevelProgress(
+  session: StudentSessionPayload
+): Promise<{ display: "IN_PROGRESS" } | { display: "PERCENT"; percent: number }> {
+  const student = await prisma.studentProfile.findUnique({
+    where: { id: session.studentId },
+    select: { level: true },
+  });
+  if (!student?.level) {
+    return { display: "IN_PROGRESS" };
+  }
+
+  if (!PERCENT_READY[student.level]) {
+    return { display: "IN_PROGRESS" };
+  }
+
+  const assigned = await prisma.studentMilestone.findMany({
+    where: { studentId: session.studentId, milestone: { level: student.level } },
+    select: { status: true, assignedAt: true, milestone: { select: { effectiveFrom: true } } },
+  });
+  if (assigned.length === 0) {
+    return { display: "IN_PROGRESS" };
+  }
+
+  const baseline = assigned.reduce(
+    (earliest, m) => (m.assignedAt < earliest ? m.assignedAt : earliest),
+    assigned[0].assignedAt
+  );
+
+  const effectiveSet = assigned.filter((m) => m.milestone.effectiveFrom <= baseline);
+  if (effectiveSet.length === 0) {
+    return { display: "IN_PROGRESS" };
+  }
+
+  const achieved = effectiveSet.filter((m) => m.status === "ACHIEVED").length;
+  let percent = Math.round(((achieved / effectiveSet.length) * 100) / 5) * 5;
+  if (achieved > 0 && percent === 0) percent = 5;
+
+  return { display: "PERCENT", percent };
 }

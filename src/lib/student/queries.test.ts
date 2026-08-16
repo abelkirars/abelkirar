@@ -193,6 +193,7 @@ interface MilestoneRow {
   label: string;
   description: string | null;
   internalCriteria: string | null;
+  effectiveFrom: Date;
 }
 
 const milestoneRows: MilestoneRow[] = [
@@ -202,6 +203,7 @@ const milestoneRows: MilestoneRow[] = [
     label: "Foundation exercise mastered",
     description: "Play the foundation exercise cleanly.",
     internalCriteria: "INTERNAL: 56bpm, zero buzz, 3 consecutive clean passes",
+    effectiveFrom: new Date("2026-07-01"),
   },
   {
     id: "m-2",
@@ -209,6 +211,7 @@ const milestoneRows: MilestoneRow[] = [
     label: "Finger Independence 2",
     description: "Independent ring-finger control.",
     internalCriteria: "INTERNAL: see C1-FL2 rubric",
+    effectiveFrom: new Date("2026-07-01"),
   },
   {
     id: "m-3-unassigned",
@@ -216,6 +219,41 @@ const milestoneRows: MilestoneRow[] = [
     label: "A milestone nobody has yet",
     description: "Should never surface to anyone in this test.",
     internalCriteria: "INTERNAL: future criteria",
+    effectiveFrom: new Date("2026-07-01"),
+  },
+  // Intermediate-level milestone, for the PERCENT_READY gate test — a
+  // level with real, computable progress that must still show "In
+  // Progress" because the code constant says that level isn't ready.
+  {
+    id: "m-4-intermediate",
+    level: "INTERMEDIATE",
+    label: "Intermediate milestone",
+    description: "An intermediate-level target.",
+    internalCriteria: "INTERNAL: intermediate criteria",
+    effectiveFrom: new Date("2026-07-01"),
+  },
+  // effectiveFrom is deliberately LATE — added to the catalog after
+  // student-9's baseline in the effective-set test below, so it must be
+  // excluded from their denominator even once explicitly assigned to them.
+  {
+    id: "m-5-late",
+    level: "BEGINNER",
+    label: "Added after student-9's baseline",
+    description: "Should not move student-9's denominator.",
+    internalCriteria: "INTERNAL: added late",
+    effectiveFrom: new Date("2026-08-20"),
+  },
+  // Advanced-level milestone, achieved for student-8 in the fixtures below
+  // — real, computable, would be 100% if the PERCENT_READY gate didn't
+  // intercept it first. Proves the gate hides real data, not just an
+  // absence of data.
+  {
+    id: "m-6-advanced",
+    level: "ADVANCED",
+    label: "Advanced milestone",
+    description: "An advanced-level target.",
+    internalCriteria: "INTERNAL: advanced criteria",
+    effectiveFrom: new Date("2026-07-01"),
   },
 ];
 
@@ -258,6 +296,117 @@ const studentMilestoneRows: StudentMilestoneRow[] = [
     achievedAt: null,
     teacherComment: null,
   },
+  // student-6: BEGINNER, ready — 1 of 2 assigned achieved, 50%.
+  {
+    id: "sm-6a",
+    studentId: "student-6",
+    milestoneId: "m-1",
+    status: "ACHIEVED",
+    assignedAt: new Date("2026-08-01"),
+    achievedAt: new Date("2026-08-10"),
+    teacherComment: null,
+  },
+  {
+    id: "sm-6b",
+    studentId: "student-6",
+    milestoneId: "m-2",
+    status: "IN_PROGRESS",
+    assignedAt: new Date("2026-08-01"),
+    achievedAt: null,
+    teacherComment: null,
+  },
+  // student-7 deliberately has NO StudentMilestone rows at all — denominator
+  // 0 despite m-1/m-2/m-3-unassigned existing in the Beginner catalog.
+  // student-8: ADVANCED, NOT ready (PERCENT_READY.ADVANCED: false) — real,
+  // achieved data that would be 100% if the gate didn't intercept it.
+  {
+    id: "sm-8",
+    studentId: "student-8",
+    milestoneId: "m-6-advanced",
+    status: "ACHIEVED",
+    assignedAt: new Date("2026-08-01"),
+    achievedAt: new Date("2026-08-05"),
+    teacherComment: null,
+  },
+  // student-9: BEGINNER, ready — baseline is 2026-08-05 (m-1's assignedAt).
+  // m-5-late's effectiveFrom (2026-08-20) is AFTER that baseline, so even
+  // though it's explicitly assigned to student-9, it must not enter their
+  // effective set. Correct: 1/1 = 100%. Wrong (unfiltered): 1/2 = 50%.
+  {
+    id: "sm-9a",
+    studentId: "student-9",
+    milestoneId: "m-1",
+    status: "ACHIEVED",
+    assignedAt: new Date("2026-08-05"),
+    achievedAt: new Date("2026-08-06"),
+    teacherComment: null,
+  },
+  {
+    id: "sm-9b",
+    studentId: "student-9",
+    milestoneId: "m-5-late",
+    status: "IN_PROGRESS",
+    assignedAt: new Date("2026-08-21"),
+    achievedAt: null,
+    teacherComment: null,
+  },
+  // student-10: starts BEGINNER with one achieved milestone. The
+  // level-change test mutates studentProfileRows to INTERMEDIATE mid-test
+  // and pushes a second row for an Intermediate milestone — see that test
+  // for why the numbers are chosen the way they are.
+  {
+    id: "sm-10a",
+    studentId: "student-10",
+    milestoneId: "m-1",
+    status: "ACHIEVED",
+    assignedAt: new Date("2026-07-05"),
+    achievedAt: new Date("2026-07-10"),
+    teacherComment: null,
+  },
+  // student-11: BEGINNER — 1 achieved of 30 assigned = 3.33%, which rounds
+  // down to 0% under plain nearest-5 rounding. All 30 reference m-1; only
+  // status/assignedAt/the related milestone's effectiveFrom matter to the
+  // calculation, so reusing one milestone id for all of them is fine.
+  {
+    id: "sm-11-achieved",
+    studentId: "student-11",
+    milestoneId: "m-1",
+    status: "ACHIEVED",
+    assignedAt: new Date("2026-08-01"),
+    achievedAt: new Date("2026-08-02"),
+    teacherComment: null,
+  },
+  ...Array.from(
+    { length: 29 },
+    (_, i): StudentMilestoneRow => ({
+      id: `sm-11-unassigned-${i}`,
+      studentId: "student-11",
+      milestoneId: "m-1",
+      status: "IN_PROGRESS",
+      assignedAt: new Date("2026-08-01"),
+      achievedAt: null,
+      teacherComment: null,
+    })
+  ),
+];
+
+interface StudentProfileRow {
+  id: string;
+  level: string | null;
+}
+
+// getMyLevelProgress is the first function in this file to touch
+// StudentProfile directly — every other student's level is irrelevant to
+// their own tests, so only the ids getMyLevelProgress's tests actually use
+// are listed here.
+const studentProfileRows: StudentProfileRow[] = [
+  { id: "student-6", level: "BEGINNER" },
+  { id: "student-7", level: "BEGINNER" },
+  { id: "student-8", level: "ADVANCED" },
+  { id: "student-9", level: "BEGINNER" },
+  { id: "student-10", level: "BEGINNER" },
+  { id: "student-11", level: "BEGINNER" },
+  { id: "student-12", level: null }, // no level set yet
 ];
 
 type SelectShape = Record<string, boolean | { select?: SelectShape }>;
@@ -293,6 +442,16 @@ interface WhereClause {
   id?: string;
   status?: string | { in: string[] };
   visibleToStudent?: boolean;
+  milestone?: { level?: string };
+}
+
+/** Supports the nested `where: { milestone: { level } }` relation filter
+ *  getMyLevelProgress uses — mirrors real Prisma's ability to filter a
+ *  StudentMilestone query by a field on its related Milestone. */
+function matchesMilestoneLevel(row: StudentMilestoneRow, filter?: { level?: string }) {
+  if (!filter?.level) return true;
+  const milestone = milestoneRows.find((m) => m.id === row.milestoneId);
+  return milestone?.level === filter.level;
 }
 
 /** Mirrors applyStudentMilestoneSelect's nested-relation handling, for
@@ -500,7 +659,12 @@ function matchesStatus(row: StudentMilestoneRow, status?: WhereClause["status"])
 const mockFindManyStudentMilestone = vi.fn(
   ({ where, select }: { where: WhereClause; select?: SelectShape }) => {
     return studentMilestoneRows
-      .filter((r) => r.studentId === where.studentId && matchesStatus(r, where.status))
+      .filter(
+        (r) =>
+          r.studentId === where.studentId &&
+          matchesStatus(r, where.status) &&
+          matchesMilestoneLevel(r, where.milestone)
+      )
       .map((r) => applyStudentMilestoneSelect(r, select));
   }
 );
@@ -508,14 +672,27 @@ const mockFindManyStudentMilestone = vi.fn(
 const mockFindFirstStudentMilestone = vi.fn(
   ({ where, select }: { where: WhereClause; select?: SelectShape }) => {
     const row = studentMilestoneRows.find(
-      (r) => r.studentId === where.studentId && matchesStatus(r, where.status)
+      (r) =>
+        r.studentId === where.studentId &&
+        matchesStatus(r, where.status) &&
+        matchesMilestoneLevel(r, where.milestone)
     );
     return row ? applyStudentMilestoneSelect(row, select) : null;
   }
 );
 
+const mockFindUniqueStudentProfile = vi.fn(
+  ({ where, select }: { where: { id: string }; select?: SelectShape }) => {
+    const row = studentProfileRows.find((r) => r.id === where.id);
+    return row ? applySelect(row, select) : null;
+  }
+);
+
 vi.mock("@/lib/db", () => ({
   prisma: {
+    studentProfile: {
+      findUnique: (args: unknown) => mockFindUniqueStudentProfile(args as never),
+    },
     weeklyPractice: {
       findFirst: (args: unknown) => mockFindFirstWeeklyPractice(args as never),
       update: (args: unknown) => mockUpdateWeeklyPractice(args as never),
@@ -564,6 +741,13 @@ vi.mock("@/lib/student-recordings", () => {
   };
 });
 
+// BEGINNER and INTERMEDIATE are ready so both a first computation and a
+// level-change recomputation are testable; ADVANCED stays not-ready so the
+// gate itself (real, achieved data still hidden) has something to prove.
+vi.mock("@/lib/level-readiness", () => ({
+  PERCENT_READY: { BEGINNER: true, INTERMEDIATE: true, ADVANCED: false },
+}));
+
 import {
   getCurrentAssignment,
   listMyNotes,
@@ -578,6 +762,7 @@ import {
   confirmMyRecordingUpload,
   getMyRecordingAttachment,
   getMyCurrentAssignmentRecording,
+  getMyLevelProgress,
   StudentAuthorizationError,
   AssignmentSubmissionError,
 } from "@/lib/student/queries";
@@ -615,6 +800,55 @@ const sessionStudent5: StudentSessionPayload = {
   supabaseUserId: "sb-5",
   email: "student5@example.com",
   fullName: "Student Five",
+  locale: "en",
+};
+const sessionStudent6: StudentSessionPayload = {
+  studentId: "student-6",
+  supabaseUserId: "sb-6",
+  email: "student6@example.com",
+  fullName: "Student Six",
+  locale: "en",
+};
+const sessionStudent7: StudentSessionPayload = {
+  studentId: "student-7",
+  supabaseUserId: "sb-7",
+  email: "student7@example.com",
+  fullName: "Student Seven",
+  locale: "en",
+};
+const sessionStudent8: StudentSessionPayload = {
+  studentId: "student-8",
+  supabaseUserId: "sb-8",
+  email: "student8@example.com",
+  fullName: "Student Eight",
+  locale: "en",
+};
+const sessionStudent9: StudentSessionPayload = {
+  studentId: "student-9",
+  supabaseUserId: "sb-9",
+  email: "student9@example.com",
+  fullName: "Student Nine",
+  locale: "en",
+};
+const sessionStudent10: StudentSessionPayload = {
+  studentId: "student-10",
+  supabaseUserId: "sb-10",
+  email: "student10@example.com",
+  fullName: "Student Ten",
+  locale: "en",
+};
+const sessionStudent11: StudentSessionPayload = {
+  studentId: "student-11",
+  supabaseUserId: "sb-11",
+  email: "student11@example.com",
+  fullName: "Student Eleven",
+  locale: "en",
+};
+const sessionStudent12: StudentSessionPayload = {
+  studentId: "student-12",
+  supabaseUserId: "sb-12",
+  email: "student12@example.com",
+  fullName: "Student Twelve",
   locale: "en",
 };
 
@@ -1121,6 +1355,99 @@ describe("getMyCurrentAssignmentRecording", () => {
   it("returns null when the current assignment has no recording yet", async () => {
     const result = await getMyCurrentAssignmentRecording(sessionStudent1);
     expect(result).toBeNull();
+  });
+});
+
+describe("getMyLevelProgress", () => {
+  it("computes achieved / assigned, rounded to the nearest 5%", async () => {
+    // student-6: m-1 ACHIEVED, m-2 IN_PROGRESS -> 1/2 = 50% (already a
+    // multiple of 5, so rounding doesn't move it).
+    const result = await getMyLevelProgress(sessionStudent6);
+    expect(result).toEqual({ display: "PERCENT", percent: 50 });
+  });
+
+  it("floors nonzero progress at 5% rather than ever displaying 0%", async () => {
+    // student-11: 1 achieved of 30 assigned = 3.33%, which rounds down to
+    // 0 under plain nearest-5 rounding — the floor rule catches this.
+    const result = await getMyLevelProgress(sessionStudent11);
+    expect(result).toEqual({ display: "PERCENT", percent: 5 });
+  });
+
+  it("a level not marked PERCENT_READY returns no percentage at all, not a percentage the UI happens to hide", async () => {
+    // student-8: ADVANCED, real achieved data (m-6-advanced) that would be
+    // 100% if computed — PERCENT_READY.ADVANCED is false in the mock.
+    const result = await getMyLevelProgress(sessionStudent8);
+    expect(result).toEqual({ display: "IN_PROGRESS" });
+    expect("percent" in result).toBe(false);
+  });
+
+  it("returns In Progress when the student has no assigned milestones at their level, even though the level's catalog has entries", async () => {
+    // student-7: BEGINNER (ready), zero StudentMilestone rows, despite
+    // m-1/m-2/m-3-unassigned existing in the Beginner catalog.
+    const result = await getMyLevelProgress(sessionStudent7);
+    expect(result).toEqual({ display: "IN_PROGRESS" });
+  });
+
+  it("a milestone not assigned to a student is unreachable — the catalog's own size never leaks into the calculation", async () => {
+    // student-6 has 2 assigned (of 3 Beginner catalog entries, including
+    // m-3-unassigned which nobody has). If the catalog size leaked in, the
+    // denominator would be 3, not 2.
+    const result = await getMyLevelProgress(sessionStudent6);
+    expect(result).toEqual({ display: "PERCENT", percent: 50 }); // 1 of 2, not 1 of 3
+  });
+
+  it("excludes a milestone added to the catalog after the student's own baseline, even once explicitly assigned to them", async () => {
+    // student-9: baseline is m-1's assignedAt (2026-08-05). m-5-late's
+    // effectiveFrom (2026-08-20) is after that, so despite being assigned
+    // to student-9 (sm-9b), it must not enter their denominator. Correct:
+    // 1/1 = 100%. Wrong (unfiltered): 1/2 = 50%.
+    const result = await getMyLevelProgress(sessionStudent9);
+    expect(result).toEqual({ display: "PERCENT", percent: 100 });
+  });
+
+  it("recomputes cleanly after a level change — old-level milestones never enter the new level's denominator", async () => {
+    // Before: student-10 is BEGINNER with sm-10a (m-1, ACHIEVED).
+    const before = await getMyLevelProgress(sessionStudent10);
+    expect(before).toEqual({ display: "PERCENT", percent: 100 });
+
+    // An admin changes the student's level to INTERMEDIATE and assigns an
+    // Intermediate milestone, not yet achieved. If the old Beginner row
+    // leaked in, this would compute 1/2 = 50%; scoped correctly, it's
+    // 0/1 = 0% (a genuine zero, not floored — achieved is 0 here, not
+    // merely a small nonzero fraction).
+    const profileIndex = studentProfileRows.findIndex((r) => r.id === "student-10");
+    studentProfileRows[profileIndex] = { id: "student-10", level: "INTERMEDIATE" };
+    studentMilestoneRows.push({
+      id: "sm-10b",
+      studentId: "student-10",
+      milestoneId: "m-4-intermediate",
+      status: "IN_PROGRESS",
+      assignedAt: new Date("2026-08-25"),
+      achievedAt: null,
+      teacherComment: null,
+    });
+
+    const after = await getMyLevelProgress(sessionStudent10);
+    expect(after).toEqual({ display: "PERCENT", percent: 0 });
+  });
+
+  it("returns In Progress for a student with no level set at all", async () => {
+    const result = await getMyLevelProgress(sessionStudent12);
+    expect(result).toEqual({ display: "IN_PROGRESS" });
+  });
+
+  it("the milestone total, count, or denominator never appears in any returned value", async () => {
+    const percentResult = await getMyLevelProgress(sessionStudent6);
+    expect(Object.keys(percentResult).sort()).toEqual(["display", "percent"]);
+    const inProgressResult = await getMyLevelProgress(sessionStudent7);
+    expect(Object.keys(inProgressResult)).toEqual(["display"]);
+  });
+
+  it("never touches prisma.milestone directly — only StudentMilestone, same as every other milestone read", async () => {
+    // @/lib/db is mocked without a `milestone` key at all (see the note at
+    // the top of this file) — calling it directly would throw, not
+    // silently pass.
+    await expect(getMyLevelProgress(sessionStudent6)).resolves.toBeDefined();
   });
 });
 

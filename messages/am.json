@@ -336,7 +336,13 @@
     "noRecordingYet": "[AM] No recording yet.",
     "recordingUploadLabel": "[AM] Upload a recording",
     "recordingUploading": "[AM] Uploading…",
-    "recordingGenericError": "[AM] Something went wrong. Please try again."
+    "recordingGenericError": "[AM] Something went wrong. Please try again.",
+    "progressHeading": "[AM] Your progress",
+    "progressInProgress": "[AM] In progress",
+    "currentMilestoneLabel": "[AM] Current focus",
+    "achievedMilestonesLabel": "[AM] Achieved milestones",
+    "noAchievedMilestones": "[AM] No milestones achieved yet.",
+    "achievedOnLabel": "[AM] Achieved {date}"
   },
   "emails": {
     "orderPending": {

@@ -643,12 +643,13 @@ model Milestone {
   @@index([level, sortOrder])
 }
 
-/// Per-level readiness for showing a milestone-progress PERCENTAGE rather
-/// than "In Progress" (Stage 9). A level with no row here defaults to not
-/// ready. Admin-toggleable — see the Stage 9 admin UI. Not load-bearing
-/// for the freeze mechanism on Milestone.effectiveFrom above — that runs
-/// entirely off each student's own assignment history, independent of
-/// when (or whether) a level is marked ready.
+/// UNUSED as of Stage 9's actual implementation. Built for an
+/// admin-toggleable readiness flag, then superseded before any code read
+/// or wrote it: the shipped design uses PERCENT_READY, a code constant in
+/// src/lib/level-readiness.ts, instead — readiness turned out to be a
+/// rare, deliberate content decision rather than routine admin data
+/// entry. Retained, not deleted: this table already exists and needs no
+/// fresh migration if the admin-toggle version is wanted back later.
 model LevelReadiness {
   level     StudentLevel @id
   ready     Boolean      @default(true)
