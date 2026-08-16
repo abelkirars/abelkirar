@@ -432,6 +432,59 @@ const studentMilestoneRows: StudentMilestoneRow[] = [
     achievedAt: null,
     teacherComment: null,
   },
+  // student-14: level-scoping fix. This row is IN_PROGRESS at BEGINNER
+  // (m-1), left over from before an admin changed the student's level to
+  // INTERMEDIATE (studentProfileRows above) with no side effect on this
+  // row — exactly how the real admin route behaves. getCurrentMilestone
+  // must not surface it once the student's level no longer matches.
+  {
+    id: "sm-14-old-level",
+    studentId: "student-14",
+    milestoneId: "m-1",
+    status: "IN_PROGRESS",
+    assignedAt: new Date("2026-07-01"),
+    achievedAt: null,
+    teacherComment: null,
+  },
+  // student-14 also has an ACHIEVED row from the same abandoned Beginner
+  // level, for listAchievedMilestones' matching level-scoping test — same
+  // student, same cause (level changed, no side effect on this row), a
+  // different query function than sm-14-old-level exercises above.
+  {
+    id: "sm-14-old-achieved",
+    studentId: "student-14",
+    milestoneId: "m-2",
+    status: "ACHIEVED",
+    assignedAt: new Date("2026-07-05"),
+    achievedAt: new Date("2026-07-15"),
+    teacherComment: null,
+  },
+  // student-15: proves the effectiveFrom/getCurrentMilestone divergence is
+  // intentional, not a bug. Baseline is sm-15-achieved's assignedAt
+  // (2026-08-01); m-5-late's effectiveFrom (2026-08-20) is after that, so
+  // sm-15-new is excluded from the frozen effective set — percentage stays
+  // 100% — yet it IS the most recently assigned IN_PROGRESS milestone, so
+  // it must still be current focus. See the paired test in "Milestones —
+  // go through StudentMilestone only" and getCurrentMilestone's own doc
+  // comment for the failure mode this prevents.
+  {
+    id: "sm-15-achieved",
+    studentId: "student-15",
+    milestoneId: "m-1",
+    status: "ACHIEVED",
+    assignedAt: new Date("2026-08-01"),
+    achievedAt: new Date("2026-08-02"),
+    teacherComment: null,
+  },
+  {
+    id: "sm-15-new",
+    studentId: "student-15",
+    milestoneId: "m-5-late",
+    status: "IN_PROGRESS",
+    assignedAt: new Date("2026-08-25"),
+    achievedAt: null,
+    teacherComment: null,
+  },
 ];
 
 interface StudentProfileRow {
@@ -439,11 +492,12 @@ interface StudentProfileRow {
   level: string | null;
 }
 
-// getMyLevelProgress is the first function in this file to touch
-// StudentProfile directly — every other student's level is irrelevant to
-// their own tests, so only the ids getMyLevelProgress's tests actually use
-// are listed here.
+// getMyLevelProgress was the first function in this file to touch
+// StudentProfile directly; getCurrentMilestone now does too (it filters by
+// the student's current level). Only the ids either function's tests
+// actually use are listed here.
 const studentProfileRows: StudentProfileRow[] = [
+  { id: "student-1", level: "BEGINNER" },
   { id: "student-6", level: "BEGINNER" },
   { id: "student-7", level: "BEGINNER" },
   { id: "student-8", level: "ADVANCED" },
@@ -451,6 +505,12 @@ const studentProfileRows: StudentProfileRow[] = [
   { id: "student-10", level: "BEGINNER" },
   { id: "student-11", level: "BEGINNER" },
   { id: "student-12", level: null }, // no level set yet
+  { id: "student-13", level: "BEGINNER" },
+  // level-scoping fix: student-13's own IN_PROGRESS milestones (m-7/m-8)
+  // are BEGINNER, matching their level — student-14 below is the one whose
+  // level deliberately does NOT match their old milestone.
+  { id: "student-14", level: "INTERMEDIATE" },
+  { id: "student-15", level: "BEGINNER" },
 ];
 
 type SelectShape = Record<string, boolean | { select?: SelectShape }>;
@@ -932,6 +992,20 @@ const sessionStudent13: StudentSessionPayload = {
   fullName: "Student Thirteen",
   locale: "en",
 };
+const sessionStudent14: StudentSessionPayload = {
+  studentId: "student-14",
+  supabaseUserId: "sb-14",
+  email: "student14@example.com",
+  fullName: "Student Fourteen",
+  locale: "en",
+};
+const sessionStudent15: StudentSessionPayload = {
+  studentId: "student-15",
+  supabaseUserId: "sb-15",
+  email: "student15@example.com",
+  fullName: "Student Fifteen",
+  locale: "en",
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -1180,11 +1254,33 @@ describe("Milestones — go through StudentMilestone only", () => {
     expect(current?.milestone.label).toBe("Current focus milestone");
   });
 
+  it("never returns a milestone left over from a level the student has since moved on from", async () => {
+    // student-14 is INTERMEDIATE now, but sm-14-old-level (BEGINNER, m-1)
+    // is still IN_PROGRESS — an admin changing StudentProfile.level has no
+    // side effect on existing StudentMilestone rows. Without the level
+    // filter, this stale row would keep winning as "current focus"
+    // indefinitely, showing Beginner content to an Intermediate student.
+    const current = await getCurrentMilestone(sessionStudent14);
+    expect(current).toBeNull();
+  });
+
   it("listAchievedMilestones returns only ACHIEVED rows, with the teacher comment", async () => {
     const achieved = await listAchievedMilestones(sessionStudent1);
     expect(achieved).toHaveLength(1);
     expect((achieved[0] as { milestone: { id: string } }).milestone.id).toBe("m-1");
     expect(achieved[0].teacherComment).toBe("Great control!");
+  });
+
+  it("never returns a prior-level achievement after the student is promoted", async () => {
+    // Same student, same cause as the getCurrentMilestone level test above
+    // (student-14: INTERMEDIATE now, sm-14-old-achieved is a real,
+    // permanent ACHIEVED row from the abandoned Beginner level). This list
+    // renders next to getMyLevelProgress's level-specific percentage, so
+    // an unscoped list would answer a different question than the number
+    // beside it. The achievement itself isn't deleted or lost — it's just
+    // not shown in the CURRENT level's progress card.
+    const achieved = await listAchievedMilestones(sessionStudent14);
+    expect(achieved).toHaveLength(0);
   });
 });
 
@@ -1558,6 +1654,30 @@ describe("getMyLevelProgress", () => {
     // the top of this file) — calling it directly would throw, not
     // silently pass.
     await expect(getMyLevelProgress(sessionStudent6)).resolves.toBeDefined();
+  });
+});
+
+// getCurrentMilestone and getMyLevelProgress use different eligibility
+// rules on purpose (see both functions' doc comments in queries.ts). This
+// is the positive proof, not just an assertion of absence: a milestone
+// assigned after the student's frozen baseline still becomes current
+// focus, at the same time the percentage it's excluded from stays put.
+describe("getCurrentMilestone and getMyLevelProgress deliberately use different eligibility rules", () => {
+  it("an assignment made after the student's baseline is excluded from the percentage but still becomes current focus", async () => {
+    // student-15: baseline is sm-15-achieved's assignedAt (2026-08-01),
+    // achieved -> effective set is 1/1 = 100%. m-5-late's effectiveFrom
+    // (2026-08-20) is after that baseline, so sm-15-new is excluded from
+    // the effective set and the percentage does not move. If the two
+    // functions were aligned, this is exactly the dead end getCurrentMilestone's
+    // comment warns about: no IN_PROGRESS/SUBMITTED row would remain
+    // inside the effective set (sm-15-achieved is ACHIEVED), so current
+    // focus would be null despite a real, live assignment existing.
+    const progress = await getMyLevelProgress(sessionStudent15);
+    expect(progress).toEqual({ display: "PERCENT", percent: 100 });
+
+    const current = await getCurrentMilestone(sessionStudent15);
+    expect(current?.milestone.id).toBe("m-5-late");
+    expect(current?.status).toBe("IN_PROGRESS");
   });
 });
 

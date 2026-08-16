@@ -175,10 +175,58 @@ export async function listMyMilestones(session: StudentSessionPayload) {
   });
 }
 
-/** The student's current (in-progress or submitted) milestone, or null. */
+/**
+ * The student's current (in-progress or submitted) milestone, or null.
+ *
+ * Scoped to the student's CURRENT level. An admin changing
+ * StudentProfile.level has no side effect on existing StudentMilestone rows
+ * (see the admin student-update route) — without this filter, a milestone
+ * left IN_PROGRESS at a level the student has since moved on from could
+ * keep winning `orderBy: assignedAt desc` and surface as "current focus"
+ * indefinitely after the level change, showing the wrong level's content.
+ *
+ * Deliberately does NOT apply getMyLevelProgress's frozen-eligibility
+ * filter (Milestone.effectiveFrom at or before the student's baseline).
+ * This is intentional, not an oversight — do not "fix" it by aligning the
+ * two. They answer different questions: getMyLevelProgress answers "how
+ * far through what I understood your curriculum to be when you started
+ * this level are you," frozen specifically so catalog growth can't move it
+ * retroactively; this function answers "what should I work on right now,"
+ * entirely at the teacher's discretion and unconstrained by that snapshot.
+ *
+ * THE FAILURE MODE if you align them anyway: a student can finish every
+ * milestone in their frozen effective set (percentage = 100%, all
+ * ACHIEVED) and then be assigned a genuinely new milestone — one whose
+ * effectiveFrom is later than the student's baseline, so it's correctly
+ * excluded from the percentage's denominator by design. If this function
+ * filtered to that same effective set, the new milestone would never
+ * qualify as a candidate, no other IN_PROGRESS/SUBMITTED row would remain
+ * inside the effective set either (they're all ACHIEVED — that's why it's
+ * 100%), and this function would return null. The student would see
+ * "100%" and no current-focus section at all, despite the teacher having
+ * just assigned them something. Verified in queries.test.ts (the test
+ * proving this divergence is intentional, paired with the level-scoping
+ * test above).
+ *
+ * listAchievedMilestones below has the same level-scoping bug fix, same
+ * cause, same reasoning — kept as a separate comment there since it's a
+ * distinct function, but it is the SAME kind of fix as the paragraph
+ * above this one, not the same kind of thing as the effectiveFrom
+ * paragraph below it. Do not conflate the two when reading either.
+ */
 export async function getCurrentMilestone(session: StudentSessionPayload) {
+  const student = await prisma.studentProfile.findUnique({
+    where: { id: session.studentId },
+    select: { level: true },
+  });
+  if (!student?.level) return null;
+
   return prisma.studentMilestone.findFirst({
-    where: { studentId: session.studentId, status: { in: ["IN_PROGRESS", "SUBMITTED"] } },
+    where: {
+      studentId: session.studentId,
+      status: { in: ["IN_PROGRESS", "SUBMITTED"] },
+      milestone: { level: student.level },
+    },
     orderBy: { assignedAt: "desc" },
     select: {
       id: true,
@@ -193,10 +241,41 @@ export async function getCurrentMilestone(session: StudentSessionPayload) {
  * Achieved milestones, most recently achieved first, with the teacher's
  * comment — per the spec's "achieved milestones with dates and teacher
  * comment."
+ *
+ * BUG FIX, same defect and same cause as getCurrentMilestone above: scoped
+ * to the student's CURRENT level, because an admin changing
+ * StudentProfile.level has no side effect on existing StudentMilestone
+ * rows, so a prior level's achievements would otherwise keep appearing
+ * forever after a promotion. This is NOT the effectiveFrom/baseline
+ * divergence discussed on getCurrentMilestone — that one is intentional
+ * and does not apply to this function either; do not conflate the two.
+ *
+ * Why level-scoping matters here specifically: this list renders next to
+ * getMyLevelProgress's percentage, which is already level-specific ("X%
+ * through your CURRENT level"). An unscoped list would silently answer a
+ * different question than the percentage sitting next to it — a student
+ * promoted to Intermediate seeing "20%" beside a list of Beginner
+ * achievements reads as "20% through what's shown below," which is wrong.
+ *
+ * Prior-level achievements are not lost — the StudentMilestone rows still
+ * exist, permanently, with status ACHIEVED. A lifetime cross-level history
+ * view may be worth building later, but it must be a deliberate, labelled
+ * section of its own, not this function silently widened back out. Do not
+ * remove this filter to build that; build the labelled view instead.
  */
 export async function listAchievedMilestones(session: StudentSessionPayload) {
+  const student = await prisma.studentProfile.findUnique({
+    where: { id: session.studentId },
+    select: { level: true },
+  });
+  if (!student?.level) return [];
+
   return prisma.studentMilestone.findMany({
-    where: { studentId: session.studentId, status: "ACHIEVED" },
+    where: {
+      studentId: session.studentId,
+      status: "ACHIEVED",
+      milestone: { level: student.level },
+    },
     orderBy: { achievedAt: "desc" },
     select: {
       id: true,
@@ -495,6 +574,11 @@ export async function getMyCurrentAssignmentRecording(session: StudentSessionPay
  *
  * Rounds to the nearest 5%; any nonzero progress is floored at 5% so real
  * progress never displays as 0%.
+ *
+ * getCurrentMilestone deliberately does NOT use this effective-set filter
+ * — see its own doc comment for why the two functions intentionally use
+ * different eligibility rules, and the failure mode that results if
+ * someone "fixes" them to match.
  */
 export async function getMyLevelProgress(
   session: StudentSessionPayload
