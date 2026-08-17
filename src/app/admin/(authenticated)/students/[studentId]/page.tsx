@@ -7,6 +7,7 @@ import { StudentForm } from "@/components/admin/student-form";
 import { StudentStatusToggle } from "@/components/admin/student-status-toggle";
 import { ResendInviteButton } from "@/components/admin/resend-invite-button";
 import { StudentEmailCorrection } from "@/components/admin/student-email-correction";
+import { StudentDeleteButton } from "@/components/admin/student-delete-button";
 import { WeeklyPracticeForm } from "@/components/admin/weekly-practice-form";
 import { WeeklyPracticeRow } from "@/components/admin/weekly-practice-row";
 import { StudentNoteForm } from "@/components/admin/student-note-form";
@@ -116,6 +117,16 @@ export default async function AdminStudentProfilePage({
 
         <div className="mt-4">
           <StudentEmailCorrection studentId={student.id} canChange={!student.activatedAt} />
+        </div>
+
+        <div className="mt-8 flex items-center justify-between rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+          <div>
+            <p className="text-sm font-medium text-destructive">Danger zone</p>
+            <p className="text-sm text-muted-foreground">
+              Permanently deletes this student and everything tied to their account.
+            </p>
+          </div>
+          <StudentDeleteButton studentId={student.id} fullName={student.fullName} />
         </div>
 
         <div className="mt-8 rounded-lg border border-border p-4">

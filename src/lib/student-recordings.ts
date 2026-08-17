@@ -122,6 +122,26 @@ export async function deleteRecordingObject(path: string): Promise<void> {
 }
 
 /**
+ * Deletes a recording object as part of a full student-account deletion —
+ * deliberately NOT deleteRecordingObject above. That one is best-effort
+ * cleanup of an object that's already been superseded by a successful new
+ * upload, so its own failure must never fail the request that triggered
+ * it. Here the situation is the opposite: this runs as the FIRST, gating
+ * step of the delete-student flow, specifically so that if it fails,
+ * nothing else happens — the StudentProfile row (and the storagePath
+ * values on it) still exists, so the failure is recoverable by retrying
+ * or cleaning up by hand. Swallowing this failure instead would let the
+ * flow proceed to delete the very row that names what still needs
+ * cleaning up. Throws rather than logs-and-continues.
+ */
+export async function deleteRecordingObjectOrThrow(path: string): Promise<void> {
+  const { error } = await supabaseAdmin.storage.from(RECORDING_BUCKET).remove([path]);
+  if (error) {
+    throw new Error(`Failed to delete recording object ${path}: ${error.message}`);
+  }
+}
+
+/**
  * Verifies the ACTUAL uploaded object — both size and content-type —
  * against MAX_RECORDING_BYTES and ALLOWED_RECORDING_TYPES. The mint-time
  * checks in createRecordingUploadUrl only validate CLIENT-DECLARED values,

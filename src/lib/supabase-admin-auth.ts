@@ -95,6 +95,26 @@ export async function deleteSupabaseUser(supabaseUserId: string): Promise<void> 
 }
 
 /**
+ * Deletes a Supabase Auth user as part of a full student-account deletion
+ * (the admin "delete student" route) — deliberately NOT deleteSupabaseUser
+ * above. That one is best-effort invite-rollback cleanup, self-logging,
+ * never throws, because by the time it runs the thing it's cleaning up
+ * after (a failed Prisma insert) is already the real error to report.
+ * Here the situation is reversed: by the time this is called, the
+ * StudentProfile row and all its data are already gone from Postgres —
+ * irreversibly. The caller MUST know whether the login account was also
+ * removed before it can report the deletion as fully successful; silently
+ * swallowing a failure here would mean reporting success for an email
+ * that is not actually free to reuse. Throws rather than logs-and-continues.
+ */
+export async function deleteStudentAuthAccount(supabaseUserId: string): Promise<void> {
+  const { error } = await supabaseAdmin.auth.admin.deleteUser(supabaseUserId);
+  if (error) {
+    throw new Error(`Failed to delete Supabase Auth user ${supabaseUserId}: ${error.message}`);
+  }
+}
+
+/**
  * Finds a Supabase Auth user by email. The Admin API has no server-side
  * email filter on listUsers(), so this pages through the user list looking
  * for a match — only used on the rare "email_exists but we don't have an id"

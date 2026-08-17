@@ -642,3 +642,122 @@ strictness; a self-contradicting spec; and a mock that dropped `orderBy`.
 **General rule.** Extends the standing one: verify what the code actually does against what you can see,
 not against what the names say. Of these seven, five were found by someone looking carefully at something
 that appeared to be working.
+
+---
+
+## 2026-08-17 — Correction: hard delete is back, for test accounts, with guardrails replacing the protection the 2026-08-15 decision provided
+
+**The 2026-08-15 entry said:** *"No hard-delete for `StudentProfile`. `PracticeLogEntry` and `StudentNote`
+cascade, so a delete button would destroy a student's entire practice history on one misclick, and
+re-inviting an existing email already works via upsert on `supabaseUserId`. If removal is ever needed it
+should be soft-delete or deactivate-and-reassign-email."**
+
+**This is not a correction of a mistaken belief** — the reasoning in that entry still holds, and this entry
+does not dispute it. It is Abel deliberately overriding it, in full knowledge of what it warned against,
+because the actual need turned out to be different from what the decision anticipated: genuinely removing
+test accounts and freeing their emails for reuse, not recovering from an admin misclick. Deactivation
+(already built) does not free the email — `StudentProfile.email` stays `@unique`-occupied by an inactive
+row forever. That gap is what this closes.
+
+**What was verified before building, not assumed.**
+
+1. **Every FK pointing at `StudentProfile`, checked directly against the schema.** Six direct relations,
+   all `onDelete: Cascade`: `WeeklyPractice`, `MonthlyLog`, `StudentNote`, `TeacherPrivateNote`,
+   `StudentMilestone`, `PracticeLogEntry`. Two more cascade transitively through those:
+   `WeeklyPracticeAttachment` (`onDelete: Cascade` from `WeeklyPractice`) and `MonthlyLogAttachment`
+   (`onDelete: Cascade` from `MonthlyLog`). `StudentMilestone.milestone` is `onDelete: Restrict`, but in the
+   other direction — it stops a *milestone* from being deleted while assignments reference it; it has no
+   bearing on deleting a *student*. Net effect: deleting a `StudentProfile` genuinely destroys every
+   assignment, submission, recording attachment row, practice log entry, note, private note, and milestone
+   record for that student. The `Milestone` catalog itself is untouched.
+2. **Storage is real and Postgres cannot see it.** `WeeklyPracticeAttachment.storagePath` points at an
+   object in the `student-recordings` bucket (§8/§9 of `docs/PROJECT_STATE.md`). A schema-level cascade
+   removes the *row*; the file behind it is never touched by any FK. `deleteRecordingObjectOrThrow`
+   (`src/lib/student-recordings.ts`, new) deletes it for real — deliberately not the existing
+   `deleteRecordingObject`, which is best-effort and never throws by design for its own call site (cleaning
+   up a superseded recording after a new upload already succeeded). This one gates: it must be able to stop
+   the whole deletion if it fails, which a swallowed error cannot do. Every attachment's `storagePath` is
+   collected *before* anything is deleted — once the database step runs, that list is gone for good.
+3. **A Prisma-only delete leaves the Supabase Auth user behind, and the email stays taken at the Auth
+   level** — confirmed by reading how invites work (`generateStudentInviteLink`/`findSupabaseUserByEmail`):
+   Supabase's own `email_exists` check is what a fresh invite to the same address would hit. A new
+   function, `deleteStudentAuthAccount` (`src/lib/supabase-admin-auth.ts`), was added specifically for this
+   — **not** the existing `deleteSupabaseUser`, which is best-effort invite-rollback cleanup that never
+   throws by design (see its own doc comment). This route needs the opposite contract: it must know whether
+   the Auth deletion actually succeeded, so building a second function with a different failure contract was
+   the correct call, not duplication of the first.
+
+**Finding, separate from and more important than the delete feature itself: I could not confirm the
+foreign-key failure Abel described.** The concern, as raised: deleting a student with recordings currently
+fails with a foreign-key error, an unchosen gap. Checked directly, three ways, before writing anything
+around it: `WeeklyPracticeAttachment.weeklyPractice` is declared `onDelete: Cascade` in
+`prisma/schema.prisma`; the actually-*applied* migration SQL
+(`20260728105905_add_student_platform/migration.sql`) declares the same foreign key with the literal SQL
+`ON DELETE CASCADE` — schema and applied database agree, this is not a case of the schema saying one thing
+and a hand-written migration saying another, which has bitten this project before; and no `relationMode`
+override exists in the datasource block, so Postgres's native cascade is what actually runs, not an
+emulated one. From source, a plain `prisma.studentProfile.delete()` should cascade through
+`WeeklyPracticeAttachment` cleanly. I cannot run this against a live database to prove it empirically
+(P1001), so this is verified-from-source confidence, not an observed test run — said plainly rather than
+implied as certain.
+
+**Built anyway, exactly as instructed — explicit, not because the cascade is confirmed broken.** Per
+"handle it explicitly in the delete transaction rather than changing the schema," `WeeklyPracticeAttachment`
+rows are now deleted with their own explicit `deleteMany` call, in the same `$transaction` as the
+`StudentProfile` delete, rather than left to the schema-level cascade alone. This costs nothing — deleting
+rows the cascade would also delete is a harmless no-op difference — and means this route's correctness no
+longer depends on trusting an implicit mechanism, which is a reasonable instinct on a project that has
+specifically been bitten before by schema declarations and applied database state drifting apart. No schema
+change was made. If a live foreign-key failure does turn up in Preview/Production, it did not come from the
+relationship checked here — that would be the next place to look, not this one.
+
+**Order: recordings, then the Supabase Auth account, then the database, last — and the three failure modes
+are not equally bad.** The `StudentProfile` row (and everything named on it — every `storagePath`, the
+`supabaseUserId`) is the one piece of information that says what still needs cleaning up. As long as it
+exists, a storage or Auth failure is recoverable: retry this route, or clean up by hand using what the row
+still names. The database delete is the step with no way back — once it succeeds, that information is gone
+for good. So it runs last, only once both steps upstream are confirmed done, never before. Each step fails
+loudly and stops; nothing downstream of a failure is attempted — a storage failure never reaches the Auth
+deletion, and an Auth failure never reaches the database. This replaces an earlier draft of this same entry,
+which had the database delete running *first* — worked out, before anything was built against it, to be the
+wrong order: it made the single least-recoverable step happen before either of the two recoverable ones,
+rather than after.
+
+**Partial failure never reports success, at any of the three steps.** A storage failure stops before Auth
+or the database are touched. An Auth failure stops before the database is touched. A database failure — now
+only possible after storage and Auth already succeeded — returns an error naming exactly that state ("the
+database delete failed... retry, or delete the remaining row manually"), never `{ ok: true }`. The one gap
+left open, stated plainly rather than silently: a retry after a database-only failure will fail again at the
+Auth step, because deleting an already-deleted Supabase user errors rather than succeeding as a no-op — that
+specific stuck state needs a person to notice the Auth account is already gone and intervene, not a route
+this app exposes today.
+
+**Guardrails that replace the protection the old decision provided.** The 2026-08-15 concern was "a delete
+button would destroy a student's entire practice history on one misclick." The route itself enforces
+nothing about how it's called beyond `requireAdminApi()` — the misclick protection lives entirely in the
+admin UI, by design: `StudentDeleteButton` (`src/components/admin/student-delete-button.tsx`) requires the
+admin to type the student's exact full name into a text field before the delete button becomes clickable at
+all — not a checkbox, not a `window.confirm()` dialog, both of which a reflexive second click clears. The
+confirmation dialog states plainly what is destroyed and that it cannot be undone, in that order, before the
+input field appears.
+
+**Tests, written failing-first, twice.** `src/app/api/admin/students/[studentId]/route.test.ts` (new — this
+route had no test file before this change) was written failing-first for the original database-first order,
+confirmed genuinely red (`DELETE is not a function`, the export didn't exist yet) then green — 6 tests. When
+the order changed to recordings-then-Auth-then-database, the tests were rewritten for the new order *first*
+and re-run against the old implementation, confirming genuine red again (6 of 8 failing, for the right
+reasons — wrong call order, wrong failure-mode expectations) before the route was rewritten to match.
+Now 8, covering: admin can delete a student end-to-end, with the three steps demonstrated to run in the
+correct order (storage, storage, auth, database); neither an unauthenticated request nor a student session
+can reach it (both fail the same `requireAdminApi()` guard — there is no code path where a valid student
+session satisfies an admin-only check); a nonexistent student 404s before anything is touched; storage
+cleanup is attempted for every recording; a storage failure stops immediately with no Auth call and no
+database transaction; an Auth failure (after storage already succeeded) stops before the database, still
+without reporting success; a database failure — after both storage and Auth already succeeded — still does
+not report success; `WeeklyPracticeAttachment` rows are deleted explicitly, in the same transaction as the
+profile delete, not left to the cascade alone.
+
+**Still true from 2026-08-15, unchanged by this entry.** Deactivation remains the default, low-risk path for
+a student who might come back. This is now available as a second, deliberately harder-to-reach path for
+permanent removal — not a replacement for deactivation, and not exposed anywhere a single misclick reaches
+it.
