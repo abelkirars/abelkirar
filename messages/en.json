@@ -300,6 +300,7 @@
   "studentDashboard": {
     "title": "Student Dashboard",
     "greeting": "Welcome, {fullName}.",
+    "logOut": "Log out",
     "currentAssignmentHeading": "This week's assignment",
     "noAssignment": "No assignment right now — check back soon.",
     "goalLabel": "Goal",

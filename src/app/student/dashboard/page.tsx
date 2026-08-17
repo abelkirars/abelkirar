@@ -15,6 +15,7 @@ import {
 import { PracticeLogForm } from "@/components/student/practice-log-form";
 import { AssignmentSubmitForm } from "@/components/student/assignment-submit-form";
 import { RecordingUpload } from "@/components/student/recording-upload";
+import { StudentLogoutButton } from "@/components/student/student-logout-button";
 
 export const dynamic = "force-dynamic";
 
@@ -64,10 +65,15 @@ export default async function StudentDashboardPage() {
   return (
     <section className="py-16 sm:py-24">
       <Container>
-        <h1 className="font-heading text-3xl font-semibold">{t("title")}</h1>
-        <p className="mt-2 text-muted-foreground">
-          {t("greeting", { fullName: session.fullName })}
-        </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="font-heading text-3xl font-semibold">{t("title")}</h1>
+            <p className="mt-2 text-muted-foreground">
+              {t("greeting", { fullName: session.fullName })}
+            </p>
+          </div>
+          <StudentLogoutButton />
+        </div>
 
         <div className="mt-8 rounded-lg border border-border p-6">
           <h2 className="font-heading text-xl font-semibold">

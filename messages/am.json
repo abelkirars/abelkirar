@@ -300,6 +300,7 @@
   "studentDashboard": {
     "title": "የተማሪ ዳሽቦርድ",
     "greeting": "እንኳን ደህና መጡ፣ {fullName}።",
+    "logOut": "[AM] Log out",
     "currentAssignmentHeading": "የዚህ ሳምንት ስራ",
     "noAssignment": "አሁን ምንም የተመደበ ስራ የለም — በቅርቡ እንደገና ይመልከቱ።",
     "goalLabel": "ግብ",
