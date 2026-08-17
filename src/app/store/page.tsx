@@ -124,7 +124,7 @@ export default async function StorePage({
 
   return (
     <>
-      <section className="relative overflow-hidden bg-gradient-to-b from-[#241b12] to-[#1b140d] py-24 text-[#f3e9d2] sm:py-32">
+      <section className="relative overflow-hidden bg-gradient-to-b from-[#241b12] to-[#1b140d] py-16 text-[#f3e9d2] sm:py-24">
         <CrossPattern className="text-[#d4a84b] opacity-[0.08]" />
         <Container className="relative">
           <p className="text-sm font-medium tracking-[0.25em] text-[#d4a84b] uppercase">
@@ -133,25 +133,31 @@ export default async function StorePage({
           <h1 className="mt-4 max-w-2xl font-heading text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
             {t("title")}
           </h1>
-          <p className="mt-6 max-w-xl text-lg text-[#f3e9d2]/80 text-pretty">
+          <p className="mt-5 max-w-xl text-lg text-[#f3e9d2]/80 text-pretty">
             {t("description")}
           </p>
         </Container>
       </section>
 
-      <section className="py-20 sm:py-28">
+      <section className="py-12 sm:py-20">
         <Container>
-          <div className="mx-auto mb-12 max-w-md">
-            <form action="/store" className="flex items-center gap-2">
+          <div className="mx-auto mb-10 max-w-xl">
+            <form action="/store" role="search" className="flex items-center gap-2">
               <Input
                 type="search"
                 name="q"
                 defaultValue={searchQuery ?? ""}
                 placeholder={t("searchPlaceholder")}
                 aria-label={t("searchLabel")}
+                className="h-11 bg-card shadow-sm"
               />
-              <Button type="submit" size="icon" aria-label={t("searchLabel")}>
-                <Search className="size-4" />
+              <Button
+                type="submit"
+                size="icon"
+                className="size-11 shrink-0"
+                aria-label={t("searchLabel")}
+              >
+                <Search aria-hidden="true" className="size-4" />
               </Button>
             </form>
             {searchQuery && (
@@ -166,7 +172,7 @@ export default async function StorePage({
               {searchQuery ? t("noResults", { query: searchQuery }) : t("empty")}
             </p>
           ) : (
-            <div className="grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
               {cards.map((card) => (
                 <ProductCard
                   key={card.key}
