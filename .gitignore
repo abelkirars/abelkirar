@@ -44,8 +44,23 @@ next-env.d.ts
 # prisma generated client
 /src/generated/prisma
 
-# Claude Code local settings
-.claude/settings.local.json
+# Claude Code local settings and installed skills — inspected directly
+# (2026-08-17): contains only settings.local.json (already machine-local
+# by its own name) and .claude/skills/remotion-best-practices/, a large
+# downloaded skill bundle with no website project content at all. Nothing
+# under .claude/ is website-specific instructions or config, so the whole
+# directory is ignored rather than just the one file it used to name.
+.claude/
+
+# Lockfile for the .claude/ skill install above — same reasoning, tracks
+# only the Remotion skill, nothing website-specific.
+skills-lock.json
+
+# Remotion is a separate project living at remotion/ on disk, kept out of
+# this repo intentionally — was never tracked here (confirmed via
+# `git rm --cached`), being moved into its own project. Not deleted from
+# disk by this ignore rule.
+remotion/
 
 # Locally-saved admin credentials — never commit
 ADMIN_PASSWORD.txt

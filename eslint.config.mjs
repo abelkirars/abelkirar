@@ -12,6 +12,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Not part of this project — see .gitignore's comments. .gitignore
+    // only keeps git from tracking these; ESLint scans the filesystem
+    // directly and needs its own ignore entry regardless.
+    "remotion/**",
+    ".claude/**",
   ]),
 ]);
 
