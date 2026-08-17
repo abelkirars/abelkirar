@@ -176,6 +176,23 @@ export async function listMyMilestones(session: StudentSessionPayload) {
 }
 
 /**
+ * The calling student's own level, or null if the teacher hasn't set one
+ * yet (see the admin student page's own "set this student's level before
+ * assigning milestones" gate — null is a real, reachable state, not just a
+ * theoretical one). Level itself is not curriculum content — it's a coarse
+ * label ("Beginner"/"Intermediate"/"Advanced") the admin UI already treats
+ * as ordinary, unlike Milestone fields — so this function's own select IS
+ * the allowlist; there is no SAFE_*_SELECT to route through.
+ */
+export async function getMyLevel(session: StudentSessionPayload) {
+  const student = await prisma.studentProfile.findUnique({
+    where: { id: session.studentId },
+    select: { level: true },
+  });
+  return student?.level ?? null;
+}
+
+/**
  * The student's current (in-progress or submitted) milestone, or null.
  *
  * Scoped to the student's CURRENT level. An admin changing

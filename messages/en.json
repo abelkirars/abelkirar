@@ -301,6 +301,9 @@
     "title": "Student Dashboard",
     "greeting": "Welcome, {fullName}.",
     "logOut": "Log out",
+    "currentLevelHeading": "Current level",
+    "levelNotSetYet": "Your teacher hasn't set your level yet.",
+    "continuePracticeHeading": "Continue practice",
     "currentAssignmentHeading": "This week's assignment",
     "noAssignment": "No assignment right now — check back soon.",
     "goalLabel": "Goal",
@@ -342,6 +345,7 @@
     "progressHeading": "Your progress",
     "progressInProgress": "In progress",
     "currentMilestoneLabel": "Current focus",
+    "noCurrentFocus": "Your teacher hasn't assigned your current focus yet.",
     "achievedMilestonesLabel": "Achieved milestones",
     "noAchievedMilestones": "No milestones achieved yet.",
     "achievedOnLabel": "Achieved {date}"

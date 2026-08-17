@@ -301,6 +301,9 @@
     "title": "የተማሪ ዳሽቦርድ",
     "greeting": "እንኳን ደህና መጡ፣ {fullName}።",
     "logOut": "[AM] Log out",
+    "currentLevelHeading": "[AM] Current level",
+    "levelNotSetYet": "[AM] Your teacher hasn't set your level yet.",
+    "continuePracticeHeading": "[AM] Continue practice",
     "currentAssignmentHeading": "የዚህ ሳምንት ስራ",
     "noAssignment": "አሁን ምንም የተመደበ ስራ የለም — በቅርቡ እንደገና ይመልከቱ።",
     "goalLabel": "ግብ",
@@ -342,6 +345,7 @@
     "progressHeading": "እድገትዎ",
     "progressInProgress": "በእድገት ሂደት ላይ",
     "currentMilestoneLabel": "የአሁኑ ትኩረት",
+    "noCurrentFocus": "[AM] Your teacher hasn't assigned your current focus yet.",
     "achievedMilestonesLabel": "የተሳኩ ግቦች",
     "noAchievedMilestones": "ገና የተሳካ ግብ የለም።",
     "achievedOnLabel": "በ{date} ተሳክቷል"
