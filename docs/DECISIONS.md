@@ -761,3 +761,58 @@ profile delete, not left to the cascade alone.
 a student who might come back. This is now available as a second, deliberately harder-to-reach path for
 permanent removal — not a replacement for deactivation, and not exposed anywhere a single misclick reaches
 it.
+
+---
+
+## 2026-08-17 — Correction: the WeeklyPracticeAttachment cascade stays, deliberately, and what the hard-delete override actually traded
+
+**Supersedes part of the entry immediately above this one** — the same day's entry, not the 2026-08-16
+"missing bucket env var" one, which has no foreign-key content at all; that reference, as given, named the
+wrong date by one day. The entry above already established, correctly and not disputed here, that
+`WeeklyPracticeAttachment.weeklyPractice` is `onDelete: Cascade` in both `prisma/schema.prisma` and the
+applied migration SQL — there is no `Restrict` on this relationship, and there never has been. What that
+entry did not yet say, and this one records: keeping it that way, and never leaning on it, is now a
+permanent, deliberate design decision — not a hedge built "just in case" an unconfirmed bug turned out to be
+real.
+
+**Decision — the schema stays exactly as it is; the delete-student route keeps handling
+`WeeklyPracticeAttachment` explicitly regardless.** Two reasons, both Abel's, both worth keeping attached to
+this code:
+
+1. **A schema-level guarantee here would apply to every future caller, not just this one.** If
+   `WeeklyPracticeAttachment`'s cascade were ever tightened — to `Restrict`, to stop it firing implicitly —
+   that protection would come from the schema, meaning any future code with a legitimate, unrelated reason to
+   delete a `WeeklyPractice` row (nothing does today — checked directly, no `weeklyPractice.delete()` call
+   exists anywhere in `src/`) would inherit a blanket decision made in service of *this* feature, not its
+   own. Handling it explicitly, in this route's own transaction, keeps that decision local to the one place
+   that actually needs it.
+2. **The alternative failure shape is exactly the one already logged seven times on this project.** Making
+   the relationship `Cascade` and *trusting* that — instead of deleting the rows explicitly and verifying it
+   in tests — would mean a future, ordinary `WeeklyPractice` mutation could silently take a student's
+   recordings with it, with no confirmation, no typed name, nothing. That is the same shape as every entry in
+   the running "guard reads stronger than it enforces" list (2026-08-10 through 2026-08-16): something
+   destructive happening by a mechanism nobody looking at the call site would notice. This isn't a new,
+   eighth instance of that pattern — it's the same discipline applied pre-emptively, to stop one from ever
+   being written. Recorded here so nobody "tidies" this later by deleting the explicit `deleteMany` call as
+   apparently-redundant with the cascade — it is redundant today, on purpose, and should stay that way.
+
+**Storage-orphan risk, stated plainly — a known gap, not a solved problem.** Deleting a `WeeklyPractice` or
+`WeeklyPracticeAttachment` row by any path *other than* the student-delete route does not clean up the
+corresponding Supabase Storage object automatically — nothing about Postgres, the schema, or this project's
+conventions makes that happen for free. Checked directly: exactly two code paths delete a
+`WeeklyPracticeAttachment` row today. `confirmMyRecordingUpload`'s replace-on-reupload step
+(`src/lib/student/queries.ts:498-500`) calls `deleteRecordingObject` first, so it is safe. The new
+student-delete transaction is safe for the same reason — storage cleanup runs as its own gated first step,
+before the row is touched. Both happen to clean up after themselves today; neither is required to by
+anything structural. A hypothetical third path — an admin "delete this one assignment" feature, say, should
+one ever be built — would need to remember storage cleanup itself, the same way these two did. Nothing
+currently enforces that a new caller can't forget it.
+
+**What the override actually traded.** The 2026-08-15 decision protected against destroying a student's
+entire practice history on a misclick by **impossibility** — the button did not exist. This entry's override
+does not restore that protection; it replaces it with **friction** — the typed-full-name confirmation makes
+the same destruction *possible*, deliberately, gated behind an action specific enough that a misclick cannot
+reach it. That is a real reduction in what the system prevents, not a like-for-like replacement, and it was
+chosen anyway: Abel traded reversibility for operational convenience — genuinely removing test accounts and
+freeing their emails — and for that specific, intended use, friction was enough. It has not been tested as a
+defense against anything more determined than an accidental click, and was never meant to be.
