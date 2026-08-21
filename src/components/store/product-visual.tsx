@@ -7,18 +7,26 @@ export function ProductVisual({
   category,
   name,
   className,
+  sizes,
 }: {
   images: string[];
   category: string;
   name: string;
   className?: string;
+  sizes?: string;
 }) {
   const image = images[0];
 
   if (image) {
     return (
       <div className={`relative overflow-hidden rounded-2xl ${className ?? ""}`}>
-        <Image src={image} alt={name} fill className="object-cover" />
+        <Image
+          src={image}
+          alt={name}
+          fill
+          sizes={sizes ?? "100vw"}
+          className="object-cover transition-transform duration-500 group-hover:scale-[1.02] motion-reduce:transition-none"
+        />
       </div>
     );
   }
