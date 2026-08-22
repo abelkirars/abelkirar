@@ -168,7 +168,21 @@ export default async function StudentDashboardPage() {
             </CardContent>
           </Card>
 
-          <Card id="weekly-practice">
+          {/* tabIndex={-1} + scroll-mt-24: the "Continue practice" CTA above
+              jumps here via a plain #fragment link (no client-side focus
+              management, no new client component). Per the HTML living
+              standard's scroll-to-the-fragment steps, browsers run the
+              focusing steps on the fragment target when it's focusable —
+              tabIndex={-1} makes a plain <div> focusable for that one case
+              without adding it to the normal Tab order. scroll-mt-24 mirrors
+              product-gallery.tsx's lg:top-24 convention for this same
+              sticky h-16 (64px) site header, so the target lands with a
+              comfortable gap below it instead of flush against/under it. */}
+          <Card
+            id="weekly-practice"
+            tabIndex={-1}
+            className="scroll-mt-24 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+          >
             <CardHeader>
               <h2 className="font-heading text-xl font-semibold">
                 {t("currentAssignmentHeading")}
@@ -359,7 +373,13 @@ export default async function StudentDashboardPage() {
             </CardContent>
           </Card>
 
-          <Card id="practice-log">
+          {/* tabIndex={-1} + scroll-mt-24: same anchor-jump target as
+              #weekly-practice above — see that Card's comment for why. */}
+          <Card
+            id="practice-log"
+            tabIndex={-1}
+            className="scroll-mt-24 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+          >
             <CardHeader>
               <h2 className="font-heading text-xl font-semibold">{t("practiceLogHeading")}</h2>
             </CardHeader>

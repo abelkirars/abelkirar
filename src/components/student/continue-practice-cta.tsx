@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -21,7 +20,7 @@ export function ContinuePracticeCta({
   href: "#weekly-practice" | "#practice-log";
 }) {
   return (
-    <Button size="lg" nativeButton={false} render={<Link href={href} />}>
+    <Button size="lg" nativeButton={false} render={<a href={href} />}>
       {label}
     </Button>
   );
