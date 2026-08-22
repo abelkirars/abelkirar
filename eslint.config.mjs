@@ -17,6 +17,11 @@ const eslintConfig = defineConfig([
     // directly and needs its own ignore entry regardless.
     "remotion/**",
     ".claude/**",
+    // Local agent tooling — excluded from git via .git/info/exclude (not
+    // .gitignore, so it isn't listed there), but ESLint still walks the
+    // filesystem directly and needs its own ignore entry, same reasoning
+    // as .claude/** above.
+    ".agents/**",
   ]),
 ]);
 
