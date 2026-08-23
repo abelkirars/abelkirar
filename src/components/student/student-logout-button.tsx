@@ -21,7 +21,11 @@ export function StudentLogoutButton() {
   }
 
   return (
-    <Button size="sm" variant="outline" onClick={handleLogout}>
+    <Button
+      variant="outline"
+      onClick={handleLogout}
+      className="h-10 self-start border-secondary-foreground/25 bg-secondary-foreground/10 px-4 text-secondary-foreground hover:bg-secondary-foreground/20 hover:text-secondary-foreground"
+    >
       {t("logOut")}
     </Button>
   );

@@ -1,4 +1,6 @@
-import { Button } from "@/components/ui/button";
+import { ArrowRight } from "lucide-react";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 /**
  * A same-page anchor link styled as a button — not a form, not a fetch,
@@ -20,8 +22,15 @@ export function ContinuePracticeCta({
   href: "#weekly-practice" | "#practice-log";
 }) {
   return (
-    <Button size="lg" nativeButton={false} render={<a href={href} />}>
-      {label}
-    </Button>
+    <a
+      href={href}
+      className={cn(
+        buttonVariants({ size: "lg" }),
+        "h-11 w-full justify-between rounded-xl px-4 shadow-sm sm:min-w-48"
+      )}
+    >
+      <span>{label}</span>
+      <ArrowRight aria-hidden="true" className="size-4" />
+    </a>
   );
 }

@@ -348,7 +348,9 @@
     "noCurrentFocus": "[AM] Your teacher hasn't assigned your current focus yet.",
     "achievedMilestonesLabel": "የተሳኩ ግቦች",
     "noAchievedMilestones": "ገና የተሳካ ግብ የለም።",
-    "achievedOnLabel": "በ{date} ተሳክቷል"
+    "achievedOnLabel": "በ{date} ተሳክቷል",
+    "nextStepLabel": "ቀጣዩ ደረጃ",
+    "nextStepDescription": "ቀጣዩን ትኩረት ከአስተማሪዎ ጋር ይመርጣሉ።"
   },
   "emails": {
     "orderPending": {

@@ -348,7 +348,9 @@
     "noCurrentFocus": "Your teacher hasn't assigned your current focus yet.",
     "achievedMilestonesLabel": "Achieved milestones",
     "noAchievedMilestones": "No milestones achieved yet.",
-    "achievedOnLabel": "Achieved {date}"
+    "achievedOnLabel": "Achieved {date}",
+    "nextStepLabel": "Next step",
+    "nextStepDescription": "Your teacher will choose your next focus with you."
   },
   "emails": {
     "orderPending": {
