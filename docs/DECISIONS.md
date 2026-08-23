@@ -816,3 +816,29 @@ reach it. That is a real reduction in what the system prevents, not a like-for-l
 chosen anyway: Abel traded reversibility for operational convenience — genuinely removing test accounts and
 freeing their emails — and for that specific, intended use, friction was enough. It has not been tested as a
 defense against anything more determined than an accidental click, and was never meant to be.
+
+---
+
+## 2026-08-22 — Beginner milestone catalog populated
+
+**Decision.** Ten active BEGINNER milestones created through the admin editor, `sortOrder` 1–10,
+`effectiveFrom` 2026-08-22.
+
+**Curriculum conflict resolved.** The manual's Beginner requirements describe ten finger exercises, while
+the knowledge library lists Foundation plus ten. Foundation was excluded and the remaining ten were used.
+Damping is worded neutrally because its definition and mapping remain unresolved in the manual — recorded
+so a future reader knows the wording is deliberate, not vague.
+
+**The curriculum stays out of this file.** Milestone labels, descriptions, and internal criteria are
+deliberately not recorded here.
+
+**Test records.** `TEST BEGINNER HIDDEN` and `TEST BEGINNER APPROVED` were deactivated, not deleted, and
+retained for audit. Deletion was avoided because a `StudentMilestone` reference would either fail on the FK
+or destroy an achievement record.
+
+**Verified with real data.** One milestone assigned to a test student showed as current focus; the other
+nine were invisible on the dashboard. The assigned-visible, unassigned-hidden model is confirmed working
+against production data, not only in tests.
+
+**State.** `PERCENT_READY` remains false on all three levels. Milestones are assigned individually as
+teaching progresses, not in advance.
