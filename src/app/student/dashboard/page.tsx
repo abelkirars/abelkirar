@@ -35,6 +35,7 @@ import { RecordingUpload } from "@/components/student/recording-upload";
 import { StudentLogoutButton } from "@/components/student/student-logout-button";
 import { ContinuePracticeCta } from "@/components/student/continue-practice-cta";
 import { getPracticeSummary } from "@/lib/student/practice-summary";
+import { getPracticeSelfRatingMessageKey } from "@/lib/student/practice-self-ratings";
 
 export const dynamic = "force-dynamic";
 
@@ -76,6 +77,13 @@ export default async function StudentDashboardPage() {
   const currentMilestone = await getCurrentMilestone(session);
   const achievedMilestones = await listAchievedMilestones(session);
   const practiceSummary = getPracticeSummary(practiceLogEntries);
+  const localizedPracticeLogEntries = practiceLogEntries.map((entry) => {
+    const selfRatingMessageKey = getPracticeSelfRatingMessageKey(entry.selfRating);
+    return {
+      ...entry,
+      selfRatingLabel: selfRatingMessageKey ? t(selfRatingMessageKey) : entry.selfRating,
+    };
+  });
 
   const isSubmitted =
     assignment !== null &&
@@ -509,7 +517,7 @@ export default async function StudentDashboardPage() {
                       <p className="text-sm text-muted-foreground">{t("noPracticeLogEntries")}</p>
                     </div>
                   ) : (
-                    practiceLogEntries.map((entry) => (
+                    localizedPracticeLogEntries.map((entry) => (
                       <article
                         key={entry.id}
                         className="rounded-2xl border border-border/70 bg-card p-4 text-sm"
@@ -526,9 +534,9 @@ export default async function StudentDashboardPage() {
                           </Badge>
                         </div>
                         <p className="mt-2 leading-6 text-foreground/85">{entry.focus}</p>
-                        {entry.selfRating && (
+                        {entry.selfRatingLabel && (
                           <p className="mt-1 text-xs text-muted-foreground">
-                            {t("practiceLogSelfRatingLabel")}: {entry.selfRating}
+                            {t("practiceLogSelfRatingLabel")}: {entry.selfRatingLabel}
                           </p>
                         )}
                       </article>
