@@ -320,6 +320,16 @@
     "practiceLogDurationLabel": "Minutes practiced",
     "practiceLogFocusLabel": "What did you practice?",
     "practiceLogSelfRatingLabel": "How did it go? (optional)",
+    "practiceSelfRatings": {
+      "focused": "Focused",
+      "rushed": "Rushed",
+      "distracted": "Distracted",
+      "difficult": "Difficult",
+      "enjoyable": "Enjoyable",
+      "frustrating": "Frustrating",
+      "steady": "Steady",
+      "breakthrough": "Breakthrough"
+    },
     "practiceLogSubmit": "Log practice",
     "practiceLogSubmitting": "Saving…",
     "practiceLogGenericError": "Something went wrong. Please try again.",

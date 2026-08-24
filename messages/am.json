@@ -320,6 +320,16 @@
     "practiceLogDurationLabel": "የተለማመዱት ደቂቃዎች",
     "practiceLogFocusLabel": "ምን ተለማመዱ?",
     "practiceLogSelfRatingLabel": "እንዴት ሄደ? (አማራጭ)",
+    "practiceSelfRatings": {
+      "focused": "ትኩረት ያለው",
+      "rushed": "በችኮላ",
+      "distracted": "ትኩረት የሌለው",
+      "difficult": "ከባድ",
+      "enjoyable": "አስደሳች",
+      "frustrating": "አበሳጭ",
+      "steady": "የተረጋጋ",
+      "breakthrough": "ታላቅ መሻሻል"
+    },
     "practiceLogSubmit": "ልምምድ ይመዝግቡ",
     "practiceLogSubmitting": "በማስቀመጥ ላይ…",
     "practiceLogGenericError": "ችግር ተፈጥሯል። እባክዎ እንደገና ይሞክሩ።",
