@@ -53,7 +53,12 @@ export default function StudentDashboardLoading() {
             </div>
           </CardHeader>
           <CardContent className="p-6">
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <SkeletonBlock className="h-24 w-full rounded-3xl" />
+              <SkeletonBlock className="h-24 w-full rounded-3xl" />
+              <SkeletonBlock className="h-24 w-full rounded-3xl" />
+            </div>
+            <div className="mt-6 grid gap-4 md:grid-cols-3">
               <SkeletonBlock className="h-32 w-full rounded-2xl" />
               <SkeletonBlock className="h-32 w-full rounded-2xl" />
               <SkeletonBlock className="h-32 w-full rounded-2xl" />

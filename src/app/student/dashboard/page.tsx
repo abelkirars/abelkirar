@@ -4,7 +4,9 @@ import {
   BookOpen,
   CalendarDays,
   CheckCircle2,
+  Clock,
   GraduationCap,
+  History,
   LockKeyhole,
   MessageCircle,
   NotebookPen,
@@ -32,6 +34,7 @@ import { AssignmentSubmitForm } from "@/components/student/assignment-submit-for
 import { RecordingUpload } from "@/components/student/recording-upload";
 import { StudentLogoutButton } from "@/components/student/student-logout-button";
 import { ContinuePracticeCta } from "@/components/student/continue-practice-cta";
+import { getPracticeSummary } from "@/lib/student/practice-summary";
 
 export const dynamic = "force-dynamic";
 
@@ -72,6 +75,7 @@ export default async function StudentDashboardPage() {
   const level = await getMyLevel(session);
   const currentMilestone = await getCurrentMilestone(session);
   const achievedMilestones = await listAchievedMilestones(session);
+  const practiceSummary = getPracticeSummary(practiceLogEntries);
 
   const isSubmitted =
     assignment !== null &&
@@ -194,7 +198,45 @@ export default async function StudentDashboardPage() {
             </div>
           </CardHeader>
           <CardContent className="p-5 sm:p-6">
-            <div className="grid gap-4 md:grid-cols-3">
+            <dl className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-3xl border border-secondary/15 bg-secondary/5 p-4">
+                <dt className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-secondary">
+                  <CalendarDays aria-hidden="true" className="size-4" />
+                  {t("practiceSessionsThisWeek")}
+                </dt>
+                <dd className="mt-3 font-heading text-3xl font-semibold text-foreground">
+                  {practiceSummary.sessionsThisWeek}
+                </dd>
+              </div>
+
+              <div className="rounded-3xl border border-primary/25 bg-primary/8 p-4">
+                <dt className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-primary">
+                  <Clock aria-hidden="true" className="size-4" />
+                  {t("practiceMinutesThisWeek")}
+                </dt>
+                <dd className="mt-3 font-heading text-3xl font-semibold text-foreground">
+                  {practiceSummary.minutesThisWeek}
+                </dd>
+              </div>
+
+              <div className="rounded-3xl border border-border bg-muted/25 p-4">
+                <dt className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                  <History aria-hidden="true" className="size-4 text-primary" />
+                  {t("latestPracticeLabel")}
+                </dt>
+                <dd className="mt-3 font-heading text-lg font-semibold text-foreground">
+                  {practiceSummary.latestPracticeAt ? (
+                    <time dateTime={practiceSummary.latestPracticeAt.toISOString()}>
+                      {practiceSummary.latestPracticeAt.toLocaleDateString()}
+                    </time>
+                  ) : (
+                    t("noPracticeLogEntries")
+                  )}
+                </dd>
+              </div>
+            </dl>
+
+            <div className="mt-6 grid gap-4 md:grid-cols-3">
               <section
                 aria-labelledby="journey-achieved-heading"
                 className="rounded-2xl border border-secondary/15 bg-secondary/5 p-4"
