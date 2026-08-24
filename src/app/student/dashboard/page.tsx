@@ -257,9 +257,14 @@ export default async function StudentDashboardPage() {
                   {t("achievedMilestonesLabel")}
                 </p>
                 {achievedMilestones.length === 0 ? (
-                  <p className="mt-4 text-sm leading-6 text-muted-foreground">
-                    {t("noAchievedMilestones")}
-                  </p>
+                  <div className="mt-4 flex items-start gap-3 rounded-2xl border border-dashed border-secondary/20 bg-card/60 p-3.5">
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-secondary/10 text-secondary">
+                      <CheckCircle2 aria-hidden="true" className="size-4" />
+                    </span>
+                    <p className="pt-1.5 text-sm leading-6 text-muted-foreground">
+                      {t("noAchievedMilestones")}
+                    </p>
+                  </div>
                 ) : (
                   <div className="mt-4 space-y-3">
                     {achievedMilestones
@@ -484,8 +489,15 @@ export default async function StudentDashboardPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-dashed border-border bg-muted/20 p-5">
-                    <p className="text-sm leading-6 text-muted-foreground">{t("noAssignment")}</p>
+                  <div className="rounded-3xl border border-dashed border-primary/25 bg-primary/5 p-5 sm:p-6">
+                    <div className="flex items-start gap-4">
+                      <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                        <BookOpen aria-hidden="true" className="size-5" />
+                      </span>
+                      <p className="pt-2 text-sm leading-6 text-muted-foreground">
+                        {t("noAssignment")}
+                      </p>
+                    </div>
                   </div>
                 )}
               </CardContent>
@@ -513,8 +525,15 @@ export default async function StudentDashboardPage() {
 
                 <div className="space-y-3">
                   {practiceLogEntries.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-border p-4">
-                      <p className="text-sm text-muted-foreground">{t("noPracticeLogEntries")}</p>
+                    <div className="rounded-3xl border border-dashed border-secondary/20 bg-secondary/5 p-5">
+                      <div className="flex items-start gap-4">
+                        <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-secondary/10 text-secondary">
+                          <History aria-hidden="true" className="size-5" />
+                        </span>
+                        <p className="pt-2 text-sm leading-6 text-muted-foreground">
+                          {t("noPracticeLogEntries")}
+                        </p>
+                      </div>
                     </div>
                   ) : (
                     localizedPracticeLogEntries.map((entry) => (
@@ -559,8 +578,15 @@ export default async function StudentDashboardPage() {
               </CardHeader>
               <CardContent className="space-y-3 p-5">
                 {notes.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-border p-4">
-                    <p className="text-sm text-muted-foreground">{t("noNotes")}</p>
+                  <div className="rounded-3xl border border-dashed border-border bg-muted/20 p-5">
+                    <div className="flex items-start gap-4">
+                      <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-secondary/10 text-secondary">
+                        <MessageCircle aria-hidden="true" className="size-5" />
+                      </span>
+                      <p className="pt-2 text-sm leading-6 text-muted-foreground">
+                        {t("noNotes")}
+                      </p>
+                    </div>
                   </div>
                 ) : (
                   notes.map((note) => (
