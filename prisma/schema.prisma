@@ -188,6 +188,9 @@ model Admin {
   assignedStudents       StudentProfile[]
   teacherPrivateNotes    TeacherPrivateNote[]
   signedOffMilestones    StudentMilestone[]
+
+  reviewedApplications    CourseApplication[]
+  applicationStatusEvents CourseApplicationEvent[]
 }
 
 /// A single logged practice session — duration and a short note on what
@@ -393,6 +396,17 @@ enum StudentMilestoneStatus {
   ACHIEVED
 }
 
+/// The lifecycle of a public course application. WAITLISTED is a holding
+/// state, not a terminal one: approving a waitlisted application is the same
+/// action as approving a pending one, so nobody is ever asked to re-apply
+/// just because a place opened up later.
+enum CourseApplicationStatus {
+  PENDING
+  APPROVED
+  WAITLISTED
+  DECLINED
+}
+
 model StudentProfile {
   id             String @id @default(cuid())
   /// Supabase Auth's auth.users.id — the actual login identity for this student.
@@ -419,6 +433,23 @@ model StudentProfile {
   /// history), which over-counted "clicked but abandoned" as activated.
   activatedAt DateTime?
 
+  /// Whether this student may use the Student Portal at all. Deliberately a
+  /// separate fact from `status`: "was approved to be here" and "account is
+  /// currently enabled" are different, and resolveStudentSession() has to be
+  /// able to say which one failed in order to show the right message.
+  /// Re-checked against the DB on every authenticated request, exactly like
+  /// `status` — never trusted from the JWT.
+  ///
+  /// Defaults to false so the ONLY way a newly created row gains access is an
+  /// explicit grant on the approval path. Every row that existed before this
+  /// column was added is backfilled to true by its migration — those students
+  /// were approved by the teacher out of band, before applications existed.
+  portalAccess Boolean @default(false)
+  /// When portal access was granted. Null for rows that predate this column,
+  /// which is why it is nullable rather than defaulting to now() — a backfilled
+  /// timestamp would be a fabricated approval date.
+  approvedAt   DateTime?
+
   /// The teacher this student is currently associated with — one field, not
   /// a feature: no multi-teacher management UI is built on top of this yet.
   /// Nullable rather than backfilled, so existing students aren't silently
@@ -435,6 +466,11 @@ model StudentProfile {
   teacherPrivateNotes TeacherPrivateNote[]
   studentMilestones   StudentMilestone[]
   practiceLogEntries  PracticeLogEntry[]
+
+  /// The application this account was provisioned from, if any. Optional
+  /// because every student created before applications existed (and any the
+  /// teacher still adds directly from /admin/students) has none.
+  courseApplication CourseApplication?
 
   @@index([status])
 }
@@ -730,4 +766,110 @@ model MonthlyLogAttachment {
   createdAt    DateTime   @default(now())
 
   @@index([monthlyLogId])
+}
+
+/// A public course-registration request, submitted from /courses before any
+/// login account exists. Deliberately NOT a ContactSubmission with a special
+/// topic string: an application has a decision lifecycle, a decision-maker, a
+/// private review note and an audit trail, none of which ContactSubmission
+/// models — and mixing them would put applicant PII in the same list as
+/// general contact mail.
+///
+/// No Supabase Auth user and no StudentProfile exist for a row in this table
+/// until it is approved. That is the whole point: applying is not signing up.
+model CourseApplication {
+  id String @id @default(cuid())
+
+  fullName String
+  /// Always stored lower-cased on write. The partial unique index that allows
+  /// only one open application per person indexes lower("email") rather than
+  /// this column raw, so the constraint holds even if a future code path
+  /// forgets to normalise — but lookups must compare on the lowered value to
+  /// match what is stored.
+  email    String
+  phone    String?
+
+  /// The level the APPLICANT asked for — a stated preference, never an
+  /// assignment. StudentProfile.level is set by the teacher at approval and is
+  /// the only one that governs curriculum, so a mistaken self-assessment here
+  /// can never place someone in a level the teacher did not choose.
+  requestedLevel   StudentLevel?
+  /// The applicant's own words about their experience. Shown to the admin;
+  /// never quoted back in any outbound email.
+  applicantMessage String?
+  /// "en" | "am" — validated app-side via src/i18n/locale.ts's isLocale(), the
+  /// same plain-string approach already used for StudentProfile.locale and
+  /// Order.locale rather than a second Prisma enum to keep in sync by hand.
+  /// Every notification about this application is sent in this locale.
+  locale           String       @default("en")
+
+  status CourseApplicationStatus @default(PENDING)
+
+  /// Optional and APPLICANT-VISIBLE: the only decision text ever included in
+  /// an outbound email. Kept as its own column precisely so that the private
+  /// field below can never be reached by the code path that sends one.
+  decisionReason String?
+  /// PRIVATE. Admin-only, for the teacher's own record. Must never appear in
+  /// any applicant- or student-facing payload, email, URL, label or client
+  /// component prop — the same rule TeacherPrivateNote carries.
+  adminNotes     String?
+
+  reviewedAt   DateTime?
+  /// The admin who last decided this application. Taken from the admin session,
+  /// never from client input. SetNull rather than Restrict so removing an admin
+  /// account never blocks on historical applications.
+  reviewedById String?
+  reviewedBy   Admin?    @relation(fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  /// Set exactly once, when approval provisions the account. Its presence is
+  /// the durable record that an account already exists for this application,
+  /// and the first half of the double-approval guard (the second half is the
+  /// conditional status update in the approve route — the check alone is racy).
+  /// Unique so the database itself refuses to attach two applications to one
+  /// student.
+  studentProfileId String?         @unique
+  studentProfile   StudentProfile? @relation(fields: [studentProfileId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  events CourseApplicationEvent[]
+
+  /// NOTE — one more index exists in the database that is not expressible
+  /// here: a partial, functional unique index on lower("email") WHERE status
+  /// IN ('PENDING', 'WAITLISTED'). It allows only one *open* application per
+  /// person, case-insensitively, while still letting a declined applicant
+  /// re-apply later. Prisma has syntax for neither partial nor expression
+  /// indexes, so it lives in the migration SQL only. Do not "fix" its absence
+  /// here by adding @unique to email — that would forbid re-application
+  /// entirely, contradicting the decline email's own wording.
+  @@index([status, createdAt])
+  @@index([email])
+}
+
+/// Append-only audit trail of every status change on an application, so the
+/// admin review page can show who decided what and when. Rows are never
+/// updated or deleted individually; they cascade with their application.
+model CourseApplicationEvent {
+  id            String            @id @default(cuid())
+  applicationId String
+  application   CourseApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  /// Null on the very first row — the applicant's own submission, which has no
+  /// prior state to transition from.
+  fromStatus CourseApplicationStatus?
+  toStatus   CourseApplicationStatus
+
+  /// Null when the actor is the applicant (submission); set for every admin
+  /// decision. Always read from the admin session, never client-suppliable.
+  actorAdminId String?
+  actorAdmin   Admin?  @relation(fields: [actorAdminId], references: [id], onDelete: SetNull)
+
+  /// PRIVATE, same rule as CourseApplication.adminNotes — context the teacher
+  /// records about a decision, never shown to the applicant.
+  note String?
+
+  createdAt DateTime @default(now())
+
+  @@index([applicationId, createdAt])
 }
