@@ -4,7 +4,7 @@ import { Container } from "@/components/marketing/container";
 import { SectionHeading } from "@/components/marketing/section-heading";
 import { CrossPattern } from "@/components/marketing/cross-pattern";
 import { CourseLevelCards } from "@/components/marketing/course-level-cards";
-import { ContactForm } from "@/components/forms/contact-form";
+import { CourseApplicationForm } from "@/components/forms/course-application-form";
 
 export const metadata: Metadata = {
   title: "Courses",
@@ -14,6 +14,7 @@ export const metadata: Metadata = {
 
 export default async function CoursesPage() {
   const t = await getTranslations("courses");
+  const tForm = await getTranslations("courseApplicationForm");
 
   return (
     <>
@@ -41,17 +42,12 @@ export default async function CoursesPage() {
       <section className="bg-muted/40 py-20 sm:py-28">
         <Container className="grid gap-12 lg:grid-cols-2">
           <SectionHeading
-            eyebrow="Enrollment"
-            title="Courses are opening soon"
-            description="We're finishing production on the first cohort of video lessons. Join the waitlist and you'll be the first to know when registration opens — with early access pricing."
+            eyebrow={tForm("eyebrow")}
+            title={tForm("title")}
+            description={tForm("description")}
           />
           <div className="max-w-md rounded-2xl bg-card p-8 ring-1 ring-foreground/10">
-            <ContactForm
-              topic="Course Waitlist"
-              showMessageField={false}
-              submitLabel="Join the waitlist"
-              successMessage="You're on the list — we'll email you as soon as enrollment opens."
-            />
+            <CourseApplicationForm />
           </div>
         </Container>
       </section>

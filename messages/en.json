@@ -213,6 +213,24 @@
     "sending": "Sending…",
     "successMessage": "Thank you — we'll be in touch soon."
   },
+  "courseApplicationForm": {
+    "eyebrow": "Enrollment",
+    "title": "Apply to study with us",
+    "description": "Tell us a little about yourself. We review every application personally and will follow up by email.",
+    "fullName": "Full name",
+    "email": "Email",
+    "phone": "Phone (optional)",
+    "requestedLevel": "Which level are you interested in?",
+    "levelNotSure": "Not sure yet",
+    "levelBeginner": "Beginner",
+    "levelIntermediate": "Intermediate",
+    "levelAdvanced": "Advanced",
+    "applicantMessage": "Tell us about your experience (optional)",
+    "submit": "Apply now",
+    "submitting": "Submitting…",
+    "submissionError": "Something went wrong submitting your application. Please try again.",
+    "successMessage": "Thank you for applying to Abel Kirar Academy. We're reviewing your application and will contact you after a decision is made."
+  },
   "newsletterForm": {
     "emailPlaceholder": "you@email.com",
     "emailLabel": "Email address",
@@ -262,7 +280,11 @@
     "selectAssignment": "Select an assignment to attach this recording to",
     "invalidRecordingType": "Unsupported recording type",
     "invalidRecordingSize": "Invalid recording size",
-    "invalidRecordingPath": "This recording could not be confirmed"
+    "invalidRecordingPath": "This recording could not be confirmed",
+    "fullNameTooLong": "Full name must be 200 characters or fewer",
+    "phoneTooLong": "Phone number must be 30 characters or fewer",
+    "applicantMessageTooLong": "Message must be 2000 characters or fewer",
+    "tooManyApplications": "Too many applications submitted recently. Please try again later."
   },
   "studentLogin": {
     "title": "Student Login",

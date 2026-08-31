@@ -213,6 +213,24 @@
     "sending": "በመላክ ላይ…",
     "successMessage": "እናመሰግናለን — በቅርቡ እናገኝዎታለን።"
   },
+  "courseApplicationForm": {
+    "eyebrow": "ምዝገባ",
+    "title": "ከእኛ ጋር ለመማር ያመልክቱ",
+    "description": "ስለ ራስዎ ጥቂት ይንገሩን። እያንዳንዱን ማመልከቻ በጥንቃቄ ገምግመን ውሳኔውን በኢሜይል እናሳውቅዎታለን።",
+    "fullName": "ሙሉ ስም",
+    "email": "ኢሜይል",
+    "phone": "ስልክ ቁጥር (አማራጭ)",
+    "requestedLevel": "የትኛውን ደረጃ መማር ይፈልጋሉ?",
+    "levelNotSure": "እስካሁን እርግጠኛ አይደለሁም",
+    "levelBeginner": "ጀማሪ",
+    "levelIntermediate": "መካከለኛ",
+    "levelAdvanced": "የላቀ",
+    "applicantMessage": "ስለ ልምድዎ ይንገሩን (አማራጭ)",
+    "submit": "አሁን ያመልክቱ",
+    "submitting": "ማመልከቻው በመላክ ላይ…",
+    "submissionError": "ማመልከቻዎን ስንልክ ችግር ተፈጥሯል። እባክዎ እንደገና ይሞክሩ።",
+    "successMessage": "ለአቤል ክራር አካዳሚ ስላመለከቱ እናመሰግናለን። ማመልከቻዎን እየገመገምን ነው፤ ውሳኔ ከሰጠን በኋላ እናነጋግርዎታለን።"
+  },
   "newsletterForm": {
     "emailPlaceholder": "you@email.com",
     "emailLabel": "የኢሜይል አድራሻ",
@@ -262,7 +280,11 @@
     "selectAssignment": "ይህን ቀረጻ ለማያያዝ አንድ ስራ ይምረጡ",
     "invalidRecordingType": "ይህ የቀረጻ አይነት አይደገፍም",
     "invalidRecordingSize": "የቀረጻው መጠን ትክክል አይደለም",
-    "invalidRecordingPath": "ይህን ቀረጻ ማረጋገጥ አልተቻለም"
+    "invalidRecordingPath": "ይህን ቀረጻ ማረጋገጥ አልተቻለም",
+    "fullNameTooLong": "ሙሉ ስምዎ ከ200 ፊደላት መብለጥ የለበትም።",
+    "phoneTooLong": "የስልክ ቁጥርዎ ከ30 ፊደላት መብለጥ የለበትም።",
+    "applicantMessageTooLong": "መልእክትዎ ከ2000 ፊደላት መብለጥ የለበትም።",
+    "tooManyApplications": "በቅርቡ ብዙ ማመልከቻዎች ቀርበዋል። እባክዎ ትንሽ ቆይተው እንደገና ይሞክሩ።"
   },
   "studentLogin": {
     "title": "የተማሪ መግቢያ",
