@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Check } from "lucide-react";
 import { COURSE_LEVELS } from "@/lib/courses-data";
 import { Container } from "@/components/marketing/container";
 import { CrossPattern } from "@/components/marketing/cross-pattern";
 import { Badge } from "@/components/ui/badge";
-import { ContactForm } from "@/components/forms/contact-form";
+import { CourseApplicationForm } from "@/components/forms/course-application-form";
 
 export function generateStaticParams() {
   return COURSE_LEVELS.map((course) => ({ slug: course.slug }));
@@ -29,6 +30,7 @@ export default async function CourseDetailPage({
   const { slug } = await params;
   const course = COURSE_LEVELS.find((c) => c.slug === slug);
   if (!course) notFound();
+  const tForm = await getTranslations("courseApplicationForm");
 
   return (
     <>
@@ -67,19 +69,13 @@ export default async function CourseDetailPage({
           </div>
 
           <div className="h-fit max-w-md rounded-2xl bg-card p-8 ring-1 ring-foreground/10">
-            <h2 className="font-heading text-xl font-semibold">
-              Join the {course.title} waitlist
-            </h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Be first to know when this course opens for enrollment.
+            <p className="mb-2 text-xs font-medium uppercase tracking-[0.2em] text-accent">
+              {tForm("eyebrow")}
             </p>
+            <h2 className="font-heading text-xl font-semibold">{tForm("title")}</h2>
+            <p className="mt-2 text-sm text-muted-foreground">{tForm("description")}</p>
             <div className="mt-6">
-              <ContactForm
-                topic={`Course Waitlist — ${course.title}`}
-                showMessageField={false}
-                submitLabel="Join the waitlist"
-                successMessage="You're on the list — we'll email you as soon as enrollment opens."
-              />
+              <CourseApplicationForm defaultRequestedLevel={course.studentLevel} />
             </div>
           </div>
         </Container>

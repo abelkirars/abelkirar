@@ -1,3 +1,9 @@
+// `type` here is load-bearing, not stylistic: this module is imported from
+// src/app/courses/[slug]/page.tsx and is reachable from client components.
+// A value import of StudentLevel would pull the generated Prisma client into
+// a browser bundle; a type-only import is erased entirely at compile time.
+import type { StudentLevel } from "@prisma/client";
+
 export interface CourseLevel {
   slug: string;
   level: string;
@@ -6,6 +12,10 @@ export interface CourseLevel {
   description: string;
   topics: string[];
   price: number;
+  /// Written literally per record — never derived from slug, title, or
+  /// `level` above. Those are independent display copy; this is the one
+  /// field this data model declares as actually meaning a StudentLevel.
+  studentLevel: StudentLevel;
 }
 
 export const COURSE_LEVELS: CourseLevel[] = [
@@ -26,6 +36,7 @@ export const COURSE_LEVELS: CourseLevel[] = [
       "Basic songs",
     ],
     price: 7000,
+    studentLevel: "BEGINNER",
   },
   {
     slug: "intermediate",
@@ -43,6 +54,7 @@ export const COURSE_LEVELS: CourseLevel[] = [
       "Developing personal style",
     ],
     price: 8500,
+    studentLevel: "INTERMEDIATE",
   },
   {
     slug: "advanced",
@@ -59,5 +71,6 @@ export const COURSE_LEVELS: CourseLevel[] = [
       "Recording and performing professionally",
     ],
     price: 10000,
+    studentLevel: "ADVANCED",
   },
 ];

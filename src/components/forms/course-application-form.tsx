@@ -14,7 +14,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel, FieldError } from "@/components/ui/field";
 
-export function CourseApplicationForm() {
+export function CourseApplicationForm({
+  defaultRequestedLevel,
+}: {
+  defaultRequestedLevel?: CreateCourseApplicationInput["requestedLevel"];
+} = {}) {
   const t = useTranslations("courseApplicationForm");
   const tValidation = useTranslations("validation");
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
@@ -32,7 +36,17 @@ export function CourseApplicationForm() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<CreateCourseApplicationInput>({ resolver });
+  } = useForm<CreateCourseApplicationInput>({
+    resolver,
+    // The <select> below intentionally carries no defaultValue attribute —
+    // that would be a second, competing source of the field's initial
+    // value and would win over this one at first render. With no prop,
+    // requestedLevel is undefined here, and undefined does not match any
+    // option's value, so the browser falls back to the first <option> in
+    // source order — the "" / "Not sure yet" option — exactly the same
+    // outcome as before this prop existed.
+    defaultValues: { requestedLevel: defaultRequestedLevel },
+  });
 
   async function onSubmit(data: CreateCourseApplicationInput) {
     try {
@@ -97,7 +111,6 @@ export function CourseApplicationForm() {
             {...register("requestedLevel")}
             aria-invalid={Boolean(errors.requestedLevel)}
             className="h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1 text-base transition-colors outline-none file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:bg-input/30 dark:disabled:bg-input/80 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40"
-            defaultValue=""
           >
             <option value="">{t("levelNotSure")}</option>
             <option value="BEGINNER">{t("levelBeginner")}</option>
