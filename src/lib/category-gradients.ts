@@ -15,9 +15,9 @@ const LABELS: Record<string, string> = {
   MESENKO: "Masenqo",
   TSENATSL: "Tsenatsl",
   MEKWAMIYA: "Mekwamiya",
-  PICK_UPS: "Pick Ups",
+  PICK_UPS: "Pickups",
   KABA: "Kaba",
-  OTHER: "Other",
+  OTHER: "Wind & Percussion",
 };
 
 export function categoryLabel(category: string): string {

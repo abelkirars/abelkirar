@@ -131,7 +131,7 @@ async function main() {
           slug: "tsenatsl",
           name: "Tsenatsl",
           category: "TSENATSL",
-          description: "Tsenatsl - traditional Ethiopian percussion instrument.",
+          description: "Tsenatsl — a shaken metal sistrum (idiophone) used in Ethiopian Orthodox church worship.",
           basePrice: 20000,
           images: [
             "https://ghscuszbdddxsxtxywdm.supabase.co/storage/v1/object/public/product-images/tsenatsl.png",
@@ -142,7 +142,7 @@ async function main() {
           slug: "mekwamiya",
           name: "Mekwamiya",
           category: "MEKWAMIYA",
-          description: "Mekwamiya - spiritual Ethiopian wind instrument.",
+          description: "Mekwamiya — a liturgical prayer and chanting staff used in Ethiopian Orthodox worship.",
           basePrice: 20000,
           images: [
             "https://ghscuszbdddxsxtxywdm.supabase.co/storage/v1/object/public/product-images/mekwamiya.png",
@@ -151,9 +151,9 @@ async function main() {
         },
         {
           slug: "pick-ups",
-          name: "Pick Ups",
+          name: "Pickups",
           category: "PICK_UPS",
-          description: "Pick Ups - essential accessory for string instruments.",
+          description: "Pickups - essential accessory for string instruments.",
           basePrice: 10000,
           images: [
             "https://ghscuszbdddxsxtxywdm.supabase.co/storage/v1/object/public/product-images/pick-ups.png",
@@ -164,7 +164,7 @@ async function main() {
           slug: "kaba",
           name: "Kaba",
           category: "KABA",
-          description: "Kaba - traditional Ethiopian drum instrument.",
+          description: "Kaba — traditional Ethiopian ceremonial clothing worn for special and religious occasions.",
           basePrice: 20000,
           images: [
             "https://ghscuszbdddxsxtxywdm.supabase.co/storage/v1/object/public/product-images/kaba.png",

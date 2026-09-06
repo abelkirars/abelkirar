@@ -3,7 +3,7 @@ export const INSTRUMENT_CATEGORIES = [
     id: "KIRAR",
     name: "Kirar",
     description:
-      "The six-string lyre at the heart of Ethiopian spiritual music — handcrafted and tuned for worship.",
+      "A traditional Ethiopian lyre, handcrafted for accompanying Orthodox chanting.",
   },
   {
     id: "BEGENA",
@@ -15,6 +15,6 @@ export const INSTRUMENT_CATEGORIES = [
     id: "MESENKO",
     name: "Masenqo",
     description:
-      "A single-string bowed instrument, compact and expressive, built for traveling musicians.",
+      "A compact, expressive single-string bowed instrument made for players who travel.",
   },
 ] as const;
