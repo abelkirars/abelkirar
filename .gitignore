@@ -65,4 +65,8 @@ remotion/
 # Locally-saved admin credentials — never commit
 ADMIN_PASSWORD.txt
 
+# Confidential teaching source material must stay outside the repository.
+**/Abel Kirar Academy Curriculum Manual*
+private-curriculum/
+
 .vercel

@@ -19,6 +19,7 @@ export function NewsletterForm({
   const t = useTranslations("newsletterForm");
   const tValidation = useTranslations("validation");
   const [status, setStatus] = useState<"idle" | "success">("idle");
+  const [submissionError, setSubmissionError] = useState(false);
   const {
     register,
     handleSubmit,
@@ -30,15 +31,18 @@ export function NewsletterForm({
   });
 
   async function onSubmit(data: NewsletterInput) {
-    const res = await fetch("/api/newsletter", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    if (res.ok) {
-      setStatus("success");
-      reset({ email: "", source });
-    }
+    setSubmissionError(false);
+    try {
+      const res = await fetch("/api/newsletter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (res.ok) {
+        setStatus("success");
+        reset({ email: "", source });
+      } else setSubmissionError(true);
+    } catch { setSubmissionError(true); }
   }
 
   if (status === "success") {
@@ -50,6 +54,7 @@ export function NewsletterForm({
       <Field orientation="responsive">
         <Input
           type="email"
+          className="bg-background text-foreground"
           placeholder={t("emailPlaceholder")}
           aria-label={t("emailLabel")}
           {...register("email")}
@@ -59,6 +64,7 @@ export function NewsletterForm({
         </Button>
       </Field>
       <FieldError errors={[errors.email]} />
+      {submissionError && <p role="alert" className="text-sm">{t("submissionError")}</p>}
     </form>
   );
 }

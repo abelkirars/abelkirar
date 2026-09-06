@@ -18,22 +18,20 @@ export interface CourseLevel {
   studentLevel: StudentLevel;
 }
 
+// Public marketing copy, also reachable from browser bundles. Keep only broad
+// outcomes here; never import teaching manuals, lesson sequences or assessments.
 export const COURSE_LEVELS: CourseLevel[] = [
   {
     slug: "beginner",
     level: "Level 1",
     title: "Beginner",
-    tagline: "Start from silence",
+    tagline: "Build your foundation",
     description:
-      "Build the foundation: how the Kirar is held, tuned, and played, and how it carries Ethiopian Orthodox worship.",
+      "Build a reliable foundation for playing Kirar and accompanying Orthodox chanting.",
     topics: [
-      "Introduction to the Kirar and its history",
-      "The Kirar in Ethiopian music and church tradition",
-      "Hand placement and finger technique",
-      "Tuning the Kirar",
-      "Understanding keys and measures",
-      "Learning scales, including Tizita",
-      "Basic songs",
+      "Build confidence playing the Kirar",
+      "Develop a consistent practice habit",
+      "Begin accompanying Ethiopian Orthodox chanting",
     ],
     price: 7000,
     studentLevel: "BEGINNER",
@@ -42,16 +40,13 @@ export const COURSE_LEVELS: CourseLevel[] = [
     slug: "intermediate",
     level: "Level 2",
     title: "Intermediate",
-    tagline: "Find your voice",
+    tagline: "Strengthen your playing",
     description:
-      "Sharpen technique and rhythm, and begin playing alongside singers with a tone and style of your own.",
+      "Strengthen your control, listening, and confidence while accompanying Orthodox chanting.",
     topics: [
-      "More advanced techniques",
-      "Rhythm development",
-      "Playing spiritual songs",
-      "Improving tone quality",
-      "Playing with singers",
-      "Developing personal style",
+      "Develop a more confident and expressive sound",
+      "Strengthen listening and consistency",
+      "Grow in confidence accompanying worship",
     ],
     price: 8500,
     studentLevel: "INTERMEDIATE",
@@ -60,15 +55,13 @@ export const COURSE_LEVELS: CourseLevel[] = [
     slug: "advanced",
     level: "Level 3",
     title: "Advanced",
-    tagline: "Lead worship",
+    tagline: "Prepare to serve",
     description:
-      "Professional technique, complex rhythm and arrangement, and the performance skills to lead in church.",
+      "Refine your playing and judgement as you prepare for greater responsibility in church.",
     topics: [
-      "Professional Kirar techniques",
-      "Complex rhythms",
-      "Advanced arrangements",
-      "Church performance skills",
-      "Recording and performing professionally",
+      "Refine playing quality and judgement",
+      "Prepare for greater responsibility in church",
+      "Develop confidence serving alongside singers and other Kirar players",
     ],
     price: 10000,
     studentLevel: "ADVANCED",

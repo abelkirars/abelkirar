@@ -15,78 +15,85 @@
     "openMenu": "Open menu"
   },
   "footer": {
-    "tagline": "Preserving and teaching Ethiopian Orthodox spiritual music for the diaspora, one Kirar at a time.",
-    "joinCommunity": "Join the community",
-    "joinCommunityDescription": "Lessons, new instruments, and gathering invitations — a few times a month.",
+    "tagline": "Online Kirar lessons for accompanying Ethiopian Orthodox chanting, led by Deacon Abel (Abelkirar).",
+    "joinCommunity": "Stay connected",
+    "joinCommunityDescription": "Get updates about Kirar lessons and new handmade instruments.",
     "copyright": "© {year} Abelkirar. All rights reserved."
   },
   "hero": {
-    "eyebrow": "Ethiopian Orthodox Spiritual Music",
-    "title": "Learn the Kirar. Carry the tradition forward.",
-    "description": "Abelkirar trains the Ethiopian and Eritrean Orthodox diaspora to play the Kirar with skill and reverence — so worship sounds the way it was always meant to.",
+    "eyebrow": "Online Kirar Lessons",
+    "title": "Learn Kirar for Orthodox chanting.",
+    "description": "Learn online with Deacon Abel (Abelkirar). Build the skill and confidence to accompany mezmur and prepare to serve in church.",
     "startLearning": "Start Learning",
-    "buyInstruments": "Buy Instruments",
+    "contactAbel": "Contact Deacon Abel",
     "joinCommunity": "Join Community"
   },
   "mission": {
-    "eyebrow": "Our Mission",
-    "title": "Preserving Ethiopian spiritual music, one musician at a time",
-    "paragraph1": "Abelkirar exists to train Kirar players wherever the Ethiopian and Eritrean Orthodox diaspora has gathered — so that worship in churches across the United States, the United Kingdom, and Europe is carried by musicians who play with real skill and understanding.",
-    "paragraph2": "Abelkirar is led by a Kirar musician and Ethiopian Orthodox Church Deacon, teaching the instrument the way it has always been taught — by ear, by tradition, and in service of the liturgy — combined with structured, modern online lessons.",
-    "readOurStory": "Read our story",
-    "quote": "“Music that carries the liturgy shouldn’t be left to chance.”"
+    "eyebrow": "Why Abelkirar",
+    "title": "Helping more Kirar players prepare to serve",
+    "paragraph1": "Deacon Abel began learning Kirar through YouTube videos in 2012 of the Ethiopian calendar. Today, he teaches students online wherever they live.",
+    "paragraph2": "The purpose is clear: help students play Kirar with care, accompany Orthodox chanting, and grow ready to serve in their church.",
+    "readOurStory": "Meet Deacon Abel",
+    "quote": "Kirar lessons rooted in Orthodox service."
   },
   "home": {
-    "coursesEyebrow": "Online Courses",
-    "coursesTitle": "A curriculum built for every stage",
-    "coursesDescription": "From your first scale to leading worship, structured for the Ethiopian and Eritrean diaspora — kids and adults alike.",
+    "coursesEyebrow": "Online Kirar Lessons",
+    "coursesTitle": "Training for each stage of your playing",
+    "coursesDescription": "Begin with the foundations, strengthen your playing, or prepare for greater responsibility in church. Tell Deacon Abel about your experience when you apply.",
     "instrumentsEyebrow": "Handmade Instruments",
-    "instrumentsTitle": "Instruments built for worship, made to order",
-    "instrumentsDescription": "Kirar, Begena, and Masenqo, customized in shape, finish, and size, and shipped to the US, UK, and Europe."
+    "instrumentsTitle": "Choose an instrument made for your needs",
+    "instrumentsDescription": "Order a Kirar, Begena, or Masenqo in the shape, finish, and size that suits you. Shipping is available to the US, UK, and Europe."
   },
   "courseLevels": {
-    "exploreCurriculum": "Explore curriculum",
+    "exploreCurriculum": "View course overview",
     "beginner": {
       "level": "Level 1",
       "title": "Beginner",
-      "tagline": "Start from silence",
-      "description": "Build the foundation: how the Kirar is held, tuned, and played, and how it carries Ethiopian Orthodox worship."
+      "tagline": "Build your foundation",
+      "description": "Learn the foundations of playing Kirar and begin accompanying Orthodox chanting."
     },
     "intermediate": {
       "level": "Level 2",
       "title": "Intermediate",
-      "tagline": "Find your voice",
-      "description": "Sharpen technique and rhythm, and begin playing alongside singers with a tone and style of your own."
+      "tagline": "Strengthen your playing",
+      "description": "Improve control, listening, and confidence as you learn to accompany chanting."
     },
     "advanced": {
       "level": "Level 3",
       "title": "Advanced",
-      "tagline": "Lead worship",
-      "description": "Professional technique, complex rhythm and arrangement, and the performance skills to lead in church."
+      "tagline": "Prepare to serve",
+      "description": "Refine your playing and judgement for greater responsibility in church."
     }
   },
   "instrumentCategories": {
     "shopCategory": "Shop {category}"
   },
   "community": {
-    "title": "A community for Kirar players, wherever they live",
-    "description": "Monthly online gatherings, student performances, and workshops with guest Ethiopian musicians — built for a diaspora scattered across continents but united in worship.",
-    "cta": "Explore the community"
+    "title": "Not sure where to begin?",
+    "description": "Tell Deacon Abel about your experience, the Kirar you have, and what you want to learn. He can help you choose the right next step.",
+    "cta": "Contact Deacon Abel"
   },
   "store": {
     "eyebrow": "The Store",
-    "title": "Handmade instruments, built for worship",
-    "description": "Every instrument is made to order and customizable in shape, finish, and size. We ship to the United States, United Kingdom, and Europe.",
+    "title": "Handmade instruments",
+    "description": "Made to order. Customized for you. Shipped to the US, UK & Europe.",
     "empty": "New instruments are being added soon — check back shortly.",
     "from": "From ${price}",
-    "view": "View",
+    "view": "View details",
     "chooseOptions": "Choose from {count} {label} options, each handcrafted and customizable.",
     "searchPlaceholder": "Search instruments…",
     "searchLabel": "Search",
     "clearSearch": "Clear search",
-    "noResults": "No instruments found for “{query}”."
+    "noResults": "No instruments found for “{query}”.",
+    "unavailableTitle": "The store is temporarily unavailable",
+    "unavailableDescription": "We cannot load current products and prices right now. Please try again shortly, or contact us about an instrument.",
+    "retry": "Try again",
+    "contact": "Contact us",
+    "production": "Production time confirmed with your order",
+    "shipping": "Ships to the US, UK & Europe"
   },
   "product": {
+    "quantityLimit": "Maximum {count} of each configuration per order.",
     "qty": "Qty",
     "addToCart": "Add to cart",
     "addedToCart": "Added to cart",
@@ -199,9 +206,13 @@
     "description": "Questions about courses, custom instruments, or anything else — we’d love to hear from you."
   },
   "courses": {
+    "overviewHeading": "Course overview",
     "eyebrow": "Online Kirar Courses",
-    "title": "From your first scale to leading worship",
-    "description": "Three structured levels, built for kids and adults, Ethiopian and Eritrean diaspora, and anyone drawn to the Kirar."
+    "title": "From your first lesson to serving with Kirar",
+    "description": "Three lesson levels for children and adults who want to play Kirar and accompany Orthodox chanting.",
+    "waitlistLabel": "Apply for Kirar lessons",
+    "availability": "Submit an application and tell us about your experience. Deacon Abel will contact you about the right level, availability, schedule, and fees before enrollment. No payment is required to apply.",
+    "strings": "Kirar instruments come in five-string and six-string forms. Tell us which model you play when applying so Deacon Abel can confirm the right lesson setup."
   },
   "contactForm": {
     "name": "Name",
@@ -211,12 +222,13 @@
     "messagePlaceholder": "Tell us a bit about what you're looking for…",
     "send": "Send",
     "sending": "Sending…",
-    "successMessage": "Thank you — we'll be in touch soon."
+    "successMessage": "Thank you — we'll be in touch soon.",
+    "submissionError": "We could not confirm your submission. Your details are still here — please try again shortly."
   },
   "courseApplicationForm": {
-    "eyebrow": "Enrollment",
-    "title": "Apply to study with us",
-    "description": "Tell us a little about yourself. We review every application personally and will follow up by email.",
+    "eyebrow": "Lesson application",
+    "title": "Apply for Kirar Lessons",
+    "description": "Tell Deacon Abel about your experience and which Kirar model you play. He will contact you about the right level and availability.",
     "fullName": "Full name",
     "email": "Email",
     "phone": "Phone (optional)",
@@ -226,33 +238,34 @@
     "levelIntermediate": "Intermediate",
     "levelAdvanced": "Advanced",
     "applicantMessage": "Tell us about your experience (optional)",
-    "submit": "Apply now",
+    "submit": "Send application",
     "submitting": "Submitting…",
     "submissionError": "Something went wrong submitting your application. Please try again.",
-    "successMessage": "Thank you for applying to Abel Kirar Academy. We're reviewing your application and will contact you after a decision is made."
+    "successMessage": "Thank you — we received your application. Deacon Abel will contact you about the next step."
   },
   "newsletterForm": {
     "emailPlaceholder": "you@email.com",
     "emailLabel": "Email address",
-    "join": "Join the community",
-    "joining": "Joining…",
-    "success": "Thank you — check your inbox for a welcome note."
+    "join": "Get updates",
+    "joining": "Signing up…",
+    "success": "Thank you — check your inbox for the confirmation.",
+    "submissionError": "We could not confirm your submission. Your details are still here — please try again shortly."
   },
   "about": {
-    "eyebrow": "About Abelkirar",
-    "title": "A Deacon, a Kirar player, and a tradition worth carrying forward",
-    "paragraph1": "Abelkirar is led by an Ethiopian Orthodox Church Deacon and Kirar musician.",
-    "paragraph2": "Serving the church revealed a gap that shaped Abelkirar’s mission: too many congregations, especially in the diaspora, lack musicians trained to play the Kirar well. Hymns that should lift a service often fall flat — not from a lack of devotion, but from a lack of structured teaching.",
-    "paragraph3": "Abelkirar was built to close that gap: rigorous, structured Kirar education, delivered online, for Ethiopian and Eritrean Orthodox communities wherever they’ve settled — from parish halls in Addis Ababa to living rooms in the United States and United Kingdom.",
-    "whyEyebrow": "Why It Matters",
-    "whyTitle": "Preservation is an active choice, not a memory",
-    "whyDescription": "Ethiopian Orthodox spiritual music has survived centuries. It survives the next century only if it's taught deliberately — to the diaspora, to the next generation, and to anyone drawn to it.",
-    "preserve": "Preserve",
-    "preserveDescription": "Keep the traditional playing techniques, scales, and church repertoire intact and accurately taught.",
-    "teach": "Teach",
-    "teachDescription": "Structured, level-based online courses that take a student from silence to leading worship.",
-    "modernize": "Modernize",
-    "modernizeDescription": "Bring the Kirar to a global, digitally-connected diaspora without losing what makes it sacred."
+    "eyebrow": "About Deacon Abel",
+    "title": "Meet Deacon Abel (Abelkirar)",
+    "paragraph1": "I began learning Kirar through YouTube videos in 2012 of the Ethiopian calendar.",
+    "paragraph2": "Today I teach Kirar online to students who want to accompany Orthodox chanting and prepare to serve in church. Each student begins from their current level.",
+    "paragraph3": "Abelkirar is especially for Ethiopian and Eritrean Orthodox communities outside Ethiopia, where a Kirar teacher may not be nearby. You can apply online and contact me with questions before you begin.",
+    "whyEyebrow": "The Purpose",
+    "whyTitle": "Learn Kirar with service in mind",
+    "whyDescription": "The lessons focus on careful playing, steady progress, and the role of Kirar in accompanying Orthodox chanting.",
+    "learn": "Learn",
+    "learnDescription": "Build reliable Kirar playing through lessons matched to your current level.",
+    "accompany": "Accompany",
+    "accompanyDescription": "Learn to support mezmur and Orthodox chanting with care.",
+    "serve": "Serve",
+    "serveDescription": "Prepare to use what you learn in church with confidence and responsibility."
   },
   "passwordToggle": {
     "show": "Show password",
@@ -438,5 +451,11 @@
       "cta": "Reset your password",
       "expiryNotice": "This link will expire after a while. If you didn't request this, you can safely ignore this email."
     }
+  },
+  "pageError": {
+    "title": "We couldn’t load this page",
+    "description": "Please try again, or contact us if the problem continues.",
+    "retry": "Try again",
+    "contact": "Contact us"
   }
 }

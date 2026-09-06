@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { PublishedMedia } from "@/components/marketing/site-media";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { Container } from "@/components/marketing/container";
@@ -18,7 +20,7 @@ export default async function CoursesPage() {
 
   return (
     <>
-      <section className="relative overflow-hidden bg-gradient-to-b from-[#241b12] to-[#1b140d] py-24 text-[#f3e9d2] sm:py-32">
+      <section className="relative overflow-hidden bg-gradient-to-b from-[#241b12] to-[#1b140d] py-16 text-[#f3e9d2] sm:py-32">
         <CrossPattern className="text-[#d4a84b] opacity-[0.08]" />
         <Container className="relative">
           <p className="text-sm font-medium tracking-[0.25em] text-[#d4a84b] uppercase">
@@ -33,13 +35,18 @@ export default async function CoursesPage() {
         </Container>
       </section>
 
-      <section className="py-20 sm:py-28">
+      <Suspense fallback={null}><PublishedMedia slot="teacher-photo" /></Suspense>
+      <Suspense fallback={null}><PublishedMedia slot="course-sample" /></Suspense>
+      <Suspense fallback={null}><PublishedMedia slot="kirar-audio" /></Suspense>
+      <section className="py-14 sm:py-24">
         <Container>
           <CourseLevelCards />
+          <p className="mx-auto mt-8 max-w-2xl text-center text-muted-foreground">{t("availability")}</p>
+          <p className="mx-auto mt-4 max-w-2xl text-center text-muted-foreground">{t("strings")}</p>
         </Container>
       </section>
 
-      <section className="bg-muted/40 py-20 sm:py-28">
+      <section id="waitlist" className="scroll-mt-20 bg-muted/40 py-14 sm:py-24">
         <Container className="grid gap-12 lg:grid-cols-2">
           <SectionHeading
             eyebrow={tForm("eyebrow")}
