@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { MAX_CART_QUANTITY, normalizeCartQuantity } from "@/lib/cart-quantity";
+import { formatUsd } from "@/lib/money";
 import { cn } from "@/lib/utils";
 
 type PaymentRegion = "US" | "EUROZONE";
@@ -18,6 +20,7 @@ type UsPaymentMethod = "ZELLE" | "CASH_APP";
 
 export default function CartPage() {
   const t = useTranslations("cart");
+  const productT = useTranslations("product");
   const { items, removeItem, setQuantity, toggleSelected, setAllSelected } = useCartStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -103,7 +106,7 @@ export default function CartPage() {
         <div>
           <h1 className="font-heading text-3xl font-semibold">{t("title")}</h1>
 
-          <label className="mt-8 flex w-fit items-center gap-2 text-sm font-medium">
+          <label className="mt-8 flex min-h-12 w-fit items-center gap-2 text-sm font-medium">
             <Checkbox
               checked={allSelected}
               indeterminate={selectAllIndeterminate}
@@ -116,12 +119,13 @@ export default function CartPage() {
           <ul className="mt-4 divide-y divide-border">
             {items.map((item) => (
               <li key={item.lineId} className="flex gap-4 py-6">
+                <label className="flex size-12 shrink-0 cursor-pointer items-center justify-center">
                 <Checkbox
                   checked={item.selected}
                   onCheckedChange={() => toggleSelected(item.lineId)}
                   aria-label={t("selectItem", { name: item.name })}
-                  className="mt-1 shrink-0"
                 />
+                </label>
                 <div className="min-w-0 flex-1">
                   <p className="font-medium">{item.name}</p>
                   {item.customizationSummary && (
@@ -133,17 +137,19 @@ export default function CartPage() {
                     <Input
                       type="number"
                       min={1}
-                      max={10}
+                      max={MAX_CART_QUANTITY}
+                      step={1}
+                      aria-label={`${productT("qty")}: ${item.name}`}
                       value={item.quantity}
                       onChange={(e) =>
-                        setQuantity(item.lineId, Math.max(1, Number(e.target.value) || 1))
+                        setQuantity(item.lineId, normalizeCartQuantity(Number(e.target.value)))
                       }
                       className="w-16"
                     />
                     <button
                       type="button"
                       onClick={() => removeItem(item.lineId)}
-                      className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-destructive"
+                      className="inline-flex min-h-12 items-center gap-1 px-2 text-sm text-muted-foreground hover:text-destructive"
                     >
                       <Trash2 className="size-4" />
                       {t("remove")}
@@ -151,38 +157,47 @@ export default function CartPage() {
                   </div>
                 </div>
                 <p className="font-medium">
-                  ${((item.unitPrice * item.quantity) / 100).toFixed(0)}
+                  {formatUsd(item.unitPrice * item.quantity)}
                 </p>
               </li>
             ))}
           </ul>
         </div>
 
-        <div className="h-fit space-y-6 rounded-2xl bg-card p-8 ring-1 ring-foreground/10">
+        <div className="h-fit space-y-6 rounded-2xl bg-card p-5 sm:p-8 ring-1 ring-foreground/10">
           <div>
             <p className="text-sm text-muted-foreground">
               {t("itemsSelected", { count: selectedItemCount, total: cartTotalItems(items) })}
             </p>
             <div className="mt-1 flex items-center justify-between text-lg font-medium">
               <span>{t("total")}</span>
-              <span>${(total / 100).toFixed(0)}</span>
+              <span>{formatUsd(total)}</span>
             </div>
           </div>
 
           <div className="space-y-3 border-t border-border pt-6">
             <Label>{t("contactDetails")}</Label>
+            <Label htmlFor="customer-name">{t("fullName")}</Label>
             <Input
+              id="customer-name"
+              autoComplete="name"
               placeholder={t("fullName")}
               value={customerName}
               onChange={(e) => setCustomerName(e.target.value)}
             />
+            <Label htmlFor="customer-email">{t("emailAddress")}</Label>
             <Input
+              id="customer-email"
+              autoComplete="email"
               type="email"
               placeholder={t("emailAddress")}
               value={customerEmail}
               onChange={(e) => setCustomerEmail(e.target.value)}
             />
+            <Label htmlFor="customer-phone">{t("phoneNumber")}</Label>
             <Input
+              id="customer-phone"
+              autoComplete="tel"
               type="tel"
               placeholder={t("phoneNumber")}
               value={customerPhone}
@@ -197,9 +212,10 @@ export default function CartPage() {
                 <button
                   key={region}
                   type="button"
+                  aria-pressed={paymentRegion === region}
                   onClick={() => setPaymentRegion(region)}
                   className={cn(
-                    "flex-1 rounded-md border px-3 py-2 text-sm transition-colors",
+                    "min-h-12 flex-1 rounded-md border px-3 py-2 text-sm transition-colors",
                     paymentRegion === region
                       ? "border-primary bg-primary/10 text-foreground"
                       : "border-border text-muted-foreground hover:border-primary/50"
@@ -221,9 +237,10 @@ export default function CartPage() {
                     <button
                       key={method}
                       type="button"
+                      aria-pressed={usPaymentMethod === method}
                       onClick={() => setUsPaymentMethod(method)}
                       className={cn(
-                        "flex-1 rounded-md border px-3 py-2 text-sm transition-colors",
+                        "min-h-12 flex-1 rounded-md border px-3 py-2 text-sm transition-colors",
                         usPaymentMethod === method
                           ? "border-primary bg-primary/10 text-foreground"
                           : "border-border text-muted-foreground hover:border-primary/50"
@@ -247,7 +264,7 @@ export default function CartPage() {
           {selectedItems.length === 0 && (
             <p className="text-sm text-destructive">{t("noItemsSelected")}</p>
           )}
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
 
           <Button
             size="lg"
