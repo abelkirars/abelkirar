@@ -14,7 +14,7 @@ export function Hero() {
     <section className="relative overflow-hidden bg-gradient-to-b from-[#241b12] to-[#1b140d] text-[#f3e9d2]">
       <CrossPattern className="text-[#d4a84b] opacity-[0.08]" />
 
-      <Container className="relative flex min-h-[82vh] flex-col justify-center gap-8 py-28">
+      <Container className="relative flex min-h-[82vh] flex-col justify-center gap-6 py-16 sm:gap-8 sm:py-28">
         <motion.p
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -46,27 +46,18 @@ export function Hero() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.3 }}
-          className="flex flex-wrap items-center gap-4 pt-2"
+          className="flex w-full flex-col gap-3 pt-2 sm:w-auto sm:flex-row sm:items-center sm:gap-4"
         >
-          <Button size="lg" nativeButton={false} render={<Link href="/courses" />}>
+          <Button size="lg" nativeButton={false} render={<Link href="/courses#waitlist" />}>
             {t("startLearning")}
           </Button>
           <Button
             size="lg"
             nativeButton={false}
             className="border-[#f3e9d2]/25 bg-transparent text-[#f3e9d2] hover:bg-[#f3e9d2]/10"
-            render={<Link href="/store" />}
+            render={<Link href="/contact" />}
           >
-            {t("buyInstruments")}
-          </Button>
-          <Button
-            size="lg"
-            variant="ghost"
-            nativeButton={false}
-            className="text-[#f3e9d2] hover:bg-[#f3e9d2]/10 hover:text-[#f3e9d2]"
-            render={<Link href="/community" />}
-          >
-            {t("joinCommunity")}
+            {t("contactAbel")}
           </Button>
         </motion.div>
       </Container>

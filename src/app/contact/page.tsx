@@ -15,7 +15,7 @@ export default async function ContactPage() {
 
   return (
     <>
-      <section className="relative overflow-hidden bg-gradient-to-b from-[#241b12] to-[#1b140d] py-24 text-[#f3e9d2] sm:py-32">
+      <section className="relative overflow-hidden bg-gradient-to-b from-[#241b12] to-[#1b140d] py-16 text-[#f3e9d2] sm:py-32">
         <CrossPattern className="text-[#d4a84b] opacity-[0.08]" />
         <Container className="relative">
           <p className="text-sm font-medium tracking-[0.25em] text-[#d4a84b] uppercase">
@@ -30,7 +30,7 @@ export default async function ContactPage() {
         </Container>
       </section>
 
-      <section className="py-20 sm:py-28">
+      <section className="py-14 sm:py-24">
         <Container className="max-w-xl">
           <div className="rounded-2xl bg-card p-8 ring-1 ring-foreground/10">
             <ContactForm topic="General" />

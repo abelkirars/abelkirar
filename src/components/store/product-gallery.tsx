@@ -49,6 +49,8 @@ export function ProductGallery({
         category={category}
         name={name}
         className={className}
+        loading="eager"
+        sizes="(min-width: 1280px) 576px, (min-width: 1024px) 50vw, 100vw"
       />
       {images.length > 1 && (
         <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
@@ -64,7 +66,7 @@ export function ProductGallery({
                 image === displayImage ? "ring-primary" : "ring-transparent hover:ring-border"
               )}
             >
-              <Image src={image} alt="" fill className="object-cover" />
+              <Image src={image} alt="" fill sizes="(min-width: 640px) 80px, 64px" className="object-cover" />
             </button>
           ))}
         </div>

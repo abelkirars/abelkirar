@@ -17,12 +17,12 @@ export function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/90 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6 xl:px-8">
         <Link href="/" className="font-heading text-xl font-semibold tracking-tight">
           {t("brand")}
         </Link>
 
-        <nav className="hidden items-center gap-1 md:flex">
+        <nav className="hidden items-center gap-1 xl:flex">
           {NAV_LINKS.map((link) => (
             <Link
               key={link.href}
@@ -51,9 +51,9 @@ export function SiteHeader() {
             )}
           </Button>
           <Button
-            className="hidden md:inline-flex"
+            className="hidden xl:inline-flex"
             nativeButton={false}
-            render={<Link href="/courses" />}
+            render={<Link href="/courses#waitlist" />}
           >
             {t("startLearning")}
           </Button>

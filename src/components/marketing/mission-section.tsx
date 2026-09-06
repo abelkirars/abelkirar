@@ -8,7 +8,7 @@ export async function MissionSection() {
   const t = await getTranslations("mission");
 
   return (
-    <section className="py-20 sm:py-28">
+    <section className="py-14 sm:py-24">
       <Container className="grid items-center gap-12 lg:grid-cols-2">
         <div>
           <p className="mb-3 text-sm font-medium tracking-[0.2em] text-accent uppercase">

@@ -1,11 +1,12 @@
 import { z } from "zod";
+import { MAX_CART_QUANTITY } from "@/lib/cart-quantity";
 
 type Translator = (key: string) => string;
 
 export const checkoutItemSchema = z.object({
   productId: z.string().min(1),
   customization: z.record(z.string(), z.string()),
-  quantity: z.number().int().min(1).max(10),
+  quantity: z.number().int().min(1).max(MAX_CART_QUANTITY),
 });
 
 const US_PAYMENT_METHODS = new Set(["ZELLE", "CASH_APP"]);

@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { normalizeCartQuantity } from "@/lib/cart-quantity";
 import type { SelectedCustomization } from "@/types/customization";
 
 export interface CartItem {
@@ -38,12 +39,12 @@ export const useCartStore = create<CartState>()(
             return {
               items: state.items.map((i) =>
                 i.lineId === item.lineId
-                  ? { ...i, quantity: i.quantity + quantity }
+                  ? { ...i, quantity: normalizeCartQuantity(i.quantity + normalizeCartQuantity(quantity)) }
                   : i
               ),
             };
           }
-          return { items: [...state.items, { ...item, quantity, selected: true }] };
+          return { items: [...state.items, { ...item, quantity: normalizeCartQuantity(quantity), selected: true }] };
         }),
       removeItem: (lineId) =>
         set((state) => ({
@@ -55,7 +56,7 @@ export const useCartStore = create<CartState>()(
             quantity <= 0
               ? state.items.filter((i) => i.lineId !== lineId)
               : state.items.map((i) =>
-                  i.lineId === lineId ? { ...i, quantity } : i
+                  i.lineId === lineId ? { ...i, quantity: normalizeCartQuantity(quantity) } : i
                 ),
         })),
       toggleSelected: (lineId) =>
@@ -72,13 +73,16 @@ export const useCartStore = create<CartState>()(
     }),
     {
       name: "abelkirar-cart",
-      version: 1,
+      version: 2,
       // v0 carts (persisted before `selected` existed) must backfill it as
       // true — otherwise those items would silently rehydrate as unselected.
       migrate: (persistedState, version) => {
         const state = persistedState as CartState;
         if (version < 1) {
           state.items = state.items.map((i) => ({ ...i, selected: i.selected ?? true }));
+        }
+        if (version < 2) {
+          state.items = state.items.map((i) => ({ ...i, quantity: normalizeCartQuantity(i.quantity) }));
         }
         return state;
       },

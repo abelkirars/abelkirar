@@ -24,7 +24,7 @@ export function MobileNav() {
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger
         render={
-          <Button variant="ghost" size="icon" className="md:hidden" aria-label={t("openMenu")} />
+          <Button variant="ghost" size="icon" className="xl:hidden" aria-label={t("openMenu")} />
         }
       >
         <Menu className="size-5" />
@@ -45,7 +45,7 @@ export function MobileNav() {
             </Link>
           ))}
           <Link
-            href="/courses"
+            href="/courses#waitlist"
             onClick={() => setOpen(false)}
             className="mt-4 rounded-md bg-primary px-3 py-3 text-center text-base font-medium text-primary-foreground"
           >

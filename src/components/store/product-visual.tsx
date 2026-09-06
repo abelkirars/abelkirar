@@ -8,12 +8,14 @@ export function ProductVisual({
   name,
   className,
   sizes,
+  loading = "lazy",
 }: {
   images: string[];
   category: string;
   name: string;
   className?: string;
   sizes?: string;
+  loading?: "eager" | "lazy";
 }) {
   const image = images[0];
 
@@ -24,6 +26,7 @@ export function ProductVisual({
           src={image}
           alt={name}
           fill
+          loading={loading}
           sizes={sizes ?? "100vw"}
           className="object-cover transition-transform duration-500 group-hover:scale-[1.02] motion-reduce:transition-none"
         />

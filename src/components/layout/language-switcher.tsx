@@ -44,7 +44,7 @@ export function LanguageSwitcher({ className }: { className?: string }) {
           onClick={() => handleSelect(value)}
           aria-pressed={locale === value}
           className={cn(
-            "rounded-sm px-2 py-1 transition-colors",
+            "min-h-11 min-w-11 rounded-sm px-2 py-1 transition-colors",
             locale === value
               ? "bg-primary text-primary-foreground"
               : "text-foreground/70 hover:text-foreground"

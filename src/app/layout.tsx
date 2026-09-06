@@ -25,11 +25,11 @@ const notoSansEthiopic = Noto_Sans_Ethiopic({
 
 export const metadata: Metadata = {
   title: {
-    default: "Abelkirar — Ethiopian Kirar Education & Instruments",
+    default: "Abelkirar — Online Kirar Lessons & Instruments",
     template: "%s — Abelkirar",
   },
   description:
-    "Learn the Kirar and bring Ethiopian Orthodox spiritual music to life. Online courses, handmade instruments, and a global diaspora community.",
+    "Learn Kirar online with Deacon Abel to accompany Ethiopian Orthodox chanting and prepare to serve in church.",
 };
 
 export default async function RootLayout({

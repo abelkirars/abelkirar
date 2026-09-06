@@ -16,7 +16,7 @@ export default function BlogIndexPage() {
 
   return (
     <>
-      <section className="relative overflow-hidden bg-gradient-to-b from-[#241b12] to-[#1b140d] py-24 text-[#f3e9d2] sm:py-32">
+      <section className="relative overflow-hidden bg-gradient-to-b from-[#241b12] to-[#1b140d] py-16 text-[#f3e9d2] sm:py-32">
         <CrossPattern className="text-[#d4a84b] opacity-[0.08]" />
         <Container className="relative">
           <p className="text-sm font-medium tracking-[0.25em] text-[#d4a84b] uppercase">
@@ -28,7 +28,7 @@ export default function BlogIndexPage() {
         </Container>
       </section>
 
-      <section className="py-20 sm:py-28">
+      <section className="py-14 sm:py-24">
         <Container className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {posts.map((post) => (
             <Link key={post.slug} href={`/blog/${post.slug}`} className="group">

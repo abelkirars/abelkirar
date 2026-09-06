@@ -12,6 +12,9 @@ function sortKey(announcement: Announcement): number {
 export async function CommunityAnnouncements() {
   const announcements = await prisma.announcement.findMany({
     where: { published: true },
+  }).catch(() => {
+    console.error("[community] Announcements query failed");
+    return [];
   });
 
   if (announcements.length === 0) return null;
@@ -19,7 +22,7 @@ export async function CommunityAnnouncements() {
   const sorted = [...announcements].sort((a, b) => sortKey(b) - sortKey(a));
 
   return (
-    <section className="py-20 sm:py-28">
+    <section className="py-14 sm:py-24">
       <Container>
         <SectionHeading
           eyebrow="Announcements"
