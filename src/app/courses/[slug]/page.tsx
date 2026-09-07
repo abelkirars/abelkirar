@@ -92,8 +92,10 @@ export default async function CourseDetailPage({
             </p>
             <h2 className="font-heading text-xl font-semibold">{tForm("title")}</h2>
             <p className="mt-2 text-sm text-muted-foreground">{tForm("description")}</p>
+            {/* No level pre-fill: an applicant on /courses/beginner must choose
+                their level deliberately rather than confirm the page's guess. */}
             <div className="mt-6">
-              <CourseApplicationForm defaultRequestedLevel={course.studentLevel} />
+              <CourseApplicationForm />
             </div>
           </div>
         </Container>

@@ -407,6 +407,32 @@ enum CourseApplicationStatus {
   DECLINED
 }
 
+/// The language an applicant wants to be TAUGHT in. Deliberately not the same
+/// thing as CourseApplication.locale, which is the language the site was being
+/// read in and governs which language we write back to them in. Someone can
+/// read the site in English and want lessons in Amharic, so EITHER is a real
+/// answer rather than a missing one.
+///
+/// A Prisma enum rather than the plain-string treatment `locale` gets: locale
+/// is a String precisely because it must track src/i18n/locale.ts's list by
+/// hand, and this closed set mirrors nothing app-side.
+enum LessonLanguage {
+  AM
+  EN
+  EITHER
+}
+
+/// Which instrument the applicant actually has. NONE_YET and UNSURE are both
+/// real, useful answers — a beginner without an instrument still needs a
+/// lesson plan, and knowing they do not have one is what makes that plan
+/// possible. Never treat either as a missing value.
+enum KirarModel {
+  FIVE_STRING
+  SIX_STRING
+  NONE_YET
+  UNSURE
+}
+
 model StudentProfile {
   id             String @id @default(cuid())
   /// Supabase Auth's auth.users.id — the actual login identity for this student.
@@ -787,16 +813,57 @@ model CourseApplication {
   /// forgets to normalise — but lookups must compare on the lowered value to
   /// match what is stored.
   email    String
+  /// The applicant's own number when they are 15 or over. For an under-15
+  /// application the form hides this field entirely and "guardianPhone" is the
+  /// only number collected, so that a parent is never asked for the same
+  /// number twice under two different labels.
   phone    String?
+
+  /// EVERY COLUMN ADDED BELOW IS NULLABLE AND REQUIRED IN VALIDATION INSTEAD.
+  /// Rows written before these questions existed genuinely have no answer, and
+  /// a NOT NULL default would assert something about them that nobody ever
+  /// said. Zod requires a real value on every new submission, so null here
+  /// means "this row predates the question", never "the applicant skipped it".
+  country          String?
+  lessonLanguage   LessonLanguage?
+  kirarModel       KirarModel?
 
   /// The level the APPLICANT asked for — a stated preference, never an
   /// assignment. StudentProfile.level is set by the teacher at approval and is
   /// the only one that governs curriculum, so a mistaken self-assessment here
   /// can never place someone in a level the teacher did not choose.
+  ///
+  /// FROM THE FOUR-VALUE WIRE ENUM ONWARDS, null MEANS "the applicant chose
+  /// Not sure yet" — not "the applicant skipped the question". The form makes
+  /// the question mandatory and sends UNSURE explicitly; the server maps
+  /// UNSURE to null and the other three to the matching StudentLevel. Nothing
+  /// coerces an unsure applicant into BEGINNER.
   requestedLevel   StudentLevel?
   /// The applicant's own words about their experience. Shown to the admin;
-  /// never quoted back in any outbound email.
+  /// never quoted back in any outbound email. This is the "tell us about your
+  /// playing so far" field — there is deliberately no second free-text
+  /// "experience" column.
   applicantMessage String?
+
+  /// Whether the student is under 15, which is what makes the guardian block
+  /// mandatory. Nullable for the reason given above, and therefore THREE
+  /// STATE: true, false, or "this row predates the question".
+  ///
+  /// NEVER branch on truthiness. `if (app.isUnder15)` silently reads null as
+  /// "not a child", which is the wrong direction for a safeguarding-adjacent
+  /// flag. Compare explicitly: `=== true`, `=== false`, `=== null`.
+  isUnder15            Boolean?
+  /// All four are required together when isUnder15 is true, enforced on the
+  /// server — a hidden fieldset in the browser proves nothing. They stay null
+  /// for applicants 15 and over.
+  guardianName         String?
+  guardianRelationship String?
+  guardianPhone        String?
+  /// Server-generated at the moment of a consenting submission. NEVER accepted
+  /// from client input: a timestamp the applicant can set is not a record of
+  /// when consent was given. Its presence is the durable evidence that the
+  /// consent box was ticked, so the boolean itself needs no column.
+  guardianConsentAt    DateTime?
   /// "en" | "am" — validated app-side via src/i18n/locale.ts's isLocale(), the
   /// same plain-string approach already used for StudentProfile.locale and
   /// Order.locale rather than a second Prisma enum to keep in sync by hand.

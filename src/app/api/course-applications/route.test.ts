@@ -22,6 +22,15 @@ vi.mock("@/lib/course-applications", () => ({
   createCourseApplication: (...args: unknown[]) => mockCreateCourseApplication(...args),
 }));
 
+// Same reasoning: the real module reaches Resend and next-intl's server
+// runtime. Its own behaviour is covered in
+// src/lib/notifications/course-application-notifications.test.ts; here we only
+// prove WHEN the route calls it and that a failure cannot reach the applicant.
+const mockSendNotifications = vi.fn();
+vi.mock("@/lib/notifications/course-application-notifications", () => ({
+  sendCourseApplicationNotifications: (...args: unknown[]) => mockSendNotifications(...args),
+}));
+
 import { POST } from "@/app/api/course-applications/route";
 
 function buildRequest(body: unknown): Request {
@@ -33,15 +42,38 @@ function buildRequest(body: unknown): Request {
 
 const validBody = {
   fullName: "Jane Doe",
+  country: "Ethiopia",
+  isUnder15: false,
   email: "jane@example.com",
   phone: "",
-  requestedLevel: "",
+  lessonLanguage: "AM",
+  requestedLevel: "BEGINNER",
+  kirarModel: "FIVE_STRING",
   applicantMessage: "",
+};
+
+/** A saved row, shaped as the route reads it when building notifications. */
+const createdRow = {
+  id: "app-1",
+  fullName: "Jane Doe",
+  email: "jane@example.com",
+  country: "Ethiopia",
+  phone: null,
+  lessonLanguage: "AM",
+  requestedLevel: "BEGINNER",
+  kirarModel: "FIVE_STRING",
+  applicantMessage: null,
+  isUnder15: false,
+  guardianName: null,
+  guardianRelationship: null,
+  guardianPhone: null,
+  locale: "en",
 };
 
 beforeEach(() => {
   vi.clearAllMocks();
   mockCheckRateLimit.mockResolvedValue(true);
+  mockSendNotifications.mockResolvedValue({ admin: { sent: true }, applicant: { sent: true } });
 });
 
 describe("POST /api/course-applications", () => {
@@ -79,9 +111,9 @@ describe("POST /api/course-applications", () => {
     expect(mockCreateCourseApplication).not.toHaveBeenCalled();
   });
 
-  it("returns 400 when applicantMessage exceeds 2000 characters", async () => {
+  it("returns 400 when applicantMessage exceeds 1000 characters", async () => {
     const res = await POST(
-      buildRequest({ ...validBody, applicantMessage: "a".repeat(2001) })
+      buildRequest({ ...validBody, applicantMessage: "a".repeat(1001) })
     );
 
     expect(res.status).toBe(400);
@@ -99,8 +131,8 @@ describe("POST /api/course-applications", () => {
     expect(mockCreateCourseApplication).not.toHaveBeenCalled();
   });
 
-  it("returns 400 with phoneTooLong when phone exceeds 30 characters", async () => {
-    const res = await POST(buildRequest({ ...validBody, phone: "1".repeat(31) }));
+  it("returns 400 with phoneTooLong when phone exceeds 40 characters", async () => {
+    const res = await POST(buildRequest({ ...validBody, phone: "1".repeat(41) }));
 
     expect(res.status).toBe(400);
     const body = await res.json();
@@ -109,7 +141,7 @@ describe("POST /api/course-applications", () => {
   });
 
   it("accepts an email with surrounding whitespace and passes it trimmed to the business logic", async () => {
-    mockCreateCourseApplication.mockResolvedValue({ id: "app-1" });
+    mockCreateCourseApplication.mockResolvedValue(createdRow);
 
     const res = await POST(buildRequest({ ...validBody, email: "  jane@example.com  " }));
 
@@ -119,7 +151,7 @@ describe("POST /api/course-applications", () => {
   });
 
   it("strips unknown body keys — status, locale and portalAccess never reach the business logic", async () => {
-    mockCreateCourseApplication.mockResolvedValue({ id: "app-1" });
+    mockCreateCourseApplication.mockResolvedValue(createdRow);
 
     await POST(
       buildRequest({
@@ -140,7 +172,7 @@ describe("POST /api/course-applications", () => {
   });
 
   it("passes the server-derived locale, not any client-supplied value", async () => {
-    mockCreateCourseApplication.mockResolvedValue({ id: "app-1" });
+    mockCreateCourseApplication.mockResolvedValue(createdRow);
 
     await POST(buildRequest({ ...validBody, locale: "fr" }));
 
@@ -148,19 +180,27 @@ describe("POST /api/course-applications", () => {
     expect(locale).toBe("en");
   });
 
-  it("normalizes empty phone/requestedLevel/applicantMessage to undefined before validation", async () => {
-    mockCreateCourseApplication.mockResolvedValue({ id: "app-1" });
+  it("normalizes empty optional strings to undefined before validation", async () => {
+    mockCreateCourseApplication.mockResolvedValue(createdRow);
 
     await POST(buildRequest(validBody));
 
     const [input] = mockCreateCourseApplication.mock.calls[0]!;
     expect(input.phone).toBeUndefined();
-    expect(input.requestedLevel).toBeUndefined();
     expect(input.applicantMessage).toBeUndefined();
   });
 
+  it("rejects an empty required choice instead of normalizing it away", async () => {
+    const res = await POST(buildRequest({ ...validBody, requestedLevel: "" }));
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("selectLevel");
+    expect(mockCreateCourseApplication).not.toHaveBeenCalled();
+  });
+
   it("happy path: returns exactly {ok: true} and nothing else", async () => {
-    mockCreateCourseApplication.mockResolvedValue({ id: "app-1" });
+    mockCreateCourseApplication.mockResolvedValue(createdRow);
 
     const res = await POST(buildRequest(validBody));
 
@@ -251,5 +291,77 @@ describe("POST /api/course-applications", () => {
     expect(loggedArgs).toContain("UNKNOWN");
     expect(loggedArgs.join(" ")).not.toContain("WeirdCustomError");
     errorSpy.mockRestore();
+  });
+
+  describe("notifications", () => {
+    it("sends exactly one pair of notifications for a genuinely new application", async () => {
+      mockCreateCourseApplication.mockResolvedValue(createdRow);
+
+      const res = await POST(buildRequest(validBody));
+
+      expect(res.status).toBe(200);
+      expect(mockSendNotifications).toHaveBeenCalledTimes(1);
+      const [data] = mockSendNotifications.mock.calls[0]!;
+      expect(data.id).toBe("app-1");
+      expect(data.email).toBe("jane@example.com");
+    });
+
+    it("sends NOTHING for a duplicate application, while returning the identical response", async () => {
+      // The single most important assertion in this file: one duplicate must
+      // produce one record and one notification in total, not two. A second
+      // email would also confirm to an enumerator that the address is on file.
+      mockCreateCourseApplication.mockResolvedValue(null);
+
+      const res = await POST(buildRequest(validBody));
+
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ ok: true });
+      expect(mockSendNotifications).not.toHaveBeenCalled();
+    });
+
+    it("still returns {ok: true} when both emails fail to send", async () => {
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      mockCreateCourseApplication.mockResolvedValue(createdRow);
+      mockSendNotifications.mockResolvedValue({
+        admin: { sent: false, error: "Email is not configured" },
+        applicant: { sent: false, error: "Email is not configured" },
+      });
+
+      const res = await POST(buildRequest(validBody));
+
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ ok: true });
+      errorSpy.mockRestore();
+    });
+
+    it("still returns {ok: true} when notification dispatch throws outright", async () => {
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      mockCreateCourseApplication.mockResolvedValue(createdRow);
+      mockSendNotifications.mockRejectedValue(new Error("resend exploded"));
+
+      const res = await POST(buildRequest(validBody));
+
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ ok: true });
+      errorSpy.mockRestore();
+    });
+
+    it("logs the application id only — never a name, an email address or an error object", async () => {
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      mockCreateCourseApplication.mockResolvedValue(createdRow);
+      mockSendNotifications.mockResolvedValue({
+        admin: { sent: false, error: "jane@example.com was rejected" },
+        applicant: { sent: false, error: "jane@example.com was rejected" },
+      });
+
+      await POST(buildRequest(validBody));
+
+      const logged = errorSpy.mock.calls.flat().join(" ");
+      expect(logged).toContain("app-1");
+      expect(logged).not.toContain("jane@example.com");
+      expect(logged).not.toContain("Jane Doe");
+      expect(logged).not.toContain("was rejected");
+      errorSpy.mockRestore();
+    });
   });
 });

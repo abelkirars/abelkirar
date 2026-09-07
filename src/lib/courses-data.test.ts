@@ -39,9 +39,15 @@ describe("COURSE_LEVELS studentLevel mapping", () => {
 describe("StudentLevel / course-application Zod schema alignment (drift guard)", () => {
   const t = (key: string) => key;
   const schema = createCourseApplicationSchema(t);
+  // A complete valid application, so this guard fails only on a genuine level
+  // drift rather than on any unrelated field becoming required.
   const baseInput = {
     fullName: "Jane Doe",
+    country: "Ethiopia",
+    isUnder15: false,
     email: "jane@example.com",
+    lessonLanguage: "AM",
+    kirarModel: "FIVE_STRING",
   };
 
   it("accepts every current Prisma StudentLevel value as requestedLevel", () => {
