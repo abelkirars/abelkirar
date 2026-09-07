@@ -18,8 +18,10 @@ const mockCreateCourseApplication = vi.fn();
 // src/app/api/orders/route.test.ts). createCourseApplication already has its
 // own dedicated unit tests (src/lib/course-applications.test.ts) — this file
 // only needs to prove the route calls it correctly and handles the result.
+const mockMarkNotificationsSent = vi.fn();
 vi.mock("@/lib/course-applications", () => ({
   createCourseApplication: (...args: unknown[]) => mockCreateCourseApplication(...args),
+  markNotificationsSent: (...args: unknown[]) => mockMarkNotificationsSent(...args),
 }));
 
 // Same reasoning: the real module reaches Resend and next-intl's server
@@ -74,6 +76,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockCheckRateLimit.mockResolvedValue(true);
   mockSendNotifications.mockResolvedValue({ admin: { sent: true }, applicant: { sent: true } });
+  mockMarkNotificationsSent.mockResolvedValue(undefined);
 });
 
 describe("POST /api/course-applications", () => {
@@ -361,6 +364,86 @@ describe("POST /api/course-applications", () => {
       expect(logged).not.toContain("jane@example.com");
       expect(logged).not.toContain("Jane Doe");
       expect(logged).not.toContain("was rejected");
+      errorSpy.mockRestore();
+    });
+  });
+
+  describe("recording notification delivery", () => {
+    it("records the timestamp when BOTH notifications report sent", async () => {
+      mockCreateCourseApplication.mockResolvedValue(createdRow);
+
+      const res = await POST(buildRequest(validBody));
+
+      expect(res.status).toBe(200);
+      expect(mockMarkNotificationsSent).toHaveBeenCalledTimes(1);
+      expect(mockMarkNotificationsSent).toHaveBeenCalledWith("app-1");
+    });
+
+    it("leaves it unrecorded when the ADMIN notification fails", async () => {
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      mockCreateCourseApplication.mockResolvedValue(createdRow);
+      mockSendNotifications.mockResolvedValue({
+        admin: { sent: false, error: "Email is not configured" },
+        applicant: { sent: true },
+      });
+
+      const res = await POST(buildRequest(validBody));
+
+      expect(res.status).toBe(200);
+      expect(mockMarkNotificationsSent).not.toHaveBeenCalled();
+      errorSpy.mockRestore();
+    });
+
+    it("leaves it unrecorded when the APPLICANT confirmation fails", async () => {
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      mockCreateCourseApplication.mockResolvedValue(createdRow);
+      mockSendNotifications.mockResolvedValue({
+        admin: { sent: true },
+        applicant: { sent: false, error: "Email is not configured" },
+      });
+
+      const res = await POST(buildRequest(validBody));
+
+      expect(res.status).toBe(200);
+      expect(mockMarkNotificationsSent).not.toHaveBeenCalled();
+      errorSpy.mockRestore();
+    });
+
+    it("leaves it unrecorded when both fail", async () => {
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      mockCreateCourseApplication.mockResolvedValue(createdRow);
+      mockSendNotifications.mockResolvedValue({
+        admin: { sent: false, error: "x" },
+        applicant: { sent: false, error: "x" },
+      });
+
+      await POST(buildRequest(validBody));
+
+      expect(mockMarkNotificationsSent).not.toHaveBeenCalled();
+      errorSpy.mockRestore();
+    });
+
+    it("never records anything for a duplicate application", async () => {
+      // A duplicate writes no row of its own and sends nothing, so there is
+      // nothing to account for and nothing to mark.
+      mockCreateCourseApplication.mockResolvedValue(null);
+
+      const res = await POST(buildRequest(validBody));
+
+      expect(res.status).toBe(200);
+      expect(mockSendNotifications).not.toHaveBeenCalled();
+      expect(mockMarkNotificationsSent).not.toHaveBeenCalled();
+    });
+
+    it("still returns {ok: true} if recording the timestamp itself fails", async () => {
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      mockCreateCourseApplication.mockResolvedValue(createdRow);
+      mockMarkNotificationsSent.mockRejectedValue(new Error("update failed"));
+
+      const res = await POST(buildRequest(validBody));
+
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ ok: true });
       errorSpy.mockRestore();
     });
   });

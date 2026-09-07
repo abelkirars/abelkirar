@@ -86,3 +86,30 @@ export async function createCourseApplication(
     throw err;
   }
 }
+
+/**
+ * Records that both notifications for an application were reported sent.
+ *
+ * Deliberately separate from the create above, and deliberately incapable of
+ * failing anything. It runs only after the row exists and only when both
+ * emails succeeded, so the worst case is that the timestamp is missing on an
+ * application that was in fact notified — null means "unconfirmed", never
+ * "sent", and over-reporting is the correct bias for a query whose whole
+ * purpose is "did anybody fall through the cracks".
+ *
+ * Swallows its own error for the same reason the caller does: the applicant
+ * has already been told their application was received, and nothing that
+ * happens here may change that. The failure is logged by id only.
+ */
+export async function markNotificationsSent(id: string): Promise<void> {
+  try {
+    await prisma.courseApplication.update({
+      where: { id },
+      data: { notificationsSentAt: new Date() },
+    });
+  } catch {
+    console.error(
+      `[course-applications] Could not record notification delivery for application ${id}`
+    );
+  }
+}

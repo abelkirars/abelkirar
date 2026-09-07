@@ -4,7 +4,7 @@ import {
   createCourseApplicationSchema,
   normalizeOptionalFields,
 } from "@/lib/validations/course-application";
-import { createCourseApplication } from "@/lib/course-applications";
+import { createCourseApplication, markNotificationsSent } from "@/lib/course-applications";
 import { sendCourseApplicationNotifications } from "@/lib/notifications/course-application-notifications";
 import { checkRateLimit, clientIpFrom } from "@/lib/rate-limit";
 import type { Locale } from "@/i18n/locale";
@@ -137,6 +137,15 @@ export async function POST(request: Request) {
         console.error(
           `[course-applications] Applicant confirmation NOT sent for application ${created.id}`
         );
+      }
+
+      // Recorded on the row ONLY when both channels succeeded, so that
+      //   SELECT id FROM "CourseApplication" WHERE "notificationsSentAt" IS NULL
+      // lists every application nobody was reliably told about. Partial
+      // success stays null on purpose: one of the two people who should have
+      // been emailed was not, and that is not a delivered notification.
+      if (admin.sent && applicant.sent) {
+        await markNotificationsSent(created.id);
       }
     } catch {
       // sendCourseApplicationNotifications is documented never to reject, so

@@ -1,16 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mockCreateCourseApplication = vi.fn();
+const mockUpdateCourseApplication = vi.fn();
 vi.mock("@/lib/db", () => ({
   prisma: {
     courseApplication: {
       create: (...args: unknown[]) => mockCreateCourseApplication(...args),
+      update: (...args: unknown[]) => mockUpdateCourseApplication(...args),
     },
   },
 }));
 
 import { Prisma } from "@prisma/client";
-import { createCourseApplication } from "@/lib/course-applications";
+import { createCourseApplication, markNotificationsSent } from "@/lib/course-applications";
 import type { CreateCourseApplicationInput } from "@/lib/validations/course-application";
 
 const adultInput: CreateCourseApplicationInput = {
@@ -54,6 +56,7 @@ function dataOf() {
 beforeEach(() => {
   vi.clearAllMocks();
   mockCreateCourseApplication.mockResolvedValue({ id: "app-1" });
+  mockUpdateCourseApplication.mockResolvedValue({ id: "app-1" });
 });
 
 describe("createCourseApplication", () => {
@@ -172,5 +175,50 @@ describe("createCourseApplication", () => {
     mockCreateCourseApplication.mockRejectedValue(otherError);
 
     await expect(createCourseApplication(adultInput, "en")).rejects.toBe(otherError);
+  });
+});
+
+describe("markNotificationsSent", () => {
+  it("stamps the row it is given with a server-generated time", async () => {
+    const before = Date.now();
+
+    await markNotificationsSent("app-1");
+
+    expect(mockUpdateCourseApplication).toHaveBeenCalledTimes(1);
+    const arg = mockUpdateCourseApplication.mock.calls[0]![0];
+    expect(arg.where).toEqual({ id: "app-1" });
+    const stamped = arg.data.notificationsSentAt as Date;
+    expect(stamped).toBeInstanceOf(Date);
+    expect(stamped.getTime()).toBeGreaterThanOrEqual(before);
+  });
+
+  it("writes nothing but the timestamp — it cannot alter an application", async () => {
+    await markNotificationsSent("app-1");
+
+    const arg = mockUpdateCourseApplication.mock.calls[0]![0];
+    expect(Object.keys(arg.data)).toEqual(["notificationsSentAt"]);
+  });
+
+  it("never throws when the update fails — null is the safe direction", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockUpdateCourseApplication.mockRejectedValue(new Error("connection reset"));
+
+    await expect(markNotificationsSent("app-1")).resolves.toBeUndefined();
+
+    errorSpy.mockRestore();
+  });
+
+  it("logs the id only when it fails — never the error", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockUpdateCourseApplication.mockRejectedValue(
+      new Error("contains jane@example.com, must not be logged")
+    );
+
+    await markNotificationsSent("app-1");
+
+    const logged = errorSpy.mock.calls.flat().join(" ");
+    expect(logged).toContain("app-1");
+    expect(logged).not.toContain("jane@example.com");
+    errorSpy.mockRestore();
   });
 });

@@ -864,6 +864,21 @@ model CourseApplication {
   /// when consent was given. Its presence is the durable evidence that the
   /// consent box was ticked, so the boolean itself needs no column.
   guardianConsentAt    DateTime?
+
+  /// Set only when BOTH notifications reported sent. Null means nobody was
+  /// told about this application — the same nullable-honesty rule the rest of
+  /// this model uses, and the reason this column is worth having: with no
+  /// admin review desk yet, email is the only channel, and a failed send was
+  /// previously visible nowhere but a runtime log nobody reads.
+  ///
+  /// Never blocks a submission. It is written as a separate statement after
+  /// the application row already exists, and its own failure leaves null —
+  /// which is the safe direction, because null means "unconfirmed", not
+  /// "sent". A duplicate submission never reaches this write at all.
+  ///
+  ///   SELECT id, "createdAt" FROM "CourseApplication"
+  ///   WHERE "notificationsSentAt" IS NULL ORDER BY "createdAt" DESC;
+  notificationsSentAt  DateTime?
   /// "en" | "am" — validated app-side via src/i18n/locale.ts's isLocale(), the
   /// same plain-string approach already used for StudentProfile.locale and
   /// Order.locale rather than a second Prisma enum to keep in sync by hand.
