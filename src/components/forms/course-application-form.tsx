@@ -24,7 +24,20 @@ import { Field, FieldGroup, FieldLabel, FieldError } from "@/components/ui/field
 const SELECT_CLASSES =
   "h-12 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1 text-base transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:bg-input/30 dark:disabled:bg-input/80 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40";
 
-export function CourseApplicationForm() {
+export function CourseApplicationForm({
+  defaultRequestedLevel,
+}: {
+  /**
+   * Pre-selects the level question. Passed by the course detail pages, which
+   * know which course the applicant navigated to — someone who opened
+   * /courses/intermediate has already stated their level, and asking them to
+   * re-enter it is friction with no benefit. "Not sure yet" stays selectable,
+   * which is the actual safeguard against a wrong pre-fill being confirmed.
+   *
+   * Omitted on /courses, where no level has been implied.
+   */
+  defaultRequestedLevel?: CreateCourseApplicationInput["requestedLevel"];
+} = {}) {
   const t = useTranslations("courseApplicationForm");
   const tValidation = useTranslations("validation");
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
@@ -44,7 +57,15 @@ export function CourseApplicationForm() {
     handleSubmit,
     control,
     formState: { errors, isSubmitting },
-  } = useForm<CreateCourseApplicationInput>({ resolver });
+  } = useForm<CreateCourseApplicationInput>({
+    resolver,
+    // The level <select> carries no defaultValue attribute of its own — that
+    // would be a second, competing source of the initial value and would win
+    // over this one at first render. With no prop, requestedLevel is undefined,
+    // which matches no option, so the browser falls back to the first option in
+    // source order: the empty "Choose one" placeholder.
+    defaultValues: { requestedLevel: defaultRequestedLevel },
+  });
 
   // useWatch rather than watch(): watch() returns a fresh function on every
   // render and cannot be memoized safely, which the react-hooks lint rule

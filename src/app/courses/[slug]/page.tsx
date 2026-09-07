@@ -92,10 +92,14 @@ export default async function CourseDetailPage({
             </p>
             <h2 className="font-heading text-xl font-semibold">{tForm("title")}</h2>
             <p className="mt-2 text-sm text-muted-foreground">{tForm("description")}</p>
-            {/* No level pre-fill: an applicant on /courses/beginner must choose
-                their level deliberately rather than confirm the page's guess. */}
+            {/* The level pre-fill is deliberate: it reflects the course page
+                the applicant chose to open, so someone who navigated to
+                /courses/intermediate is not asked to state their level twice.
+                It is a starting point, not a lock — "Not sure yet" and the
+                other levels remain selectable, which is what keeps a wrong
+                guess from being silently confirmed. */}
             <div className="mt-6">
-              <CourseApplicationForm />
+              <CourseApplicationForm defaultRequestedLevel={course.studentLevel} />
             </div>
           </div>
         </Container>
