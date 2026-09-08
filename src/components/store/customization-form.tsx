@@ -7,6 +7,8 @@ import type {
   ProductCustomizationOptions,
   SelectedCustomization,
 } from "@/types/customization";
+import { MAX_CART_QUANTITY, normalizeCartQuantity } from "@/lib/cart-quantity";
+import { formatUsd, formatPriceAdjustment } from "@/lib/money";
 import { computeUnitPrice } from "@/lib/pricing";
 import { useCartStore } from "@/store/cart-store";
 import { Button } from "@/components/ui/button";
@@ -101,11 +103,11 @@ export function CustomizationForm({ product, onSelectImage }: Props) {
         }
 
         return (
-        <div key={field.id}>
-          <p className="text-sm font-medium">
+        <fieldset key={field.id}>
+          <legend className="text-sm font-medium">
             {field.label}
             {field.required && <span className="text-accent"> *</span>}
-          </p>
+          </legend>
           {field.helpText && (
             <p className="text-xs text-muted-foreground">{field.helpText}</p>
           )}
@@ -116,11 +118,12 @@ export function CustomizationForm({ product, onSelectImage }: Props) {
                 <button
                   key={choice.id}
                   type="button"
+                  aria-pressed={selected[field.id] === choice.id}
                   onClick={() =>
                     setSelected((s) => ({ ...s, [field.id]: choice.id }))
                   }
                   className={cn(
-                    "rounded-md border px-3 py-2 text-sm transition-colors",
+                    "min-h-12 rounded-md border px-3 py-2 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
                     selected[field.id] === choice.id
                       ? "border-primary bg-primary/10 text-foreground"
                       : "border-border text-muted-foreground hover:border-primary/50"
@@ -129,8 +132,7 @@ export function CustomizationForm({ product, onSelectImage }: Props) {
                   {choice.label}
                   {choice.priceModifier !== 0 && (
                     <span className="ml-1 text-xs opacity-70">
-                      {choice.priceModifier > 0 ? "+" : ""}
-                      ${(choice.priceModifier / 100).toFixed(0)}
+                      {formatPriceAdjustment(choice.priceModifier)}
                     </span>
                   )}
                 </button>
@@ -144,12 +146,14 @@ export function CustomizationForm({ product, onSelectImage }: Props) {
                 <button
                   key={choice.id}
                   type="button"
+                  aria-pressed={selected[field.id] === choice.id}
                   title={choice.label}
+                  aria-label={`${choice.label}${choice.priceModifier ? ` (${formatPriceAdjustment(choice.priceModifier)})` : ""}`}
                   onClick={() =>
                     setSelected((s) => ({ ...s, [field.id]: choice.id }))
                   }
                   className={cn(
-                    "size-9 rounded-full ring-2 ring-offset-2 ring-offset-background transition-all",
+                    "size-12 rounded-full focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-foreground ring-2 ring-offset-2 ring-offset-background transition-all",
                     selected[field.id] === choice.id
                       ? "ring-primary"
                       : "ring-transparent"
@@ -160,9 +164,16 @@ export function CustomizationForm({ product, onSelectImage }: Props) {
             </div>
           )}
 
+          {field.type === "swatch" && selected[field.id] && (
+            <p className="mt-3 text-sm text-muted-foreground">
+              {field.choices?.find((choice) => choice.id === selected[field.id])?.label}
+            </p>
+          )}
+
           {field.type === "text" && (
             <Input
               className="mt-2"
+              aria-label={field.label}
               maxLength={field.maxLength}
               value={selected[field.id] ?? ""}
               onChange={(e) =>
@@ -177,11 +188,11 @@ export function CustomizationForm({ product, onSelectImage }: Props) {
                 <button
                   key={choice.id}
                   type="button"
+                  aria-pressed={selected[field.id] === choice.id}
                   onClick={() => {
                     setSelected((s) => ({ ...s, [field.id]: choice.id }));
                     if (choice.imageUrl) onSelectImage?.(choice.imageUrl);
                   }}
-                  aria-current={selected[field.id] === choice.id}
                   className={cn(
                     "overflow-hidden rounded-lg ring-2 transition-all",
                     selected[field.id] === choice.id
@@ -191,15 +202,14 @@ export function CustomizationForm({ product, onSelectImage }: Props) {
                 >
                   <div className="relative aspect-square w-full bg-muted">
                     {choice.imageUrl && (
-                      <Image src={choice.imageUrl} alt="" fill className="object-cover" />
+                      <Image src={choice.imageUrl} alt="" fill sizes="(min-width: 1024px) 12vw, (min-width: 640px) 25vw, 33vw" className="object-cover" />
                     )}
                   </div>
                   <p className="mt-1.5 truncate px-1 pb-1 text-center text-xs font-medium">
                     {choice.label}
                     {choice.priceModifier !== 0 && (
                       <span className="ml-1 font-normal opacity-70">
-                        {choice.priceModifier > 0 ? "+" : ""}
-                        ${(choice.priceModifier / 100).toFixed(0)}
+                        {formatPriceAdjustment(choice.priceModifier)}
                       </span>
                     )}
                   </p>
@@ -214,11 +224,12 @@ export function CustomizationForm({ product, onSelectImage }: Props) {
                 <button
                   key={choice.id}
                   type="button"
+                  aria-pressed={selected[field.id] === choice.id}
                   onClick={() =>
                     setSelected((s) => ({ ...s, [field.id]: choice.id }))
                   }
                   className={cn(
-                    "rounded-md border px-3 py-2 text-sm transition-colors",
+                    "min-h-12 rounded-md border px-3 py-2 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
                     selected[field.id] === choice.id
                       ? "border-primary bg-primary/10 text-foreground"
                       : "border-border text-muted-foreground hover:border-primary/50"
@@ -227,15 +238,14 @@ export function CustomizationForm({ product, onSelectImage }: Props) {
                   {choice.label}
                   {choice.priceModifier !== 0 && (
                     <span className="ml-1 text-xs opacity-70">
-                      {choice.priceModifier > 0 ? "+" : ""}
-                      ${(choice.priceModifier / 100).toFixed(0)}
+                      {formatPriceAdjustment(choice.priceModifier)}
                     </span>
                   )}
                 </button>
               ))}
             </div>
           )}
-        </div>
+        </fieldset>
         );
       })}
 
@@ -247,13 +257,14 @@ export function CustomizationForm({ product, onSelectImage }: Props) {
           id="quantity"
           type="number"
           min={1}
-          max={10}
+          max={MAX_CART_QUANTITY}
+          step={1}
           value={quantity}
-          onChange={(e) => setQuantity(Math.max(1, Number(e.target.value) || 1))}
+          onChange={(e) => setQuantity(normalizeCartQuantity(Number(e.target.value)))}
           className="w-20"
         />
         <span className="ml-auto font-heading text-2xl">
-          ${(unitPrice / 100).toFixed(0)}
+          {formatUsd(unitPrice)}
         </span>
       </div>
 
@@ -265,6 +276,8 @@ export function CustomizationForm({ product, onSelectImage }: Props) {
       >
         {added ? t("addedToCart") : t("addToCart")}
       </Button>
+      <p role="status" className="sr-only">{added ? t("addedToCart") : ""}</p>
+      <p className="text-sm text-muted-foreground">{t("quantityLimit", { count: MAX_CART_QUANTITY })}</p>
     </div>
   );
 }

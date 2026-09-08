@@ -1,21 +1,31 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { cache } from "react";
+import { correctProductCopy } from "@/lib/product-copy";
+import { productImages } from "@/lib/catalog";
+import { CatalogUnavailable } from "@/components/store/catalog-unavailable";
 import { Container } from "@/components/marketing/container";
 import { ProductDisplay } from "@/components/store/product-display";
 import type { ProductCustomizationOptions } from "@/types/customization";
 
 export const dynamic = "force-dynamic";
 
-async function getProduct(slug: string) {
-  return prisma.product.findUnique({ where: { slug, isActive: true } });
-}
+const getProduct = cache(async (slug: string) => {
+  try {
+    const product = await prisma.product.findUnique({ where: { slug, isActive: true } });
+    return { available: true, product: product ? correctProductCopy(product) : null };
+  } catch {
+    console.error("[catalog] Product detail query failed");
+    return { available: false, product: null };
+  }
+});
 
 export async function generateMetadata({
   params,
 }: PageProps<"/store/[slug]">): Promise<Metadata> {
   const { slug } = await params;
-  const product = await getProduct(slug);
+  const { product } = await getProduct(slug);
   if (!product) return {};
   return { title: product.name, description: product.description };
 }
@@ -24,7 +34,8 @@ export default async function ProductDetailPage({
   params,
 }: PageProps<"/store/[slug]">) {
   const { slug } = await params;
-  const product = await getProduct(slug);
+  const { product, available } = await getProduct(slug);
+  if (!available) return <section className="px-4 py-16"><CatalogUnavailable /></section>;
   if (!product) notFound();
 
   return (
@@ -37,7 +48,7 @@ export default async function ProductDetailPage({
             name: product.name,
             basePrice: product.basePrice,
             category: product.category,
-            images: product.images as string[],
+            images: productImages(product.images),
             customizationOptions:
               product.customizationOptions as unknown as ProductCustomizationOptions,
             isCustomMade: product.isCustomMade,

@@ -35,7 +35,7 @@ const OFFERINGS = [
 export default function CommunityPage() {
   return (
     <>
-      <section className="relative overflow-hidden bg-gradient-to-b from-[#241b12] to-[#1b140d] py-24 text-[#f3e9d2] sm:py-32">
+      <section className="relative overflow-hidden bg-gradient-to-b from-[#241b12] to-[#1b140d] py-16 text-[#f3e9d2] sm:py-32">
         <CrossPattern className="text-[#d4a84b] opacity-[0.08]" />
         <Container className="relative">
           <p className="text-sm font-medium tracking-[0.25em] text-[#d4a84b] uppercase">
@@ -51,7 +51,7 @@ export default function CommunityPage() {
         </Container>
       </section>
 
-      <section className="py-20 sm:py-28">
+      <section className="py-14 sm:py-24">
         <Container>
           <SectionHeading
             eyebrow="What to expect"
@@ -78,7 +78,7 @@ export default function CommunityPage() {
 
       <CommunityAnnouncements />
 
-      <section className="bg-muted/40 py-20 sm:py-28">
+      <section className="bg-muted/40 py-14 sm:py-24">
         <Container className="max-w-xl text-center">
           <h2 className="font-heading text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
             Be one of our founding members

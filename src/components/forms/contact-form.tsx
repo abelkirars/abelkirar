@@ -31,6 +31,7 @@ export function ContactForm({
   const t = useTranslations("contactForm");
   const tValidation = useTranslations("validation");
   const [status, setStatus] = useState<"idle" | "success">("idle");
+  const [submissionError, setSubmissionError] = useState(false);
   const {
     register,
     handleSubmit,
@@ -44,12 +45,16 @@ export function ContactForm({
   });
 
   async function onSubmit(data: ContactInput) {
-    const res = await fetch("/api/contact", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    if (res.ok) setStatus("success");
+    setSubmissionError(false);
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (res.ok) setStatus("success");
+      else setSubmissionError(true);
+    } catch { setSubmissionError(true); }
   }
 
   if (status === "success") {
@@ -93,6 +98,7 @@ export function ContactForm({
           {isSubmitting ? t("sending") : (submitLabel ?? t("send"))}
         </Button>
       </FieldGroup>
+      {submissionError && <p role="alert" className="mt-4 text-sm text-destructive">{t("submissionError")}</p>}
     </form>
   );
 }

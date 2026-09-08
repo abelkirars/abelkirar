@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Search } from "lucide-react";
 import { getTranslations } from "next-intl/server";
-import { prisma } from "@/lib/db";
+import { readCatalog, productImages, PRODUCT_CATEGORIES } from "@/lib/catalog";
+import { CatalogUnavailable } from "@/components/store/catalog-unavailable";
 import { Container } from "@/components/marketing/container";
 import { CrossPattern } from "@/components/marketing/cross-pattern";
 import { ProductCard } from "@/components/store/product-card";
@@ -27,6 +28,7 @@ type ProductCardData = {
   description: string;
   basePrice: number;
   images: string[];
+  isCustomMade: boolean;
 };
 
 // When browsing the full store (no category filter), categories with more
@@ -54,12 +56,13 @@ function groupIntoCards(
         category: product.category,
         description: product.description,
         basePrice: product.basePrice,
-        images: product.images as string[],
+        images: productImages(product.images),
+        isCustomMade: product.isCustomMade,
       };
     }
 
     const basePrice = Math.min(...group.map((p) => p.basePrice));
-    const withImage = group.find((p) => (p.images as string[]).length > 0);
+    const withImage = group.find((p) => productImages(p.images).length > 0);
     const label = categoryLabel(category);
 
     return {
@@ -69,7 +72,8 @@ function groupIntoCards(
       category,
       description: t("chooseOptions", { count: group.length, label }),
       basePrice,
-      images: (withImage?.images as string[]) ?? [],
+      images: productImages(withImage?.images),
+      isCustomMade: group.some((product) => product.isCustomMade),
     };
   });
 }
@@ -85,12 +89,10 @@ export default async function StorePage({
   // AND made "browsing a category, then searching" silently return nothing
   // whenever the match lived outside that category.
   const categoryFilter =
-    !searchQuery && typeof category === "string" ? category : undefined;
+    !searchQuery && typeof category === "string" && PRODUCT_CATEGORIES.some((value) => value === category) ? category : undefined;
   const t = await getTranslations("store");
 
-  const products = await prisma.product.findMany({
-    where: {
-      isActive: true,
+  const { products, available } = await readCatalog({
       ...(searchQuery
         ? {
             OR: [
@@ -102,8 +104,6 @@ export default async function StorePage({
         : categoryFilter
           ? { category: categoryFilter as never }
           : {}),
-    },
-    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
   });
 
   // Grouping only applies to the default, unfiltered browse view — any
@@ -118,30 +118,31 @@ export default async function StorePage({
         category: product.category,
         description: product.description,
         basePrice: product.basePrice,
-        images: product.images as string[],
+        images: productImages(product.images),
+        isCustomMade: product.isCustomMade,
       }))
     : groupIntoCards(products, t);
 
   return (
     <>
-      <section className="relative overflow-hidden bg-gradient-to-b from-[#241b12] to-[#1b140d] py-16 text-[#f3e9d2] sm:py-24">
+      <section className="relative overflow-hidden bg-gradient-to-b from-[#241b12] to-[#1b140d] py-6 text-[#f3e9d2] sm:py-10">
         <CrossPattern className="text-[#d4a84b] opacity-[0.08]" />
         <Container className="relative">
-          <p className="text-sm font-medium tracking-[0.25em] text-[#d4a84b] uppercase">
+          <p className="text-xs font-medium tracking-[0.2em] text-[#d4a84b] uppercase sm:text-sm">
             {t("eyebrow")}
           </p>
-          <h1 className="mt-4 max-w-2xl font-heading text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
+          <h1 className="mt-2 max-w-2xl font-heading text-2xl leading-tight font-semibold tracking-tight text-balance sm:text-4xl">
             {t("title")}
           </h1>
-          <p className="mt-5 max-w-xl text-lg text-[#f3e9d2]/80 text-pretty">
+          <p className="mt-2 max-w-xl text-sm leading-6 text-[#f3e9d2]/80 text-pretty sm:text-base">
             {t("description")}
           </p>
         </Container>
       </section>
 
-      <section className="py-12 sm:py-20">
+      <section className="pt-6 pb-12 sm:pt-8 sm:pb-20">
         <Container>
-          <div className="mx-auto mb-10 max-w-xl">
+          <div className="mx-auto mb-6 max-w-xl sm:mb-8">
             <form action="/store" role="search" className="flex items-center gap-2">
               <Input
                 type="search"
@@ -149,7 +150,7 @@ export default async function StorePage({
                 defaultValue={searchQuery ?? ""}
                 placeholder={t("searchPlaceholder")}
                 aria-label={t("searchLabel")}
-                className="h-11 bg-card shadow-sm"
+                className="h-12 bg-card shadow-sm"
               />
               <Button
                 type="submit"
@@ -167,7 +168,7 @@ export default async function StorePage({
             )}
           </div>
 
-          {cards.length === 0 ? (
+          {!available ? <CatalogUnavailable /> : cards.length === 0 ? (
             <p className="text-center text-muted-foreground">
               {searchQuery ? t("noResults", { query: searchQuery }) : t("empty")}
             </p>
@@ -182,6 +183,7 @@ export default async function StorePage({
                   description={card.description}
                   basePrice={card.basePrice}
                   images={card.images}
+                  isCustomMade={card.isCustomMade}
                 />
               ))}
             </div>

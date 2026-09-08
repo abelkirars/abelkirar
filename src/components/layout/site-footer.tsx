@@ -10,18 +10,18 @@ export async function SiteFooter() {
 
   return (
     <footer className="border-t border-border/60 bg-secondary text-secondary-foreground">
-      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[1.3fr_1fr_1.2fr] lg:px-8">
+      <div className="mx-auto grid max-w-6xl gap-7 px-4 py-14 sm:px-6 lg:grid-cols-[1.3fr_1fr_1.2fr] lg:px-8">
         <div className="space-y-4">
           <span className="font-heading text-2xl font-semibold">{tHeader("brand")}</span>
           <p className="max-w-sm text-sm text-secondary-foreground/80">{t("tagline")}</p>
         </div>
 
-        <nav className="flex flex-col gap-2 text-sm">
+        <nav className="grid grid-cols-2 gap-x-4 text-sm lg:grid-cols-1">
           {NAV_LINKS.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className="text-secondary-foreground/80 transition-colors hover:text-secondary-foreground"
+              className="flex min-h-11 items-center text-secondary-foreground/80 transition-colors hover:text-secondary-foreground"
             >
               {tNav(link.key)}
             </Link>

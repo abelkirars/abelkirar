@@ -125,7 +125,7 @@ export async function POST() {
           slug: "tsenatsl",
           name: "Tsenatsl",
           category: "OTHER",  // Using OTHER temporarily
-          description: "Tsenatsl - traditional Ethiopian percussion instrument.",
+          description: "Tsenatsl — a shaken metal sistrum (idiophone) used in Ethiopian Orthodox church worship.",
           basePrice: 20000,
           images: [
             "https://ghscuszbdddxsxtxywdm.supabase.co/storage/v1/object/public/product-images/tsenatsl.png",
@@ -136,7 +136,7 @@ export async function POST() {
           slug: "mekwamiya",
           name: "Mekwamiya",
           category: "OTHER",  // Using OTHER temporarily
-          description: "Mekwamiya - spiritual Ethiopian wind instrument.",
+          description: "Mekwamiya — a liturgical prayer and chanting staff used in Ethiopian Orthodox worship.",
           basePrice: 20000,
           images: [
             "https://ghscuszbdddxsxtxywdm.supabase.co/storage/v1/object/public/product-images/mekwamiya.png",
@@ -145,9 +145,9 @@ export async function POST() {
         },
         {
           slug: "pick-ups",
-          name: "Pick Ups",
+          name: "Pickups",
           category: "OTHER",  // Using OTHER temporarily
-          description: "Pick Ups - essential accessory for string instruments.",
+          description: "Pickups - essential accessory for string instruments.",
           basePrice: 10000,
           images: [
             "https://ghscuszbdddxsxtxywdm.supabase.co/storage/v1/object/public/product-images/pick-ups.png",
@@ -158,7 +158,7 @@ export async function POST() {
           slug: "kaba",
           name: "Kaba",
           category: "OTHER",  // Using OTHER temporarily
-          description: "Kaba - traditional Ethiopian drum instrument.",
+          description: "Kaba — traditional Ethiopian ceremonial clothing worn for special and religious occasions.",
           basePrice: 20000,
           images: [
             "https://ghscuszbdddxsxtxywdm.supabase.co/storage/v1/object/public/product-images/kaba.png",

@@ -1,10 +1,12 @@
+import { Suspense } from "react";
+import { PublishedMedia } from "@/components/marketing/site-media";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { Container } from "@/components/marketing/container";
 import { SectionHeading } from "@/components/marketing/section-heading";
 import { CrossPattern } from "@/components/marketing/cross-pattern";
 import { CourseLevelCards } from "@/components/marketing/course-level-cards";
-import { ContactForm } from "@/components/forms/contact-form";
+import { CourseApplicationForm } from "@/components/forms/course-application-form";
 
 export const metadata: Metadata = {
   title: "Courses",
@@ -14,10 +16,11 @@ export const metadata: Metadata = {
 
 export default async function CoursesPage() {
   const t = await getTranslations("courses");
+  const tForm = await getTranslations("courseApplicationForm");
 
   return (
     <>
-      <section className="relative overflow-hidden bg-gradient-to-b from-[#241b12] to-[#1b140d] py-24 text-[#f3e9d2] sm:py-32">
+      <section className="relative overflow-hidden bg-gradient-to-b from-[#241b12] to-[#1b140d] py-16 text-[#f3e9d2] sm:py-32">
         <CrossPattern className="text-[#d4a84b] opacity-[0.08]" />
         <Container className="relative">
           <p className="text-sm font-medium tracking-[0.25em] text-[#d4a84b] uppercase">
@@ -32,26 +35,26 @@ export default async function CoursesPage() {
         </Container>
       </section>
 
-      <section className="py-20 sm:py-28">
+      <Suspense fallback={null}><PublishedMedia slot="teacher-photo" /></Suspense>
+      <Suspense fallback={null}><PublishedMedia slot="course-sample" /></Suspense>
+      <Suspense fallback={null}><PublishedMedia slot="kirar-audio" /></Suspense>
+      <section className="py-14 sm:py-24">
         <Container>
           <CourseLevelCards />
+          <p className="mx-auto mt-8 max-w-2xl text-center text-muted-foreground">{t("availability")}</p>
+          <p className="mx-auto mt-4 max-w-2xl text-center text-muted-foreground">{t("strings")}</p>
         </Container>
       </section>
 
-      <section className="bg-muted/40 py-20 sm:py-28">
+      <section id="waitlist" className="scroll-mt-20 bg-muted/40 py-14 sm:py-24">
         <Container className="grid gap-12 lg:grid-cols-2">
           <SectionHeading
-            eyebrow="Enrollment"
-            title="Courses are opening soon"
-            description="We're finishing production on the first cohort of video lessons. Join the waitlist and you'll be the first to know when registration opens — with early access pricing."
+            eyebrow={tForm("eyebrow")}
+            title={tForm("title")}
+            description={tForm("description")}
           />
           <div className="max-w-md rounded-2xl bg-card p-8 ring-1 ring-foreground/10">
-            <ContactForm
-              topic="Course Waitlist"
-              showMessageField={false}
-              submitLabel="Join the waitlist"
-              successMessage="You're on the list — we'll email you as soon as enrollment opens."
-            />
+            <CourseApplicationForm />
           </div>
         </Container>
       </section>

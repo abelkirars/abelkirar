@@ -1,0 +1,41 @@
+-- =============================================================================
+-- Record whether anyone was actually told about a course application.
+--
+-- PURELY ADDITIVE. One nullable column. No existing column is altered or
+-- dropped, no row is written, no index or constraint changes, and no backfill
+-- runs. Applying this migration cannot change the behaviour of anything
+-- already deployed.
+-- =============================================================================
+
+-- ---------------------------------------------------------------------------
+-- "notificationsSentAt"
+--
+--    Set only when BOTH the teacher notification and the applicant
+--    confirmation report sent. Written as a separate statement AFTER the
+--    application row already exists, so it can never fail a submission: if
+--    this write fails, the column stays null, and null means "unconfirmed",
+--    never "sent". That is the safe direction — the query below over-reports
+--    rather than under-reports, which is the correct bias for "did anybody
+--    fall through the cracks".
+--
+--    NOT backfilled. Rows written before this column existed have no evidence
+--    either way, and writing now() for them would fabricate a delivery that
+--    was never confirmed — the same reasoning that left "approvedAt" null for
+--    backfilled StudentProfile rows in 20260826120000. One consequence worth
+--    knowing: existing rows will show up in the query below as unnotified,
+--    which for the staging test rows is in fact true.
+--
+--    Why it exists: with no admin review desk built yet, email is the only
+--    way the teacher learns an application arrived. A failed send used to be
+--    visible only in a runtime log nobody reads. This makes it answerable
+--    with one query, in a place he already looks:
+--
+--      SELECT id, "createdAt" FROM "CourseApplication"
+--      WHERE "notificationsSentAt" IS NULL ORDER BY "createdAt" DESC;
+--
+--    A duplicate application never reaches this write at all — it returns null
+--    from the write layer, sends nothing by design, and correctly leaves no
+--    row of its own to account for.
+-- ---------------------------------------------------------------------------
+ALTER TABLE "CourseApplication"
+    ADD COLUMN "notificationsSentAt" TIMESTAMP(3);
