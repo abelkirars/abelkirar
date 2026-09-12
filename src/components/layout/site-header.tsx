@@ -16,8 +16,8 @@ export function SiteHeader() {
   const tNav = useTranslations("nav");
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border/60 bg-background/90 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6 xl:px-8">
+    <header className="sticky top-0 z-40 h-(--header-height) border-b border-border/60 bg-background/90 backdrop-blur">
+      <div className="mx-auto flex h-full max-w-6xl items-center justify-between px-4 sm:px-6 xl:px-8">
         <Link href="/" className="font-heading text-xl font-semibold tracking-tight">
           {t("brand")}
         </Link>

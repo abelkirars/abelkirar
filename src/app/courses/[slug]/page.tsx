@@ -85,7 +85,7 @@ export default async function CourseDetailPage({
 
           <div
             id="apply"
-            className="h-fit max-w-md scroll-mt-20 rounded-2xl bg-card p-8 ring-1 ring-foreground/10"
+            className="h-fit max-w-md scroll-mt-[calc(var(--header-height)+1rem)] rounded-2xl bg-card p-8 ring-1 ring-foreground/10"
           >
             <p className="mb-2 text-xs font-medium uppercase tracking-[0.2em] text-accent">
               {tForm("eyebrow")}

@@ -75,6 +75,10 @@
   --chart-4: #6b5d4d;
   --chart-5: #8a6a2f;
   --radius: 0.5rem;
+  /* Total rendered height of the sticky site header: 64px of bar content
+     plus its 1px bottom border. Single source of truth - the header sizes
+     itself from this, and in-page anchor targets offset by it. */
+  --header-height: 65px;
   --sidebar: #f5efdd;
   --sidebar-foreground: #2a2018;
   --sidebar-primary: #8a5f10;

@@ -46,7 +46,7 @@ export default async function CoursesPage() {
         </Container>
       </section>
 
-      <section id="waitlist" className="scroll-mt-20 bg-muted/40 py-14 sm:py-24">
+      <section id="waitlist" className="scroll-mt-[calc(var(--header-height)+1rem)] bg-muted/40 py-14 sm:py-24">
         <Container className="grid gap-12 lg:grid-cols-2">
           <SectionHeading
             eyebrow={tForm("eyebrow")}

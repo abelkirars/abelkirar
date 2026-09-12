@@ -351,7 +351,7 @@ export default async function StudentDashboardPage() {
             <Card
               id="weekly-practice"
               tabIndex={-1}
-              className={`${DASHBOARD_CARD_CLASS} scroll-mt-24 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring`}
+              className={`${DASHBOARD_CARD_CLASS} scroll-mt-[calc(var(--header-height)+1rem)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring`}
             >
               <CardHeader className="border-b border-border/70 bg-muted/25 p-5 sm:p-6">
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -506,7 +506,7 @@ export default async function StudentDashboardPage() {
             <Card
               id="practice-log"
               tabIndex={-1}
-              className={`${DASHBOARD_CARD_CLASS} scroll-mt-24 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring`}
+              className={`${DASHBOARD_CARD_CLASS} scroll-mt-[calc(var(--header-height)+1rem)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring`}
             >
               <CardHeader className="border-b border-border/70 bg-muted/25 p-5 sm:p-6">
                 <div className="flex items-center gap-3">
