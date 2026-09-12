@@ -56,6 +56,19 @@ next-env.d.ts
 # only the Remotion skill, nothing website-specific.
 skills-lock.json
 
+# Local AI-tool scratch output, not project content: .codex/ is the Codex
+# CLI working directory, and Claude outputs/ holds files written for review
+# during a session. Same reasoning as .claude/ above: neither carries
+# website-specific config, and both are per-machine. Contents stay on disk,
+# these rules only stop them being tracked.
+#
+# The space below is deliberately not escaped or quoted: gitignore needs a
+# backslash only for a TRAILING space, and it does not strip quotes, so
+# "Claude outputs/" would match a name containing the quote characters.
+# Same form as the curriculum-manual pattern below.
+.codex/
+Claude outputs/
+
 # Remotion is a separate project living at remotion/ on disk, kept out of
 # this repo intentionally — was never tracked here (confirmed via
 # `git rm --cached`), being moved into its own project. Not deleted from
