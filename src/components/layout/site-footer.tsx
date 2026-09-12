@@ -2,11 +2,13 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { NAV_LINKS } from "@/lib/nav";
 import { NewsletterForm } from "@/components/forms/newsletter-form";
+import { SOCIAL_LINKS } from "@/lib/social";
 
 export async function SiteFooter() {
   const t = await getTranslations("footer");
   const tHeader = await getTranslations("header");
   const tNav = await getTranslations("nav");
+  const tSocial = await getTranslations("footer.social");
 
   return (
     <footer className="border-t border-border/60 bg-secondary text-secondary-foreground">
@@ -34,6 +36,28 @@ export async function SiteFooter() {
             {t("joinCommunityDescription")}
           </p>
           <NewsletterForm source="footer" className="flex flex-col gap-2" />
+          <ul className="flex flex-wrap items-center gap-1 pt-1">
+            {SOCIAL_LINKS.map((social) => (
+              <li key={social.key}>
+                <a
+                  href={social.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={tSocial(social.key)}
+                  className="flex size-11 items-center justify-center rounded-lg text-secondary-foreground/80 outline-none transition-colors hover:text-secondary-foreground focus-visible:ring-2 focus-visible:ring-secondary-foreground/70"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden
+                    className="size-5"
+                  >
+                    <path d={social.path} />
+                  </svg>
+                </a>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
 

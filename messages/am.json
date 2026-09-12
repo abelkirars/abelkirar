@@ -18,7 +18,12 @@
     "tagline": "በዲያቆን አቤል (አቤል ክራር) የሚሰጥ፣ የኦርቶዶክስ ዝማሬን በክራር ለማጀብ የኦንላይን ትምህርት።",
     "joinCommunity": "መረጃ ያግኙ",
     "joinCommunityDescription": "ስለ ክራር ትምህርቶችና አዳዲስ በእጅ የተሠሩ መሣሪያዎች መረጃ ያግኙ።",
-    "copyright": "© {year} Abelkirar. መብቱ በሕግ የተጠበቀ ነው።"
+    "copyright": "© {year} Abelkirar. መብቱ በሕግ የተጠበቀ ነው።",
+    "social": {
+      "whatsapp": "በWhatsApp ያነጋግሩኝ",
+      "instagram": "በInstagram ይከተሉኝ",
+      "telegram": "በTelegram መልእክት ይላኩልኝ"
+    }
   },
   "hero": {
     "eyebrow": "የኦንላይን የክራር ትምህርት",

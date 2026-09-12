@@ -18,7 +18,12 @@
     "tagline": "Online Kirar lessons for accompanying Ethiopian Orthodox chanting, led by Deacon Abel (Abelkirar).",
     "joinCommunity": "Stay connected",
     "joinCommunityDescription": "Get updates about Kirar lessons and new handmade instruments.",
-    "copyright": "© {year} Abelkirar. All rights reserved."
+    "copyright": "© {year} Abelkirar. All rights reserved.",
+    "social": {
+      "whatsapp": "Chat with me on WhatsApp",
+      "instagram": "Follow me on Instagram",
+      "telegram": "Message me on Telegram"
+    }
   },
   "hero": {
     "eyebrow": "Online Kirar Lessons",
