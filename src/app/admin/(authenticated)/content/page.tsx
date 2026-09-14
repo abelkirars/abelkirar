@@ -1,4 +1,3 @@
-import { Container } from "@/components/marketing/container";
 import { ContentEditor, type CopySection } from "@/components/admin/content-editor";
 import { getCopyRecords, type CopyOverrideRecord } from "@/lib/site-copy";
 import { COPY_KEYS, defaultCopy } from "@/lib/site-copy-defaults";
@@ -60,19 +59,5 @@ export default async function AdminContentPage() {
     });
   }
 
-  return (
-    <section className="py-10">
-      <Container className="max-w-5xl">
-        <h1 className="font-heading text-2xl font-semibold">Website text</h1>
-        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-          Every word on the site, grouped by where it appears. Edit the English and
-          Amharic side by side and save — the change is live on the next page load.
-          Nothing is overwritten permanently: <strong>Restore original</strong> puts any
-          field back to the wording the site shipped with.
-        </p>
-
-        <ContentEditor sections={sections} />
-      </Container>
-    </section>
-  );
+  return <ContentEditor sections={sections} />;
 }

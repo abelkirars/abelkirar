@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-const mocks = vi.hoisted(() => ({ auth: vi.fn(), getMedia: vi.fn(), bucket: vi.fn(), createBucket: vi.fn(), signed: vi.fn(), list: vi.fn(), upload: vi.fn(), remove: vi.fn() }));
+const mocks = vi.hoisted(() => ({ auth: vi.fn(), getMedia: vi.fn(), bucket: vi.fn(), createBucket: vi.fn(), updateBucket: vi.fn(), signed: vi.fn(), list: vi.fn(), upload: vi.fn(), remove: vi.fn() }));
 vi.mock("@/lib/site-media", () => ({ getSiteMedia: mocks.getMedia }));
 vi.mock("@/lib/admin/dal", () => ({ requireAdminApi: mocks.auth }));
 vi.mock("@/lib/supabase-admin", () => ({ supabaseAdmin: { storage: {
-  getBucket: mocks.bucket, createBucket: mocks.createBucket,
+  getBucket: mocks.bucket, createBucket: mocks.createBucket, updateBucket: mocks.updateBucket,
   from: () => ({ createSignedUploadUrl: mocks.signed, list: mocks.list, upload: mocks.upload, remove: mocks.remove, getPublicUrl: (path: string) => ({ data: { publicUrl: `https://example.com/${path}` } }) }),
 } } }));
 import { POST, PUT, PATCH, DELETE } from "./route";
@@ -18,9 +18,27 @@ beforeEach(() => {
   mocks.signed.mockResolvedValue({ data: { token: "signed-token" }, error: null });
   mocks.upload.mockResolvedValue({ error: null });
   mocks.remove.mockResolvedValue({ error: null });
+  mocks.updateBucket.mockResolvedValue({ error: null });
   mocks.list.mockResolvedValue({ data: [{ name: path.split("/").pop(), metadata: { size: 1000, mimetype: "video/mp4" } }], error: null });
 });
 describe("admin website media", () => {
+  it("updates an existing bucket's legacy allowlist before signing an iPhone upload", async () => {
+    mocks.bucket.mockResolvedValue({ data: { public: true, file_size_limit: 52428800, allowed_mime_types: ["video/mp4", "application/json"] }, error: null });
+    expect((await POST(request({ slot: "home-performance", mimeType: "video/quicktime", size: 1000 }))).status).toBe(200);
+    expect(mocks.updateBucket).toHaveBeenCalledWith("site-media", expect.objectContaining({ public: true, fileSizeLimit: 52428800, allowedMimeTypes: expect.arrayContaining(["video/mp4", "video/quicktime", "application/json"]) }));
+    expect(mocks.signed).toHaveBeenCalledWith(expect.stringMatching(/\.mov$/));
+    mocks.updateBucket.mockResolvedValue({ error: new Error("Unavailable") });
+    mocks.signed.mockClear();
+    expect((await POST(request({ slot: "home-performance", mimeType: "video/quicktime", size: 1000 }))).status).toBe(503);
+    expect(mocks.signed).not.toHaveBeenCalled();
+  });
+  it("publishes MOV only after verifying its stored type and size", async () => {
+    const movPath = path.replace(/mp4$/, "mov");
+    mocks.list.mockResolvedValue({ data: [{ name: movPath.split("/").pop(), metadata: { size: 1000, mimetype: "video/quicktime" } }], error: null });
+    const response = await PUT(request({ slot: "home-performance", path: movPath, title: "iPhone recording", transcript: "" }));
+    expect(response.status).toBe(200);
+    expect((await response.json()).media.mimeType).toBe("video/quicktime");
+  });
   it("requires admin authorization for every operation", async () => {
     mocks.auth.mockResolvedValue({ response: new Response(null, { status: 401 }) });
     for (const handler of [POST, PUT, PATCH, DELETE]) expect((await handler(request({}))).status).toBe(401);

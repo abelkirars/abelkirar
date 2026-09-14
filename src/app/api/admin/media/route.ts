@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireAdminApi } from "@/lib/admin/dal";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { getSiteMedia } from "@/lib/site-media";
-import { MEDIA_BUCKET, MEDIA_EXTENSIONS, MEDIA_SLOTS, MAX_MEDIA_BYTES, isMediaSlot, allowedMedia } from "@/lib/site-media-config";
+import { MEDIA_BUCKET, MEDIA_EXTENSIONS, MEDIA_MIME_TYPES, MAX_MEDIA_BYTES, isMediaSlot, allowedMedia } from "@/lib/site-media-config";
 
 const slotSchema = z.string().refine(isMediaSlot);
 const uploadSchema = z.object({ slot: slotSchema, mimeType: z.string(), size: z.number().int().positive() }).strict();
@@ -40,9 +40,18 @@ export async function POST(request: Request) {
       if (bucketError && String(bucketError.statusCode) !== "404") throw bucketError;
       const { error } = await supabaseAdmin.storage.createBucket(MEDIA_BUCKET, {
         public: true, fileSizeLimit: MAX_MEDIA_BYTES,
-        allowedMimeTypes: [...new Set(Object.values(MEDIA_SLOTS).flatMap((s) => [...s.types])), "application/json"],
+        allowedMimeTypes: MEDIA_MIME_TYPES,
       });
       if (error && String(error.statusCode) !== "409") throw error;
+    } else if (bucket.allowed_mime_types && MEDIA_MIME_TYPES.some((type) => !bucket.allowed_mime_types!.includes(type))) {
+      // Existing buckets retain the old MP4/WebM allowlist after a code deploy.
+      // Add the supported types without changing visibility or size policy.
+      const { error } = await supabaseAdmin.storage.updateBucket(MEDIA_BUCKET, {
+        public: bucket.public,
+        fileSizeLimit: bucket.file_size_limit ?? null,
+        allowedMimeTypes: [...new Set([...bucket.allowed_mime_types, ...MEDIA_MIME_TYPES])],
+      });
+      if (error) throw error;
     }
     const path = `uploads/${auth.session.adminId}/${slot}/${randomUUID()}.${MEDIA_EXTENSIONS[mimeType]}`;
     const { data, error } = await supabaseAdmin.storage.from(MEDIA_BUCKET).createSignedUploadUrl(path);
@@ -62,7 +71,7 @@ export async function PUT(request: Request) {
     const { slot, path, title, transcript } = parsed.data;
     const prefix = `uploads/${auth.session.adminId}/${slot}/`;
     const filename = path.slice(prefix.length);
-    if (!path.startsWith(prefix) || !/^[a-f0-9-]{36}\.(mp4|webm|mp3|m4a|wav|ogg|jpg|png|webp)$/.test(filename)) return Response.json({ error: "Invalid upload path." }, { status: 400 });
+    if (!path.startsWith(prefix) || !/^[a-f0-9-]{36}\.(mp4|webm|mov|mp3|m4a|wav|ogg|jpg|png|webp)$/.test(filename)) return Response.json({ error: "Invalid upload path." }, { status: 400 });
     const storage = supabaseAdmin.storage.from(MEDIA_BUCKET);
     const { data, error } = await storage.list(prefix.slice(0, -1), { search: filename });
     if (error) throw error;

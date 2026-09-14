@@ -4,6 +4,11 @@ import { describe, expect, it } from "vitest";
 import { MediaManager } from "./media-manager";
 
 describe("website media editor", () => {
+  it("offers MOV in the native iPhone file picker and explains how to publish", () => {
+    const html = renderToStaticMarkup(createElement(MediaManager, { initialMedia: {} }));
+    expect(html.match(/<input\b[^>]*id="home-performance-file"[^>]*>/)?.[0]).toContain("video/quicktime,.mov");
+    expect(html).toContain("Selecting a file does not publish it.");
+  });
   it("allows saving published details without choosing a new file", () => {
     const html = renderToStaticMarkup(createElement(MediaManager, { initialMedia: {
       "home-performance": { url: "https://example.com/performance.mp4", title: "Kirar performance", transcript: "A hymn.", mimeType: "video/mp4" },
