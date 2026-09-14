@@ -1,6 +1,8 @@
 import { getRequestConfig } from "next-intl/server";
 import { cookies } from "next/headers";
 import { defaultLocale, isLocale, localeCookieName } from "@/i18n/locale";
+import { getCopyOverrides } from "@/lib/site-copy";
+import { applyOverrides } from "@/lib/site-copy-keys";
 
 /**
  * `locale` here is next-intl's own override channel: when an awaitable
@@ -15,6 +17,12 @@ import { defaultLocale, isLocale, localeCookieName } from "@/i18n/locale";
  * sending it had an English cookie. Normal page rendering never passes an
  * explicit locale, so it's untouched by this and keeps resolving from the
  * cookie exactly as before.
+ *
+ * The messages file is the default and the fallback; admin edits from
+ * /admin/content are layered over it here, at the single point every
+ * translated string in the app already passes through, so nothing that calls
+ * t() needs to know the feature exists. getCopyOverrides never throws — see
+ * its comment in src/lib/site-copy.ts.
  */
 export default getRequestConfig(async ({ locale: explicitLocale }) => {
   let locale = defaultLocale;
@@ -27,8 +35,10 @@ export default getRequestConfig(async ({ locale: explicitLocale }) => {
     if (isLocale(cookieLocale)) locale = cookieLocale;
   }
 
+  const messages = (await import(`../../messages/${locale}.json`)).default;
+
   return {
     locale,
-    messages: (await import(`../../messages/${locale}.json`)).default,
+    messages: applyOverrides(messages, await getCopyOverrides(locale)),
   };
 });

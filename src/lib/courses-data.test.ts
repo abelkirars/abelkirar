@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { StudentLevel } from "@prisma/client";
-import { COURSE_LEVELS } from "@/lib/courses-data";
+import { COURSE_LEVELS, COURSE_TOPIC_SLOTS } from "@/lib/courses-data";
+import englishMessages from "../../messages/en.json";
+import amharicMessages from "../../messages/am.json";
 import { createCourseApplicationSchema } from "@/lib/validations/course-application";
 
 // StudentLevel is imported as a VALUE here, not a type — this file runs in
@@ -61,4 +63,46 @@ describe("StudentLevel / course-application Zod schema alignment (drift guard)",
     const result = schema.safeParse({ ...baseInput, requestedLevel: "NOT_A_REAL_LEVEL" });
     expect(result.success).toBe(false);
   });
+});
+
+/**
+ * Drift guard for the move of course display copy out of this module and into
+ * messages/{locale}.json. COURSE_LEVELS now carries only slug, price and
+ * StudentLevel; a course whose slug has no matching translation keys would
+ * render next-intl's fallback (the key path itself) on a public page.
+ */
+describe("course copy keys exist for every course, in every locale", () => {
+  const locales = { en: englishMessages, am: amharicMessages } as const;
+
+  // These sections are deliberately mixed: alongside one nested object per
+  // course slug, `courseLevels` also carries flat string entries such as
+  // `exploreCurriculum`. Asserting a uniform Record<string, Record<string,
+  // string>> over the whole section would therefore be a lie about the data.
+  // Narrow at the point of lookup instead, so a slug whose entry is missing —
+  // or is a bare string rather than a group of fields — yields undefined and
+  // fails the expectation below, rather than being cast away.
+  const copyField = (section: unknown, slug: string, field: string): unknown => {
+    if (typeof section !== "object" || section === null) return undefined;
+    const entry = (section as Record<string, unknown>)[slug];
+    if (typeof entry !== "object" || entry === null) return undefined;
+    return (entry as Record<string, unknown>)[field];
+  };
+
+  for (const [locale, messages] of Object.entries(locales)) {
+    it(`has courseLevels and courseDetails entries for each slug (${locale})`, () => {
+      const { courseLevels, courseDetails } = messages;
+
+      for (const { slug } of COURSE_LEVELS) {
+        for (const field of ["level", "title", "tagline", "description"]) {
+          expect(copyField(courseLevels, slug, field), `courseLevels.${slug}.${field}`).toBeTruthy();
+        }
+        for (const slot of COURSE_TOPIC_SLOTS) {
+          expect(
+            copyField(courseDetails, slug, `topic${slot}`),
+            `courseDetails.${slug}.topic${slot}`,
+          ).toBeTruthy();
+        }
+      }
+    });
+  }
 });

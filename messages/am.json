@@ -1,4 +1,35 @@
 {
+  "coursePricing": {
+    "nav": "የትምህርት ዋጋ",
+    "title": "የትምህርት ዋጋዎችና ቅናሾች",
+    "description": "ለእያንዳንዱ ትምህርት በድረ ገጹ የሚታየውን ዋጋ ያስተካክሉ። ማመልከት ነፃ ነው።",
+    "priceCents": "ዋጋ (በአሜሪካ ሳንቲም)",
+    "unitsHint": "100 ሳንቲም = 1 ዶላር። ለምሳሌ፣ ለ70 ዶላር 7000 ያስገቡ።",
+    "discountType": "የቅናሽ ዓይነት",
+    "none": "ቅናሽ የለም",
+    "percent": "በመቶኛ ቅናሽ",
+    "fixed": "በተወሰነ መጠን ቅናሽ",
+    "percentValue": "የቅናሽ መቶኛ (1–100)",
+    "fixedValue": "የቅናሽ መጠን (በአሜሪካ ሳንቲም)",
+    "active": "ቅናሹ ይስራ",
+    "preview": "የዋጋ ቅድመ እይታ",
+    "previewLoading": "ቅድመ እይታው እየተዘመነ ነው…",
+    "previewUnavailable": "ዋጋውን ለማየት ትክክለኛ እሴቶችን ያስገቡ።",
+    "save": "ዋጋውን አስቀምጥ",
+    "saving": "በማስቀመጥ ላይ…",
+    "saved": "ዋጋው ተቀምጧል።",
+    "amount": "${amount}",
+    "originalPrice": "የቀድሞ ዋጋ",
+    "finalPrice": "የአሁኑ ዋጋ",
+    "percentOff": "{percent}% ቅናሽ",
+    "lessThanOnePercent": "ከ1% ያነሰ ቅናሽ",
+    "invalidPrice": "ከ1 እስከ 2,147,483,647 ያለ ሙሉ ቁጥር በሳንቲም ያስገቡ።",
+    "invalidDiscount": "ከ1 እስከ 100 ያለ ሙሉ መቶኛ፣ ወይም ከዋጋው ያነሰና ከዜሮ የሚበልጥ መጠን በሳንቲም ያስገቡ።",
+    "unknownCourse": "ይህ ትምህርት አልተገኘም።",
+    "sessionExpired": "እባክዎ እንደ አስተዳዳሪ እንደገና ይግቡ።",
+    "saveFailed": "ዋጋውን ማስቀመጥ አልተቻለም። እባክዎ እንደገና ይሞክሩ።",
+    "previewFailed": "ቅድመ እይታውን ማሳየት አልተቻለም። ግንኙነትዎን ያረጋግጡና እንደገና ይሞክሩ።"
+  },
   "nav": {
     "about": "ስለ እኛ",
     "courses": "ትምህርቶች",
@@ -68,6 +99,23 @@
       "title": "የላቀ",
       "tagline": "ለአገልግሎት ይዘጋጁ",
       "description": "በቤተ ክርስቲያን በበለጠ ኃላፊነት ለማገልገል አጫወትዎንና ውሳኔዎን ያዳብሩ።"
+    }
+  },
+  "courseDetails": {
+    "beginner": {
+      "topic1": "Build confidence playing the Kirar",
+      "topic2": "Develop a consistent practice habit",
+      "topic3": "Begin accompanying Ethiopian Orthodox chanting"
+    },
+    "intermediate": {
+      "topic1": "Develop a more confident and expressive sound",
+      "topic2": "Strengthen listening and consistency",
+      "topic3": "Grow in confidence accompanying worship"
+    },
+    "advanced": {
+      "topic1": "Refine playing quality and judgement",
+      "topic2": "Prepare for greater responsibility in church",
+      "topic3": "Develop confidence serving alongside singers and other Kirar players"
     }
   },
   "instrumentCategories": {

@@ -1,4 +1,35 @@
 {
+  "coursePricing": {
+    "nav": "Course pricing",
+    "title": "Course pricing and discounts",
+    "description": "Set the public price for each course. Applications remain free.",
+    "priceCents": "Price (US cents)",
+    "unitsHint": "100 cents = $1. For example, enter 7000 for $70.",
+    "discountType": "Discount type",
+    "none": "No discount",
+    "percent": "Percentage off",
+    "fixed": "Fixed amount off",
+    "percentValue": "Percentage off (1–100)",
+    "fixedValue": "Amount off (US cents)",
+    "active": "Discount active",
+    "preview": "Price preview",
+    "previewLoading": "Updating preview…",
+    "previewUnavailable": "Enter valid values to preview the price.",
+    "save": "Save pricing",
+    "saving": "Saving…",
+    "saved": "Pricing saved.",
+    "amount": "${amount}",
+    "originalPrice": "Original price",
+    "finalPrice": "Current price",
+    "percentOff": "{percent}% off",
+    "lessThanOnePercent": "Less than 1% off",
+    "invalidPrice": "Enter a whole number of cents between 1 and 2,147,483,647.",
+    "invalidDiscount": "Choose a whole percentage from 1 to 100, or a positive amount in cents smaller than the price.",
+    "unknownCourse": "This course could not be found.",
+    "sessionExpired": "Please sign in as an admin again.",
+    "saveFailed": "Could not save pricing. Please try again.",
+    "previewFailed": "Could not load the preview. Check your connection and try again."
+  },
   "nav": {
     "about": "About",
     "courses": "Courses",
@@ -68,6 +99,23 @@
       "title": "Advanced",
       "tagline": "Prepare to serve",
       "description": "Refine your playing and judgement for greater responsibility in church."
+    }
+  },
+  "courseDetails": {
+    "beginner": {
+      "topic1": "Build confidence playing the Kirar",
+      "topic2": "Develop a consistent practice habit",
+      "topic3": "Begin accompanying Ethiopian Orthodox chanting"
+    },
+    "intermediate": {
+      "topic1": "Develop a more confident and expressive sound",
+      "topic2": "Strengthen listening and consistency",
+      "topic3": "Grow in confidence accompanying worship"
+    },
+    "advanced": {
+      "topic1": "Refine playing quality and judgement",
+      "topic2": "Prepare for greater responsibility in church",
+      "topic3": "Develop confidence serving alongside singers and other Kirar players"
     }
   },
   "instrumentCategories": {

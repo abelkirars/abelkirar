@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { COURSE_LEVELS } from "@/lib/courses-data";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { CoursePrice } from "@/components/marketing/course-price";
 
 export function CourseLevelCards() {
   const t = useTranslations("courseLevels");
@@ -24,6 +25,7 @@ export function CourseLevelCards() {
             </CardHeader>
             <CardContent className="flex h-full flex-col justify-between gap-6">
               <p className="text-muted-foreground">{t(`${course.slug}.description`)}</p>
+              <CoursePrice slug={course.slug} />
               <span className="inline-flex items-center gap-1 text-sm font-medium text-foreground">
                 {t("exploreCurriculum")}
                 <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />

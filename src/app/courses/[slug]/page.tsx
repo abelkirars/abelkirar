@@ -3,7 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { Check } from "lucide-react";
-import { COURSE_LEVELS } from "@/lib/courses-data";
+import { COURSE_LEVELS, COURSE_TOPIC_SLOTS } from "@/lib/courses-data";
+import { CoursePrice } from "@/components/marketing/course-price";
 import { Container } from "@/components/marketing/container";
 import { CrossPattern } from "@/components/marketing/cross-pattern";
 import { Badge } from "@/components/ui/badge";
@@ -20,9 +21,10 @@ export async function generateMetadata({
   const { slug } = await params;
   const course = COURSE_LEVELS.find((c) => c.slug === slug);
   if (!course) return {};
+  const tLevels = await getTranslations("courseLevels");
   return {
-    title: `${course.title} Kirar Course`,
-    description: course.description,
+    title: `${tLevels(`${course.slug}.title`)} Kirar Course`,
+    description: tLevels(`${course.slug}.description`),
   };
 }
 
@@ -34,6 +36,16 @@ export default async function CourseDetailPage({
   if (!course) notFound();
   const t = await getTranslations("courses");
   const tForm = await getTranslations("courseApplicationForm");
+  // The same namespace the cards on /courses read, so a level's name and
+  // description are written once and shown identically in both places.
+  const tLevels = await getTranslations("courseLevels");
+  const tDetails = await getTranslations("courseDetails");
+
+  // Blank slots are dropped rather than rendered as an empty bullet: clearing
+  // a topic in the editor is how you end up with a two-point course.
+  const topics = COURSE_TOPIC_SLOTS.map((slot) =>
+    tDetails(`${course.slug}.topic${slot}`).trim()
+  ).filter((topic) => topic.length > 0);
 
   return (
     <>
@@ -41,19 +53,19 @@ export default async function CourseDetailPage({
         <CrossPattern className="text-[#d4a84b] opacity-[0.08]" />
         <Container className="relative">
           <Badge variant="secondary" className="w-fit">
-            {course.level}
+            {tLevels(`${course.slug}.level`)}
           </Badge>
           <h1 className="mt-4 max-w-2xl font-heading text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
-            {course.title}: {course.tagline}
+            {tLevels(`${course.slug}.title`)}: {tLevels(`${course.slug}.tagline`)}
           </h1>
           <p className="mt-6 max-w-xl text-lg text-[#f3e9d2]/80 text-pretty">
-            {course.description}
+            {tLevels(`${course.slug}.description`)}
           </p>
           {/* The price stays visible so an applicant can self-qualify before
               applying; the apply CTA sits beneath it rather than replacing it. */}
-          <p className="mt-6 font-heading text-2xl text-[#d4a84b]">
-            ${(course.price / 100).toFixed(0)}
-          </p>
+          <div className="mt-6 text-[#d4a84b]">
+            <CoursePrice slug={course.slug} />
+          </div>
           <p className="mt-4 max-w-xl text-sm text-[#f3e9d2]/80">{t("availability")}</p>
           <p className="mt-4 max-w-xl text-sm text-[#f3e9d2]/80">{t("strings")}</p>
           <Button
@@ -74,7 +86,7 @@ export default async function CourseDetailPage({
               {t("overviewHeading")}
             </h2>
             <ul className="mt-6 space-y-3">
-              {course.topics.map((topic) => (
+              {topics.map((topic) => (
                 <li key={topic} className="flex items-start gap-3">
                   <Check className="mt-1 size-4 shrink-0 text-accent" />
                   <span className="text-muted-foreground">{topic}</span>

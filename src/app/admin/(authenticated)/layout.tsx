@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { requireAdminPage } from "@/lib/admin/dal";
 import { Container } from "@/components/marketing/container";
 import { AdminLogoutButton } from "@/components/admin/logout-button";
@@ -9,6 +10,7 @@ export default async function AuthenticatedAdminLayout({
   children: React.ReactNode;
 }) {
   const session = await requireAdminPage();
+  const pricing = await getTranslations("coursePricing");
 
   return (
     <div>
@@ -19,8 +21,10 @@ export default async function AuthenticatedAdminLayout({
             <Link href="/admin/students">Students</Link>
             <Link href="/admin/milestones">Milestones</Link>
             <Link href="/admin/products">Products</Link>
+            <Link href="/admin/courses">{pricing("nav")}</Link>
             <Link href="/admin/announcements">Announcements</Link>
             <Link href="/admin/upload-images">Upload images</Link>
+            <Link href="/admin/content">Website text</Link>
             <Link href="/admin/media">Website media</Link>
             <Link href="/admin/settings">Settings</Link>
           </nav>

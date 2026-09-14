@@ -68,6 +68,21 @@ enum NotificationDeliveryStatus {
   FAILED
 }
 
+enum CourseDiscountType {
+  PERCENT
+  FIXED
+}
+
+model CoursePrice {
+  slug           String              @id
+  priceCents     Int
+  discountType   CourseDiscountType?
+  /// PERCENT: whole percentage 1–100. FIXED: amount off in CENTS, never dollars.
+  discountValue  Int?
+  discountActive Boolean             @default(false)
+  updatedAt      DateTime            @updatedAt
+}
+
 model Product {
   id                   String          @id @default(cuid())
   slug                 String          @unique
@@ -954,4 +969,30 @@ model CourseApplicationEvent {
   createdAt DateTime @default(now())
 
   @@index([applicationId, createdAt])
+}
+
+/// An admin-authored replacement for one translated string in
+/// messages/{locale}.json. The JSON files stay the source of defaults AND the
+/// fallback: a row here only replaces a single leaf, an unrecognised `key` is
+/// ignored, and a database outage resolves every string back to the file. That
+/// is deliberate and matches src/lib/site-media.ts — editable public copy must
+/// never become a way for Postgres to take the marketing pages offline.
+///
+/// Deleting a row is how "reset to the original wording" is expressed, so
+/// there is no `isDefault` flag and no copy of the default stored here.
+model SiteCopy {
+  /// A Locale from src/i18n/locale.ts. Kept as String rather than an enum so
+  /// adding a language is a JSON file plus a locale constant, not a migration.
+  locale    String
+  /// Dot path into the messages JSON, e.g. "about.paragraph1". Validated
+  /// against the file on write — see src/lib/validations/site-copy.ts.
+  key       String
+  value     String
+  updatedAt DateTime @updatedAt
+  /// Admin display name at the time of the edit, for the "who changed this"
+  /// line in the editor. Free text, not a relation: the audit line should
+  /// survive an admin account being deleted.
+  updatedBy String?
+
+  @@id([locale, key])
 }

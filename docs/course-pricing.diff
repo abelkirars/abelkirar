@@ -1,0 +1,923 @@
+diff --git a/prisma/schema.prisma b/prisma/schema.prisma
+index 3e619a9..440e604 100644
+--- a/prisma/schema.prisma
++++ b/prisma/schema.prisma
+@@ -68,6 +68,21 @@ enum NotificationDeliveryStatus {
+   FAILED
+ }
+ 
++enum CourseDiscountType {
++  PERCENT
++  FIXED
++}
++
++model CoursePrice {
++  slug           String              @id
++  priceCents     Int
++  discountType   CourseDiscountType?
++  /// PERCENT: whole percentage 1–100. FIXED: amount off in CENTS, never dollars.
++  discountValue  Int?
++  discountActive Boolean             @default(false)
++  updatedAt      DateTime            @updatedAt
++}
++
+ model Product {
+   id                   String          @id @default(cuid())
+   slug                 String          @unique
+diff --git a/src/lib/courses-data.ts b/src/lib/courses-data.ts
+index e5cb984..3faadde 100644
+--- a/src/lib/courses-data.ts
++++ b/src/lib/courses-data.ts
+@@ -20,7 +20,7 @@ import type { StudentLevel } from "@prisma/client";
+  */
+ export interface CourseLevel {
+   slug: string;
+-  /// In cents.
++  /// Fallback in cents. CoursePrice in the DB is authoritative when a row exists.
+   price: number;
+   /// Written literally per record — never derived from the slug or from any
+   /// display copy. Those are independent; this is the one field this data
+diff --git a/src/app/courses/[slug]/page.tsx b/src/app/courses/[slug]/page.tsx
+index 0eca885..81618ff 100644
+--- a/src/app/courses/[slug]/page.tsx
++++ b/src/app/courses/[slug]/page.tsx
+@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
+ import { getTranslations } from "next-intl/server";
+ import { Check } from "lucide-react";
+ import { COURSE_LEVELS, COURSE_TOPIC_SLOTS } from "@/lib/courses-data";
++import { CoursePrice } from "@/components/marketing/course-price";
+ import { Container } from "@/components/marketing/container";
+ import { CrossPattern } from "@/components/marketing/cross-pattern";
+ import { Badge } from "@/components/ui/badge";
+@@ -62,9 +63,9 @@ export default async function CourseDetailPage({
+           </p>
+           {/* The price stays visible so an applicant can self-qualify before
+               applying; the apply CTA sits beneath it rather than replacing it. */}
+-          <p className="mt-6 font-heading text-2xl text-[#d4a84b]">
+-            ${(course.price / 100).toFixed(0)}
+-          </p>
++          <div className="mt-6 text-[#d4a84b]">
++            <CoursePrice slug={course.slug} />
++          </div>
+           <p className="mt-4 max-w-xl text-sm text-[#f3e9d2]/80">{t("availability")}</p>
+           <p className="mt-4 max-w-xl text-sm text-[#f3e9d2]/80">{t("strings")}</p>
+           <Button
+diff --git a/src/components/marketing/course-level-cards.tsx b/src/components/marketing/course-level-cards.tsx
+index 36a892e..00ec544 100644
+--- a/src/components/marketing/course-level-cards.tsx
++++ b/src/components/marketing/course-level-cards.tsx
+@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
+ import { COURSE_LEVELS } from "@/lib/courses-data";
+ import { Card, CardContent, CardHeader } from "@/components/ui/card";
+ import { Badge } from "@/components/ui/badge";
++import { CoursePrice } from "@/components/marketing/course-price";
+ 
+ export function CourseLevelCards() {
+   const t = useTranslations("courseLevels");
+@@ -24,6 +25,7 @@ export function CourseLevelCards() {
+             </CardHeader>
+             <CardContent className="flex h-full flex-col justify-between gap-6">
+               <p className="text-muted-foreground">{t(`${course.slug}.description`)}</p>
++              <CoursePrice slug={course.slug} />
+               <span className="inline-flex items-center gap-1 text-sm font-medium text-foreground">
+                 {t("exploreCurriculum")}
+                 <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
+diff --git a/src/app/admin/(authenticated)/layout.tsx b/src/app/admin/(authenticated)/layout.tsx
+index bdfbd87..81b0728 100644
+--- a/src/app/admin/(authenticated)/layout.tsx
++++ b/src/app/admin/(authenticated)/layout.tsx
+@@ -1,4 +1,5 @@
+ import Link from "next/link";
++import { getTranslations } from "next-intl/server";
+ import { requireAdminPage } from "@/lib/admin/dal";
+ import { Container } from "@/components/marketing/container";
+ import { AdminLogoutButton } from "@/components/admin/logout-button";
+@@ -9,6 +10,7 @@ export default async function AuthenticatedAdminLayout({
+   children: React.ReactNode;
+ }) {
+   const session = await requireAdminPage();
++  const pricing = await getTranslations("coursePricing");
+ 
+   return (
+     <div>
+@@ -19,6 +21,7 @@ export default async function AuthenticatedAdminLayout({
+             <Link href="/admin/students">Students</Link>
+             <Link href="/admin/milestones">Milestones</Link>
+             <Link href="/admin/products">Products</Link>
++            <Link href="/admin/courses">{pricing("nav")}</Link>
+             <Link href="/admin/announcements">Announcements</Link>
+             <Link href="/admin/upload-images">Upload images</Link>
+             <Link href="/admin/content">Website text</Link>
+diff --git a/messages/en.json b/messages/en.json
+index 346c61d..c5faba8 100644
+--- a/messages/en.json
++++ b/messages/en.json
+@@ -1,4 +1,35 @@
+ {
++  "coursePricing": {
++    "nav": "Course pricing",
++    "title": "Course pricing and discounts",
++    "description": "Set the public price for each course. Applications remain free.",
++    "priceCents": "Price (US cents)",
++    "unitsHint": "100 cents = $1. For example, enter 7000 for $70.",
++    "discountType": "Discount type",
++    "none": "No discount",
++    "percent": "Percentage off",
++    "fixed": "Fixed amount off",
++    "percentValue": "Percentage off (1–100)",
++    "fixedValue": "Amount off (US cents)",
++    "active": "Discount active",
++    "preview": "Price preview",
++    "previewLoading": "Updating preview…",
++    "previewUnavailable": "Enter valid values to preview the price.",
++    "save": "Save pricing",
++    "saving": "Saving…",
++    "saved": "Pricing saved.",
++    "amount": "${amount}",
++    "originalPrice": "Original price",
++    "finalPrice": "Current price",
++    "percentOff": "{percent}% off",
++    "lessThanOnePercent": "Less than 1% off",
++    "invalidPrice": "Enter a whole number of cents between 1 and 2,147,483,647.",
++    "invalidDiscount": "Choose a whole percentage from 1 to 100, or a positive amount in cents smaller than the price.",
++    "unknownCourse": "This course could not be found.",
++    "sessionExpired": "Please sign in as an admin again.",
++    "saveFailed": "Could not save pricing. Please try again.",
++    "previewFailed": "Could not load the preview. Check your connection and try again."
++  },
+   "nav": {
+     "about": "About",
+     "courses": "Courses",
+diff --git a/messages/am.json b/messages/am.json
+index 8156a66..6e11e6d 100644
+--- a/messages/am.json
++++ b/messages/am.json
+@@ -1,4 +1,35 @@
+ {
++  "coursePricing": {
++    "nav": "የትምህርት ዋጋ",
++    "title": "የትምህርት ዋጋዎችና ቅናሾች",
++    "description": "ለእያንዳንዱ ትምህርት በድረ ገጹ የሚታየውን ዋጋ ያስተካክሉ። ማመልከት ነፃ ነው።",
++    "priceCents": "ዋጋ (በአሜሪካ ሳንቲም)",
++    "unitsHint": "100 ሳንቲም = 1 ዶላር። ለምሳሌ፣ ለ70 ዶላር 7000 ያስገቡ።",
++    "discountType": "የቅናሽ ዓይነት",
++    "none": "ቅናሽ የለም",
++    "percent": "በመቶኛ ቅናሽ",
++    "fixed": "በተወሰነ መጠን ቅናሽ",
++    "percentValue": "የቅናሽ መቶኛ (1–100)",
++    "fixedValue": "የቅናሽ መጠን (በአሜሪካ ሳንቲም)",
++    "active": "ቅናሹ ይስራ",
++    "preview": "የዋጋ ቅድመ እይታ",
++    "previewLoading": "ቅድመ እይታው እየተዘመነ ነው…",
++    "previewUnavailable": "ዋጋውን ለማየት ትክክለኛ እሴቶችን ያስገቡ።",
++    "save": "ዋጋውን አስቀምጥ",
++    "saving": "በማስቀመጥ ላይ…",
++    "saved": "ዋጋው ተቀምጧል።",
++    "amount": "${amount}",
++    "originalPrice": "የቀድሞ ዋጋ",
++    "finalPrice": "የአሁኑ ዋጋ",
++    "percentOff": "{percent}% ቅናሽ",
++    "lessThanOnePercent": "ከ1% ያነሰ ቅናሽ",
++    "invalidPrice": "ከ1 እስከ 2,147,483,647 ያለ ሙሉ ቁጥር በሳንቲም ያስገቡ።",
++    "invalidDiscount": "ከ1 እስከ 100 ያለ ሙሉ መቶኛ፣ ወይም ከዋጋው ያነሰና ከዜሮ የሚበልጥ መጠን በሳንቲም ያስገቡ።",
++    "unknownCourse": "ይህ ትምህርት አልተገኘም።",
++    "sessionExpired": "እባክዎ እንደ አስተዳዳሪ እንደገና ይግቡ።",
++    "saveFailed": "ዋጋውን ማስቀመጥ አልተቻለም። እባክዎ እንደገና ይሞክሩ።",
++    "previewFailed": "ቅድመ እይታውን ማሳየት አልተቻለም። ግንኙነትዎን ያረጋግጡና እንደገና ይሞክሩ።"
++  },
+   "nav": {
+     "about": "ስለ እኛ",
+     "courses": "ትምህርቶች",
+diff --git a/prisma/migrations/20260914000000_add_course_prices/migration.sql b/prisma/migrations/20260914000000_add_course_prices/migration.sql
+new file mode 100644
+index 0000000..2d0c34b
+--- /dev/null
++++ b/prisma/migrations/20260914000000_add_course_prices/migration.sql
+@@ -0,0 +1,23 @@
++CREATE TYPE "CourseDiscountType" AS ENUM ('PERCENT', 'FIXED');
++
++CREATE TABLE "CoursePrice" (
++    "slug" TEXT NOT NULL,
++    "priceCents" INTEGER NOT NULL,
++    "discountType" "CourseDiscountType",
++    "discountValue" INTEGER,
++    "discountActive" BOOLEAN NOT NULL DEFAULT false,
++    "updatedAt" TIMESTAMP(3) NOT NULL,
++    CONSTRAINT "CoursePrice_pkey" PRIMARY KEY ("slug"),
++    CONSTRAINT "CoursePrice_price_positive" CHECK ("priceCents" > 0),
++    -- PERCENT values are whole percentages; FIXED values are CENTS.
++    CONSTRAINT "CoursePrice_discount_valid" CHECK (
++      ("discountType" IS NULL AND "discountValue" IS NULL AND NOT "discountActive")
++      OR ("discountType" IS NOT NULL AND "discountType" = 'PERCENT' AND "discountValue" IS NOT NULL AND "discountValue" BETWEEN 1 AND 100)
++      OR ("discountType" IS NOT NULL AND "discountType" = 'FIXED' AND "discountValue" IS NOT NULL AND "discountValue" > 0 AND "discountValue" < "priceCents")
++    )
++);
++
++INSERT INTO "CoursePrice" ("slug", "priceCents", "updatedAt") VALUES
++    ('beginner', 7000, CURRENT_TIMESTAMP),
++    ('intermediate', 8500, CURRENT_TIMESTAMP),
++    ('advanced', 10000, CURRENT_TIMESTAMP);
+diff --git a/src/lib/validations/course-price.ts b/src/lib/validations/course-price.ts
+new file mode 100644
+index 0000000..1706c5f
+--- /dev/null
++++ b/src/lib/validations/course-price.ts
+@@ -0,0 +1,29 @@
++import { z } from "zod";
++
++// Accept digit strings from inputs, but never coerce blank strings, booleans,
++// decimal values, or exponential notation into cents. Bound to Postgres Int.
++const integer = z.preprocess(
++  (value) => typeof value === "string" && /^\d+$/.test(value) ? Number(value) : value,
++  z.number().int().positive().max(2_147_483_647),
++);
++
++export const coursePriceSchema = z.object({
++  priceCents: integer,
++  discountType: z.enum(["PERCENT", "FIXED"]).nullable(),
++  discountValue: integer.nullable(),
++  discountActive: z.boolean(),
++}).superRefine((value, ctx) => {
++  if (value.discountType === null) {
++    if (value.discountValue !== null || value.discountActive) {
++      ctx.addIssue({ code: "custom", path: ["discountType"], message: "invalidDiscount" });
++    }
++    return;
++  }
++  if (value.discountValue === null ||
++    (value.discountType === "PERCENT" && value.discountValue > 100) ||
++    (value.discountType === "FIXED" && value.discountValue >= value.priceCents)) {
++    ctx.addIssue({ code: "custom", path: ["discountValue"], message: "invalidDiscount" });
++  }
++});
++
++export type CoursePriceInput = z.output<typeof coursePriceSchema>;
+diff --git a/src/lib/course-pricing.ts b/src/lib/course-pricing.ts
+new file mode 100644
+index 0000000..685cada
+--- /dev/null
++++ b/src/lib/course-pricing.ts
+@@ -0,0 +1,44 @@
++import "server-only";
++import { prisma } from "@/lib/db";
++import { COURSE_LEVELS } from "@/lib/courses-data";
++import { coursePriceSchema, type CoursePriceInput } from "@/lib/validations/course-price";
++
++export interface CoursePricing {
++  basePriceCents: number;
++  finalPriceCents: number;
++  discountAmountCents: number;
++  percentOff: number;
++  isDiscounted: boolean;
++}
++
++// Deliberately no persistent cache: saved prices are read on the next request.
++// Drafts are only used by the authenticated server preview; never public input.
++export async function getCoursePricing(slug: string, draft?: CoursePriceInput): Promise<CoursePricing> {
++  const course = COURSE_LEVELS.find((entry) => entry.slug === slug);
++  if (!course) throw new Error("Unknown course slug");
++  const row = draft ?? await prisma.coursePrice.findUnique({ where: { slug } });
++  const price = row ?? {
++    priceCents: course.price, discountType: null, discountValue: null, discountActive: false,
++  };
++  if (draft) coursePriceSchema.parse(draft);
++  const base = BigInt(price.priceCents);
++  let discount = BigInt(0);
++  if (price.discountActive && price.discountType !== null && price.discountValue !== null) {
++    // PERCENT: integer 1–100; FIXED: CENTS. BigInt implements positive
++    // Math.round(base * percent / 100) exactly, without fractional cents.
++    discount = price.discountType === "PERCENT"
++      ? (base * BigInt(price.discountValue) + BigInt(50)) / BigInt(100)
++      : BigInt(price.discountValue);
++  }
++  if (discount > base) discount = base;
++  return {
++    basePriceCents: Number(base),
++    finalPriceCents: Number(base - discount),
++    discountAmountCents: Number(discount),
++    // Fixed discounts round DOWN for display: never advertise 100% off when
++    // a balance remains. The display labels sub-1% fixed discounts explicitly.
++    percentOff: discount === BigInt(0) ? 0 : price.discountType === "PERCENT"
++      ? price.discountValue! : Number(discount * BigInt(100) / base),
++    isDiscounted: discount > BigInt(0),
++  };
++}
+diff --git a/src/app/admin/(authenticated)/courses/page.tsx b/src/app/admin/(authenticated)/courses/page.tsx
+new file mode 100644
+index 0000000..7b5d4da
+--- /dev/null
++++ b/src/app/admin/(authenticated)/courses/page.tsx
+@@ -0,0 +1,29 @@
++import { getTranslations } from "next-intl/server";
++import { requireAdminPage } from "@/lib/admin/dal";
++import { COURSE_LEVELS } from "@/lib/courses-data";
++import { getCoursePricing } from "@/lib/course-pricing";
++import { prisma } from "@/lib/db";
++import { Container } from "@/components/marketing/container";
++import { CoursePriceForm } from "@/components/admin/course-price-form";
++
++export default async function CoursePricingPage() {
++  await requireAdminPage();
++  const t = await getTranslations("coursePricing");
++  const levels = await getTranslations("courseLevels");
++  const courses = await Promise.all(COURSE_LEVELS.map(async (course) => {
++    const row = await prisma.coursePrice.findUnique({ where: { slug: course.slug } });
++    const input = row ?? { priceCents: course.price, discountType: null, discountValue: null, discountActive: false };
++    return { course, input, pricing: await getCoursePricing(course.slug, input) };
++  }));
++  return (
++    <Container className="py-10">
++      <h1 className="font-heading text-3xl font-semibold">{t("title")}</h1>
++      <p className="mt-3 text-muted-foreground">{t("description")}</p>
++      <div className="mt-8 grid gap-6 lg:grid-cols-3">
++        {courses.map(({ course, input, pricing }) => (
++          <CoursePriceForm key={course.slug} slug={course.slug} title={levels(`${course.slug}.title`)} initial={input} initialPricing={pricing} />
++        ))}
++      </div>
++    </Container>
++  );
++}
+diff --git a/src/app/api/admin/courses/[slug]/route.ts b/src/app/api/admin/courses/[slug]/route.ts
+new file mode 100644
+index 0000000..2484a3c
+--- /dev/null
++++ b/src/app/api/admin/courses/[slug]/route.ts
+@@ -0,0 +1,45 @@
++import { NextResponse } from "next/server";
++import { revalidatePath } from "next/cache";
++import { requireAdminApi } from "@/lib/admin/dal";
++import { prisma } from "@/lib/db";
++import { COURSE_LEVELS } from "@/lib/courses-data";
++import { coursePriceSchema } from "@/lib/validations/course-price";
++import { getCoursePricing } from "@/lib/course-pricing";
++
++type Context = { params: Promise<{ slug: string }> };
++
++async function handle(request: Request, context: Context, save: boolean) {
++  const auth = await requireAdminApi();
++  if ("response" in auth) return auth.response;
++  const { slug } = await context.params;
++  if (!COURSE_LEVELS.some((course) => course.slug === slug)) {
++    return NextResponse.json({ error: "unknownCourse" }, { status: 404 });
++  }
++  const body = await request.json().catch(() => null);
++  const parsed = coursePriceSchema.safeParse(body);
++  if (!parsed.success) {
++    const field = parsed.error.issues[0]?.path[0];
++    return NextResponse.json({ error: field === "priceCents" ? "invalidPrice" : "invalidDiscount", field }, { status: 400 });
++  }
++  try {
++    const pricing = await getCoursePricing(slug, parsed.data);
++    if (save) {
++      await prisma.coursePrice.upsert({ where: { slug }, create: { slug, ...parsed.data }, update: parsed.data });
++      revalidatePath("/courses");
++      revalidatePath(`/courses/${slug}`);
++      revalidatePath("/admin/courses");
++    }
++    return NextResponse.json({ pricing }, { headers: { "Cache-Control": "no-store" } });
++  } catch {
++    return NextResponse.json({ error: "saveFailed" }, { status: 500 });
++  }
++}
++
++export async function PUT(request: Request, context: Context) {
++  return handle(request, context, true);
++}
++
++// Read-only draft preview; the same guard and validation apply as to a save.
++export async function POST(request: Request, context: Context) {
++  return handle(request, context, false);
++}
+diff --git a/src/components/admin/course-price-form.tsx b/src/components/admin/course-price-form.tsx
+new file mode 100644
+index 0000000..4b6bd37
+--- /dev/null
++++ b/src/components/admin/course-price-form.tsx
+@@ -0,0 +1,116 @@
++"use client";
++
++import { useEffect, useId, useRef, useState } from "react";
++import { useRouter } from "next/navigation";
++import { useTranslations } from "next-intl";
++import { Button } from "@/components/ui/button";
++import { Input } from "@/components/ui/input";
++import { Field, FieldLabel, FieldError } from "@/components/ui/field";
++import { CoursePriceAmount } from "@/components/marketing/course-price-amount";
++import type { CoursePriceInput } from "@/lib/validations/course-price";
++import type { CoursePricing } from "@/lib/course-pricing";
++
++export function CoursePriceForm({ slug, title, initial, initialPricing }: {
++  slug: string; title: string; initial: CoursePriceInput; initialPricing: CoursePricing;
++}) {
++  const t = useTranslations("coursePricing");
++  const router = useRouter();
++  const uid = useId();
++  const [draft, setDraft] = useState({ priceCents: String(initial.priceCents), discountType: initial.discountType ?? "", discountValue: initial.discountValue === null ? "" : String(initial.discountValue), discountActive: initial.discountActive });
++  const [preview, setPreview] = useState<CoursePricing | null>(initialPricing);
++  const [error, setError] = useState<string | null>(null);
++  const [errorField, setErrorField] = useState<string | null>(null);
++  const [saved, setSaved] = useState(false);
++  const [saving, setSaving] = useState(false);
++  const revision = useRef(0);
++  const previewController = useRef<AbortController | null>(null);
++  const payload = JSON.stringify({ ...draft, discountType: draft.discountType || null, discountValue: draft.discountType ? draft.discountValue : null });
++
++  // Abort older previews so a slow response cannot overwrite newer input.
++  useEffect(() => {
++    const controller = new AbortController();
++    previewController.current = controller;
++    const previewRevision = revision.current;
++    const timer = setTimeout(async () => {
++      try {
++        const response = await fetch(`/api/admin/courses/${slug}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: payload, signal: controller.signal });
++        const data = await response.json();
++        if (controller.signal.aborted || revision.current !== previewRevision) return;
++        if (!response.ok) {
++          setPreview(null);
++          setError(response.status === 401 ? "sessionExpired" : data.error ?? "saveFailed");
++          setErrorField(data.field ?? null);
++        } else {
++          setPreview(data.pricing);
++          setError(null);
++          setErrorField(null);
++        }
++      } catch {
++        if (!controller.signal.aborted) { setPreview(null); setError("previewFailed"); }
++      }
++    }, 300);
++    return () => { clearTimeout(timer); controller.abort(); };
++  }, [payload, slug]);
++
++  function update(patch: Partial<typeof draft>) {
++    revision.current += 1;
++    setDraft((current) => ({ ...current, ...patch }));
++    setPreview(null);
++    setError(null);
++    setErrorField(null);
++    setSaved(false);
++  }
++
++  async function submit(event: React.FormEvent<HTMLFormElement>) {
++    event.preventDefault();
++    previewController.current?.abort();
++    setSaving(true); setSaved(false); setError(null);
++    const submittedRevision = revision.current;
++    try {
++      const response = await fetch(`/api/admin/courses/${slug}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: payload });
++      const data = await response.json();
++      if (!response.ok) {
++        setError(response.status === 401 ? "sessionExpired" : data.error ?? "saveFailed");
++        setErrorField(data.field ?? null);
++        return;
++      }
++      if (revision.current === submittedRevision) { setPreview(data.pricing); setSaved(true); }
++      router.refresh();
++    } catch { setError("saveFailed"); }
++    finally { setSaving(false); }
++  }
++
++  const errorId = `${uid}-error`;
++  return (
++    <form onSubmit={submit} noValidate className="space-y-5 rounded-2xl border border-border bg-card p-6">
++      <h2 className="font-heading text-xl font-semibold">{title}</h2>
++      <fieldset disabled={saving} className="space-y-5">
++        <Field>
++          <FieldLabel htmlFor={`${uid}-price`}>{t("priceCents")}</FieldLabel>
++          <Input id={`${uid}-price`} name="priceCents" inputMode="numeric" value={draft.priceCents} onChange={(e) => update({ priceCents: e.target.value })} aria-invalid={errorField === "priceCents"} aria-describedby={`${uid}-units${errorField === "priceCents" ? ` ${errorId}` : ""}`} />
++          <p id={`${uid}-units`} className="text-sm text-muted-foreground">{t("unitsHint")}</p>
++        </Field>
++        <Field>
++          <FieldLabel htmlFor={`${uid}-type`}>{t("discountType")}</FieldLabel>
++          <select id={`${uid}-type`} name="discountType" className="min-h-11 w-full rounded-md border border-input bg-background px-3 text-sm" value={draft.discountType} onChange={(e) => update({ discountType: e.target.value, discountValue: "", discountActive: e.target.value ? draft.discountActive : false })}>
++            <option value="">{t("none")}</option><option value="PERCENT">{t("percent")}</option><option value="FIXED">{t("fixed")}</option>
++          </select>
++        </Field>
++        {draft.discountType && <Field>
++          <FieldLabel htmlFor={`${uid}-discount`}>{t(draft.discountType === "PERCENT" ? "percentValue" : "fixedValue")}</FieldLabel>
++          <Input id={`${uid}-discount`} name="discountValue" inputMode="numeric" value={draft.discountValue} onChange={(e) => update({ discountValue: e.target.value })} aria-invalid={errorField === "discountValue"} aria-describedby={errorField === "discountValue" ? errorId : undefined} />
++        </Field>}
++        <label className="flex min-h-11 items-center gap-3 text-sm" htmlFor={`${uid}-active`}>
++          <input id={`${uid}-active`} type="checkbox" className="size-5 accent-current" disabled={!draft.discountType} checked={draft.discountActive} onChange={(e) => update({ discountActive: e.target.checked })} />{t("active")}
++        </label>
++      </fieldset>
++      <div aria-live="polite" aria-atomic="true" className="min-h-20 rounded-lg bg-muted p-4">
++        <p className="mb-2 text-sm text-muted-foreground">{t("preview")}</p>
++        {preview ? <CoursePriceAmount pricing={preview} /> : <p className="text-sm">{t(error ? "previewUnavailable" : "previewLoading")}</p>}
++      </div>
++      {error && <div id={errorId} role="alert"><FieldError>{t(error)}</FieldError></div>}
++      {saved && <p role="status" className="text-sm">{t("saved")}</p>}
++      <Button type="submit" disabled={saving}>{t(saving ? "saving" : "save")}</Button>
++    </form>
++  );
++}
+diff --git a/src/components/marketing/course-price-amount.tsx b/src/components/marketing/course-price-amount.tsx
+new file mode 100644
+index 0000000..7b25ed7
+--- /dev/null
++++ b/src/components/marketing/course-price-amount.tsx
+@@ -0,0 +1,28 @@
++"use client";
++
++import { useTranslations } from "next-intl";
++import type { CoursePricing } from "@/lib/course-pricing";
++
++function decimalCents(cents: number) {
++  const value = BigInt(cents);
++  const minor = value % BigInt(100);
++  return `${value / BigInt(100)}${minor ? `.${String(minor).padStart(2, "0")}` : ""}`;
++}
++
++export function CoursePriceAmount({ pricing }: { pricing: CoursePricing }) {
++  const t = useTranslations("coursePricing");
++  const amount = (cents: number) => t("amount", { amount: decimalCents(cents) });
++  return (
++    <div className="flex flex-wrap items-baseline gap-3">
++      {pricing.isDiscounted && (
++        <del className="text-base opacity-75"><span className="sr-only">{t("originalPrice")} </span>{amount(pricing.basePriceCents)}</del>
++      )}
++      <span className="font-heading text-3xl font-semibold">
++        <span className="sr-only">{t("finalPrice")} </span>{amount(pricing.finalPriceCents)}
++      </span>
++      {pricing.isDiscounted && (
++        <span className="rounded-full bg-accent px-3 py-1 text-sm font-semibold text-accent-foreground">{pricing.percentOff < 1 ? t("lessThanOnePercent") : t("percentOff", { percent: pricing.percentOff })}</span>
++      )}
++    </div>
++  );
++}
+diff --git a/src/components/marketing/course-price.tsx b/src/components/marketing/course-price.tsx
+new file mode 100644
+index 0000000..25e7982
+--- /dev/null
++++ b/src/components/marketing/course-price.tsx
+@@ -0,0 +1,6 @@
++import { getCoursePricing } from "@/lib/course-pricing";
++import { CoursePriceAmount } from "@/components/marketing/course-price-amount";
++
++export async function CoursePrice({ slug }: { slug: string }) {
++  return <CoursePriceAmount pricing={await getCoursePricing(slug)} />;
++}
+diff --git a/src/lib/course-pricing.test.ts b/src/lib/course-pricing.test.ts
+new file mode 100644
+index 0000000..6feb656
+--- /dev/null
++++ b/src/lib/course-pricing.test.ts
+@@ -0,0 +1,114 @@
++import { beforeEach, describe, expect, it, vi } from "vitest";
++
++// Only the external storage and request-cookie boundaries are substituted.
++// The actual page, route, JWT/session guard, validation and pricing execute.
++const boundary = vi.hoisted(() => ({
++  read: vi.fn(), write: vi.fn(), admin: vi.fn(),
++}));
++vi.mock("server-only", () => ({}));
++vi.mock("next/headers", () => ({ cookies: async () => ({ get: () => undefined }) }));
++vi.mock("@/lib/db", () => ({ prisma: {
++  coursePrice: { findUnique: boundary.read, upsert: boundary.write },
++  admin: { findUnique: boundary.admin },
++} }));
++
++beforeEach(() => {
++  vi.clearAllMocks();
++  boundary.read.mockResolvedValue(null);
++});
++
++describe("course pricing acceptance", () => {
++  it("non-admin cannot load the admin course pricing page", async () => {
++    const { default: Page } = await import("@/app/admin/(authenticated)/courses/page");
++    await expect(Page()).rejects.toThrow("NEXT_REDIRECT");
++    expect(boundary.read).not.toHaveBeenCalled();
++  }, 20000);
++
++  it("non-admin cannot call the pricing mutation directly", async () => {
++    const { PUT } = await import("@/app/api/admin/courses/[slug]/route");
++    const response = await PUT(new Request("http://localhost/api/admin/courses/beginner", {
++      method: "PUT", body: JSON.stringify({ priceCents: 1 }),
++    }), { params: Promise.resolve({ slug: "beginner" }) });
++    expect(response.status).toBe(401);
++    expect(boundary.write).not.toHaveBeenCalled();
++    expect(boundary.read).not.toHaveBeenCalled();
++  });
++
++  it("PERCENT 101 is rejected", async () => {
++    const { coursePriceSchema } = await import("@/lib/validations/course-price");
++    expect(coursePriceSchema.safeParse({ priceCents: 7000, discountType: "PERCENT", discountValue: 101, discountActive: true }).success).toBe(false);
++  });
++
++  it("FIXED equal to or above the base price is rejected", async () => {
++    const { coursePriceSchema } = await import("@/lib/validations/course-price");
++    for (const discountValue of [7000, 7001]) {
++      expect(coursePriceSchema.safeParse({ priceCents: 7000, discountType: "FIXED", discountValue, discountActive: true }).success).toBe(false);
++    }
++  });
++
++  it("inactive discount leaves the base price unchanged", async () => {
++    boundary.read.mockResolvedValue({ priceCents: 8500, discountType: "PERCENT", discountValue: 50, discountActive: false });
++    const { getCoursePricing } = await import("@/lib/course-pricing");
++    expect(await getCoursePricing("intermediate")).toEqual({ basePriceCents: 8500, finalPriceCents: 8500, discountAmountCents: 0, percentOff: 0, isDiscounted: false });
++  });
++
++  it("missing CoursePrice row falls back to the hardcoded course price", async () => {
++    const { getCoursePricing } = await import("@/lib/course-pricing");
++    expect((await getCoursePricing("beginner")).finalPriceCents).toBe(7000);
++    expect(boundary.read).toHaveBeenCalledWith({ where: { slug: "beginner" } });
++  });
++});
++
++describe("course pricing edge cases", () => {
++  it.each([
++    [7000, "PERCENT", 30, 4900, 2100, 30],
++    [8500, "PERCENT", 50, 4250, 4250, 50],
++    [101, "PERCENT", 50, 50, 51, 50],
++    [10000, "PERCENT", 100, 0, 10000, 100],
++    [7000, "FIXED", 1234, 5766, 1234, 17],
++    [7000, "FIXED", 6999, 1, 6999, 99],
++    [7000, "FIXED", 1, 6999, 1, 0],
++    [2147483647, "PERCENT", 99, 21474836, 2126008811, 99],
++  ])("calculates %i cents with %s %i", async (priceCents, discountType, discountValue, finalPriceCents, discountAmountCents, percentOff) => {
++    boundary.read.mockResolvedValue({ priceCents, discountType, discountValue, discountActive: true });
++    const { getCoursePricing } = await import("@/lib/course-pricing");
++    expect(await getCoursePricing("beginner")).toEqual({ basePriceCents: priceCents, finalPriceCents, discountAmountCents, percentOff, isDiscounted: true });
++  });
++
++  it("null discount type never applies a discount", async () => {
++    boundary.read.mockResolvedValue({ priceCents: 7000, discountType: null, discountValue: null, discountActive: true });
++    const { getCoursePricing } = await import("@/lib/course-pricing");
++    expect((await getCoursePricing("beginner")).isDiscounted).toBe(false);
++  });
++
++  it("does not cache a previously read price", async () => {
++    const { getCoursePricing } = await import("@/lib/course-pricing");
++    expect((await getCoursePricing("beginner")).basePriceCents).toBe(7000);
++    boundary.read.mockResolvedValue({ priceCents: 9000, discountType: null, discountValue: null, discountActive: false });
++    expect((await getCoursePricing("beginner")).basePriceCents).toBe(9000);
++  });
++
++  it("does not substitute a fallback price for a database outage", async () => {
++    boundary.read.mockRejectedValueOnce(new Error("Database unavailable"));
++    const { getCoursePricing } = await import("@/lib/course-pricing");
++    await expect(getCoursePricing("beginner")).rejects.toThrow("Database unavailable");
++  });
++
++  it("rejects unknown slugs before a database read", async () => {
++    const { getCoursePricing } = await import("@/lib/course-pricing");
++    await expect(getCoursePricing("other")).rejects.toThrow("Unknown course slug");
++    expect(boundary.read).not.toHaveBeenCalled();
++  });
++
++  it.each(["", " ", "abc", -1, 0, 1.5, "1.5", "1e2", true, null, 2147483648])("rejects invalid cents %s", async (priceCents) => {
++    const { coursePriceSchema } = await import("@/lib/validations/course-price");
++    expect(coursePriceSchema.safeParse({ priceCents, discountType: null, discountValue: null, discountActive: false }).success).toBe(false);
++  });
++
++  it.each(["", "abc", -1, 0, 1.5, true, null])("rejects invalid discount %s even when inactive", async (discountValue) => {
++    const { coursePriceSchema } = await import("@/lib/validations/course-price");
++    for (const discountType of ["PERCENT", "FIXED"]) {
++      expect(coursePriceSchema.safeParse({ priceCents: 7000, discountType, discountValue, discountActive: false }).success).toBe(false);
++    }
++  });
++});
+diff --git a/src/app/api/admin/courses/[slug]/route.test.ts b/src/app/api/admin/courses/[slug]/route.test.ts
+new file mode 100644
+index 0000000..62ee23e
+--- /dev/null
++++ b/src/app/api/admin/courses/[slug]/route.test.ts
+@@ -0,0 +1,64 @@
++import { beforeEach, expect, it, vi } from "vitest";
++
++// Authentication is covered with the real guard in course-pricing.test.ts
++// and by local HTTP checks. Here an authenticated boundary lets us exercise
++// the real route's validation, preview, persistence payload and invalidation.
++const boundary = vi.hoisted(() => ({ write: vi.fn(), revalidate: vi.fn() }));
++vi.mock("server-only", () => ({}));
++vi.mock("@/lib/admin/dal", () => ({ requireAdminApi: async () => ({ session: { adminId: "test-admin" } }) }));
++vi.mock("@/lib/db", () => ({ prisma: { coursePrice: { upsert: boundary.write } } }));
++vi.mock("next/cache", () => ({ revalidatePath: boundary.revalidate }));
++
++import { POST, PUT } from "./route";
++
++const context = { params: Promise.resolve({ slug: "beginner" }) };
++const input = { priceCents: "7000", discountType: "PERCENT", discountValue: "30", discountActive: true };
++function request(body: unknown) {
++  return new Request("http://localhost/api/admin/courses/beginner", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
++}
++beforeEach(() => { vi.clearAllMocks(); boundary.write.mockResolvedValue(undefined); });
++
++it.each([
++  { ...input, discountValue: 101 },
++  { ...input, discountType: "FIXED", discountValue: 7000 },
++  { ...input, discountType: "FIXED", discountValue: 7001 },
++  { ...input, priceCents: "" },
++  { ...input, discountValue: "" },
++  { ...input, priceCents: -10 },
++])("rejects invalid input without writing %j", async (body) => {
++  const response = await PUT(request(body), context);
++  expect(response.status).toBe(400);
++  expect((await response.json()).error).toMatch(/^invalid(Price|Discount)$/);
++  expect(boundary.write).not.toHaveBeenCalled();
++});
++
++it("preview and save use identical server pricing; only save writes and revalidates", async () => {
++  const preview = await POST(request(input), context);
++  expect(preview.status).toBe(200);
++  expect(boundary.write).not.toHaveBeenCalled();
++  expect(boundary.revalidate).not.toHaveBeenCalled();
++  const saved = await PUT(request({ ...input, finalPriceCents: 1 }), context);
++  const result = await saved.json();
++  expect(result).toEqual(await preview.json());
++  expect(result.pricing.finalPriceCents).toBe(4900);
++  expect(boundary.write).toHaveBeenCalledWith({
++    where: { slug: "beginner" },
++    create: { slug: "beginner", priceCents: 7000, discountType: "PERCENT", discountValue: 30, discountActive: true },
++    update: { priceCents: 7000, discountType: "PERCENT", discountValue: 30, discountActive: true },
++  });
++  expect(boundary.revalidate.mock.calls).toEqual([["/courses"], ["/courses/beginner"], ["/admin/courses"]]);
++});
++
++it("reports a failed write without revalidating", async () => {
++  boundary.write.mockRejectedValueOnce(new Error("Unavailable"));
++  const response = await PUT(request(input), context);
++  expect(response.status).toBe(500);
++  expect(await response.json()).toEqual({ error: "saveFailed" });
++  expect(boundary.revalidate).not.toHaveBeenCalled();
++});
++
++it("refuses slugs outside courses-data.ts", async () => {
++  const response = await PUT(request(input), { params: Promise.resolve({ slug: "other" }) });
++  expect(response.status).toBe(404);
++  expect(boundary.write).not.toHaveBeenCalled();
++});
+diff --git a/src/components/marketing/course-price-amount.test.ts b/src/components/marketing/course-price-amount.test.ts
+new file mode 100644
+index 0000000..9ae4de5
+--- /dev/null
++++ b/src/components/marketing/course-price-amount.test.ts
+@@ -0,0 +1,30 @@
++import { createElement, type ComponentProps, type ComponentType, type PropsWithChildren } from "react";
++import { renderToStaticMarkup } from "react-dom/server";
++import { NextIntlClientProvider } from "next-intl";
++import { expect, it } from "vitest";
++import en from "../../../messages/en.json";
++import am from "../../../messages/am.json";
++import { CoursePriceAmount } from "./course-price-amount";
++
++// createElement supplies children as its third argument. Allow that calling
++// convention while retaining the real provider and all its other prop types.
++const Provider = NextIntlClientProvider as ComponentType<PropsWithChildren<Omit<ComponentProps<typeof NextIntlClientProvider>, "children">>>;
++
++it.each([["en", en], ["am", am]] as const)("renders discounted cents and badge in %s", (locale, messages) => {
++  const html = renderToStaticMarkup(createElement(Provider, { locale, messages, timeZone: "Africa/Addis_Ababa" }, createElement(CoursePriceAmount, {
++    pricing: { basePriceCents: 8500, finalPriceCents: 4250, discountAmountCents: 4250, percentOff: 50, isDiscounted: true },
++  })));
++  expect(html).toContain("<del");
++  expect(html).toContain("$85");
++  expect(html).toContain("$42.50");
++  expect(html).toContain(locale === "en" ? "50% off" : "50% ቅናሽ");
++});
++
++it("renders the base price alone when inactive", () => {
++  const html = renderToStaticMarkup(createElement(Provider, { locale: "en", messages: en, timeZone: "Africa/Addis_Ababa" }, createElement(CoursePriceAmount, {
++    pricing: { basePriceCents: 7000, finalPriceCents: 7000, discountAmountCents: 0, percentOff: 0, isDiscounted: false },
++  })));
++  expect(html).toContain("$70");
++  expect(html).not.toContain("<del");
++  expect(html).not.toContain("% off");
++});
+diff --git a/docs/course-pricing.md b/docs/course-pricing.md
+new file mode 100644
+index 0000000..bd85efe
+--- /dev/null
++++ b/docs/course-pricing.md
+@@ -0,0 +1,133 @@
++# Course pricing and discounts
++
++Implemented locally on 2026-09-14. No database migration, commit, push, build, or deployment was run. Existing uncommitted website-text work was preserved.
++
++## Display inventory
++
++Before this change:
++
++- `src/app/courses/[slug]/page.tsx:66` was the only rendered course price: `(course.price / 100).toFixed(0)`.
++- `src/app/courses/page.tsx` uses `src/components/marketing/course-level-cards.tsx`; these cards had no prices.
++- `src/components/forms/course-application-form.tsx` and `src/lib/notifications/course-application-notifications.ts` contain no course-price display. They remain unchanged.
++- No admin course pricing view existed. Store product/order prices are separate and unchanged.
++
++After this change, detail pages and listing cards render `CoursePrice`, which calls the server-only `getCoursePricing`. The new `/admin/courses` page and its server preview use the same function. `CoursePriceAmount` only formats the returned amounts and renders translated labels; it does not calculate discounts.
++
++## Files changed
++
++| File | Purpose |
++| --- | --- |
++| `prisma/schema.prisma` | Add only `CourseDiscountType` and `CoursePrice`; keep Product unchanged. |
++| `prisma/migrations/20260914000000_add_course_prices/migration.sql` | Create pricing table and enum, enforce valid values, insert the original three prices. |
++| `src/lib/courses-data.ts` | Document that existing cents values are fallbacks and database rows are authoritative. |
++| `src/lib/validations/course-price.ts` | Validate positive integer cents, percentages 1–100, fixed discounts below the base price, and consistent nullable fields. |
++| `src/lib/course-pricing.ts` | Single server-only discount calculation and missing-row fallback. |
++| `src/app/admin/(authenticated)/courses/page.tsx` | Server-guarded editor for the three existing course slugs. |
++| `src/app/api/admin/courses/[slug]/route.ts` | Server-guarded PUT save and read-only POST preview; validate both. |
++| `src/components/admin/course-price-form.tsx` | Existing form styling/submission pattern, cents labels, toggle, visible errors, debounced server preview, stale-response cancellation. |
++| `src/app/admin/(authenticated)/layout.tsx` | Add a translated course-pricing navigation link. |
++| `src/components/marketing/course-price.tsx` | Server pricing lookup shared by public display sites. |
++| `src/components/marketing/course-price-amount.tsx` | Exact cents formatting, strike-through price and translated discount badge. |
++| `src/app/courses/[slug]/page.tsx` | Replace hardcoded price rendering. Application flow remains intact. |
++| `src/components/marketing/course-level-cards.tsx` | Add current prices/discounts to listing cards. |
++| `messages/en.json`, `messages/am.json` | Add all new public/admin labels, errors and statuses. |
++| `src/lib/course-pricing.test.ts` | Real page/guard and pricing/validation tests, with cookie/storage boundaries controlled. |
++| `src/app/api/admin/courses/[slug]/route.test.ts` | Route validation, preview/save consistency, writes, error responses and revalidation tests. |
++| `src/components/marketing/course-price-amount.test.ts` | Render actual price component in EN/AM and check discounted/non-discounted markup. |
++| `docs/course-pricing.md`, `docs/course-pricing.diff` | Implementation report and complete implementation diff against the pre-task working tree. |
++
++## Units and display behavior
++
++- `priceCents` and FIXED `discountValue` are integer US cents. The editor explicitly labels both and explains that 7000 means $70.
++- PERCENT `discountValue` is an integer from 1 through 100. Changing types clears the old value to avoid carrying cents into a percentage field.
++- BigInt arithmetic implements positive `Math.round(basePriceCents * percentage / 100)` exactly. A 50% discount on 101 cents removes 51 cents, leaving 50 cents.
++- Fixed discounts show a whole percent rounded down so the badge cannot claim 100% off while money is still due. Discounts below 1% receive a translated “Less than 1% off” badge.
++- With an inactive discount or null type, the final price equals the base price. There is no strike-through or badge.
++- Missing rows fall back to 7000/8500/10000. Database errors are not treated as missing rows: the error surfaces rather than advertising a potentially incorrect fallback price.
++
++## Migration — run manually
++
++From the repository directory, with the intended database configuration available:
++
++```powershell
++npx prisma migrate deploy
++```
++
++This applies **all pending migrations**, including any pending migration from the pre-existing website-text work. Apply before running/deploying this code against that database. `prisma generate` was run locally to update generated TypeScript types; it did not migrate or seed the database.
++
++The complete SQL is:
++
++```sql
++CREATE TYPE "CourseDiscountType" AS ENUM ('PERCENT', 'FIXED');
++
++CREATE TABLE "CoursePrice" (
++    "slug" TEXT NOT NULL,
++    "priceCents" INTEGER NOT NULL,
++    "discountType" "CourseDiscountType",
++    "discountValue" INTEGER,
++    "discountActive" BOOLEAN NOT NULL DEFAULT false,
++    "updatedAt" TIMESTAMP(3) NOT NULL,
++    CONSTRAINT "CoursePrice_pkey" PRIMARY KEY ("slug"),
++    CONSTRAINT "CoursePrice_price_positive" CHECK ("priceCents" > 0),
++    -- PERCENT values are whole percentages; FIXED values are CENTS.
++    CONSTRAINT "CoursePrice_discount_valid" CHECK (
++      ("discountType" IS NULL AND "discountValue" IS NULL AND NOT "discountActive")
++      OR ("discountType" IS NOT NULL AND "discountType" = 'PERCENT' AND "discountValue" IS NOT NULL AND "discountValue" BETWEEN 1 AND 100)
++      OR ("discountType" IS NOT NULL AND "discountType" = 'FIXED' AND "discountValue" IS NOT NULL AND "discountValue" > 0 AND "discountValue" < "priceCents")
++    )
++);
++
++INSERT INTO "CoursePrice" ("slug", "priceCents", "updatedAt") VALUES
++    ('beginner', 7000, CURRENT_TIMESTAMP),
++    ('intermediate', 8500, CURRENT_TIMESTAMP),
++    ('advanced', 10000, CURRENT_TIMESTAMP);
++```
++
++## Caching evidence
++
++Two read-only requests to `https://abelkirar.com/courses/beginner`, at approximately 21:01 and 21:05 UTC on 2026-09-13, returned:
++
++```text
++HTTP 200
++Cache-Control: no-store, must-revalidate, no-cache, max-age=0, private
++X-Vercel-Cache: MISS
++Age: 0
++```
++
++The second request sent `NEXT_LOCALE=am` and returned `<html lang="am">`. This is empirical evidence that the **currently deployed** course page is served per request without shared page caching. It is not a production test of these undeployed changes. Locally, the Next.js 16.2.10 caching/route-handler/revalidatePath documentation was read before editing.
++
++The new function performs uncached Prisma reads. Successful saves call `revalidatePath('/courses')`, `revalidatePath('/courses/<slug>')`, and `revalidatePath('/admin/courses')`; the form also calls `router.refresh()`. Public pages show saved pricing on the next request. Already-open public pages are not live subscriptions and must be refreshed.
++
++## Verification
++
++The six requested acceptance tests were written and run **before implementation**:
++
++| Test | Before | After |
++| --- | --- | --- |
++| Non-admin cannot load pricing page | FAIL | PASS |
++| Non-admin cannot directly mutate pricing | FAIL | PASS |
++| PERCENT 101 is rejected | FAIL | PASS |
++| FIXED equal to or above base is rejected | FAIL | PASS |
++| Inactive discount preserves base price | FAIL | PASS |
++| Missing row uses hardcoded fallback | FAIL | PASS |
++
++The initial failures were missing-module errors because the feature did not exist, not demonstrated vulnerabilities in an existing pricing implementation. First run: 6 failed, exit 1. After implementation: 6 passed. One first post-implementation cold import exceeded Vitest's default 5-second limit; the page test now allows 20 seconds.
++
++Latest focused run:
++
++```powershell
++npm test -- src/lib/course-pricing.test.ts 'src/app/api/admin/courses/[slug]/route.test.ts' src/components/marketing/course-price-amount.test.ts src/lib/courses-data.test.ts src/lib/site-copy-keys.test.ts
++```
++
++**69 tests passed across 5 files.** Includes actual validator and pricing execution, real admin/session denial, exact rounding, 100% discounts, maximum stored integer, invalid inputs, missing rows, no persistent cache, server preview/save equality, ignored client-supplied final price, rejected unknown slugs, failed writes, and EN/AM rendering. Storage/cookie boundaries are substituted; authenticated mutation tests substitute only authentication/storage/revalidation boundaries. This is not a real Postgres persistence or interactive browser test.
++
++Local Next.js HTTP checks independently returned:
++
++- `GET /admin/courses` without an admin session: **307**, `Location: /admin/login`.
++- `PUT /api/admin/courses/beginner` without an admin session: **401**.
++
++`npx prisma validate`: **PASS**. `git diff --check`: **PASS**. Targeted ESLint on the new implementation and test files: **PASS**.
++
++`npm run typecheck`: **FAIL**, with only the pre-existing `src/lib/courses-data.test.ts:79` TS2352 error. That existing test casts `messages.courseLevels` to `Record<string, Record<string, string>>`, but `exploreCurriculum` is a string. Neither the test nor those pre-existing message entries were changed by this task. No errors were reported in the new feature files.
++
++Real database persistence, applying the SQL constraints, a saved-price public refresh, and the authenticated interactive editor remain unverified until the migration is applied. No course checkout, Stripe, cart, order pricing, student visibility, or course-application behavior changed.
