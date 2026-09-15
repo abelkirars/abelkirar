@@ -36,6 +36,12 @@ export const COURSE_LEVELS: CourseLevel[] = [
 
 /** Spare slots stay blank until an admin adds an item; existing keys keep their edits. */
 export const COURSE_TOPIC_SLOTS = Array.from({ length: 50 }, (_, index) => index + 1);
+export const COURSE_PLAN_FIELDS = ["duration", "schedule", "prerequisite"] as const;
+
+export function coursePlanItems(readDetail: (field: (typeof COURSE_PLAN_FIELDS)[number]) => string) {
+  return COURSE_PLAN_FIELDS.map((field) => ({ field, text: readDetail(field).trim() }))
+    .filter((item) => item.text.length > 0);
+}
 
 export function courseOverviewItems(readTopic: (slot: number) => string) {
   return COURSE_TOPIC_SLOTS.map((slot) => ({ slot, text: readTopic(slot).trim() }))

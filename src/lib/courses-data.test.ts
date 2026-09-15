@@ -102,6 +102,12 @@ describe("course copy keys exist for every course, in every locale", () => {
             `courseDetails.${slug}.topic${slot}`,
           ).toBeTypeOf("string");
         }
+        for (const field of ["duration", "schedule", "prerequisite"]) {
+          expect(copyField(courseDetails, slug, field), `courseDetails.${slug}.${field}`).toBeTypeOf("string");
+        }
+      }
+      for (const field of ["duration", "schedule", "prerequisite"]) {
+        expect(copyField(courseDetails, "beginner", field), `courseDetails.beginner.${field}`).toBeTruthy();
       }
     });
   }

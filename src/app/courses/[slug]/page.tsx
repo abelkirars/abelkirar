@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { Check } from "lucide-react";
-import { COURSE_LEVELS, courseOverviewItems } from "@/lib/courses-data";
+import { COURSE_LEVELS, courseOverviewItems, coursePlanItems } from "@/lib/courses-data";
 import { CoursePrice } from "@/components/marketing/course-price";
 import { Container } from "@/components/marketing/container";
 import { CrossPattern } from "@/components/marketing/cross-pattern";
@@ -44,6 +44,7 @@ export default async function CourseDetailPage({
   // Blank slots are dropped rather than rendered as an empty bullet: clearing
   // a topic in the editor is how you end up with a two-point course.
   const topics = courseOverviewItems((slot) => tDetails(`${course.slug}.topic${slot}`));
+  const plan = coursePlanItems((field) => tDetails(`${course.slug}.${field}`));
 
   return (
     <>
@@ -81,6 +82,17 @@ export default async function CourseDetailPage({
             <h2 className="font-heading text-2xl font-semibold">
               {t("overviewHeading")}
             </h2>
+            {plan.length > 0 && <ul
+              className="mt-5 flex flex-wrap gap-x-3 gap-y-2 text-sm font-medium text-foreground"
+              aria-label={t("planLabel")}
+            >
+              {plan.map(({ field, text }, index) => (
+                <li key={field} className="inline-flex items-center gap-3">
+                  {index > 0 && <span className="text-accent" aria-hidden="true">·</span>}
+                  <span>{text}</span>
+                </li>
+              ))}
+            </ul>}
             <ul className="mt-6 space-y-3">
               {topics.map(({ slot, text }) => (
                 <li key={slot} className="flex items-start gap-3">

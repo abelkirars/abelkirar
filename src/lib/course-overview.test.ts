@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { courseOverviewItems } from "./courses-data";
+import { courseOverviewItems, coursePlanItems } from "./courses-data";
 import { applyOverrides } from "./site-copy-keys";
 import en from "../../messages/en.json";
 import am from "../../messages/am.json";
 
 describe("editable public course overviews", () => {
+  it("shows the supplied plan for Beginner and hides empty plans for the other levels", () => {
+    expect(coursePlanItems((field) => en.courseDetails.beginner[field])).toHaveLength(3);
+    expect(coursePlanItems((field) => en.courseDetails.intermediate[field])).toHaveLength(0);
+    expect(coursePlanItems((field) => en.courseDetails.advanced[field])).toHaveLength(0);
+  });
   it.each([en, am])("keeps the original three items until the admin adds more", (messages) => {
     const copy = messages.courseDetails.beginner as Record<string, string>;
     expect(courseOverviewItems((slot) => copy[`topic${slot}`])).toHaveLength(3);

@@ -178,6 +178,15 @@ export function ContentEditor({ sections }: { sections: CopySection[] }) {
               {edit(`courseLevels.${pageId}.tagline`, "heading")}
               {edit(`courseLevels.${pageId}.description`, "description")}
             </section>
+            <section className={styles.block}>
+              <h3 className="font-heading text-2xl">Course plan</h3>
+              <p className="mt-2 mb-6 text-sm text-muted-foreground">Edit the duration, weekly schedule, and experience requirement shown below Course overview.</p>
+              <div className={styles.cards}>
+                <article className={styles.card}>{edit(`courseDetails.${pageId}.duration`)}</article>
+                <article className={styles.card}>{edit(`courseDetails.${pageId}.schedule`)}</article>
+                <article className={styles.card}>{edit(`courseDetails.${pageId}.prerequisite`)}</article>
+              </div>
+            </section>
             <CourseTopicEditor key={`${pageId}:${locale}`} fields={fields.filter((field) => field.key.startsWith(`courseDetails.${pageId}.topic`))}
               values={values} locale={locale} disabled={saving} renderField={edit} onChange={change} />
           </> : <>

@@ -103,6 +103,9 @@
   },
   "courseDetails": {
     "beginner": {
+      "duration": "About 3 months",
+      "schedule": "3 lessons per week",
+      "prerequisite": "No prior experience needed",
       "topic1": "Build confidence playing the Kirar",
       "topic2": "Develop a consistent practice habit",
       "topic3": "Begin accompanying Ethiopian Orthodox chanting",
@@ -155,6 +158,9 @@
       "topic50": ""
     },
     "intermediate": {
+      "duration": "",
+      "schedule": "",
+      "prerequisite": "",
       "topic1": "Develop a more confident and expressive sound",
       "topic2": "Strengthen listening and consistency",
       "topic3": "Grow in confidence accompanying worship",
@@ -207,6 +213,9 @@
       "topic50": ""
     },
     "advanced": {
+      "duration": "",
+      "schedule": "",
+      "prerequisite": "",
       "topic1": "Refine playing quality and judgement",
       "topic2": "Prepare for greater responsibility in church",
       "topic3": "Develop confidence serving alongside singers and other Kirar players",
@@ -401,6 +410,7 @@
   },
   "courses": {
     "overviewHeading": "Course overview",
+    "planLabel": "Course length, schedule, and experience requirements",
     "eyebrow": "Online Kirar Courses",
     "title": "From your first lesson to serving with Kirar",
     "description": "Three lesson levels for children and adults who want to play Kirar and accompany Orthodox chanting.",

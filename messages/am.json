@@ -103,6 +103,9 @@
   },
   "courseDetails": {
     "beginner": {
+      "duration": "በግምት 3 ወራት",
+      "schedule": "በሳምንት 3 ትምህርቶች",
+      "prerequisite": "ቀደም ሲል ልምድ አያስፈልግም",
       "topic1": "Build confidence playing the Kirar",
       "topic2": "Develop a consistent practice habit",
       "topic3": "Begin accompanying Ethiopian Orthodox chanting",
@@ -155,6 +158,9 @@
       "topic50": ""
     },
     "intermediate": {
+      "duration": "",
+      "schedule": "",
+      "prerequisite": "",
       "topic1": "Develop a more confident and expressive sound",
       "topic2": "Strengthen listening and consistency",
       "topic3": "Grow in confidence accompanying worship",
@@ -207,6 +213,9 @@
       "topic50": ""
     },
     "advanced": {
+      "duration": "",
+      "schedule": "",
+      "prerequisite": "",
       "topic1": "Refine playing quality and judgement",
       "topic2": "Prepare for greater responsibility in church",
       "topic3": "Develop confidence serving alongside singers and other Kirar players",
@@ -401,6 +410,7 @@
   },
   "courses": {
     "overviewHeading": "የኮርሱ አጠቃላይ መግለጫ",
+    "planLabel": "የኮርሱ ቆይታ፣ መርሐ ግብር እና የልምድ መስፈርቶች",
     "eyebrow": "የኦንላይን የክራር ትምህርቶች",
     "title": "ከመጀመሪያው ትምህርት እስከ በክራር ማገልገል",
     "description": "ክራር መጫወትና የኦርቶዶክስ ዝማሬን ማጀብ ለሚፈልጉ ሕፃናትና አዋቂዎች ሦስት የትምህርት ደረጃዎች።",

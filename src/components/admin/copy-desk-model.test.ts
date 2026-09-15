@@ -30,6 +30,7 @@ describe("Copy Desk", () => {
       const page = pages.find((item) => item.id === level)!;
       expect(page).toBeDefined();
       expect(copyPageIncludesField(page, `courseLevels.${level}.title`)).toBe(true);
+      expect(copyPageIncludesField(page, `courseDetails.${level}.duration`)).toBe(true);
       expect(copyPageIncludesField(page, `courseDetails.${level}.topic50`)).toBe(true);
       const other = level === "beginner" ? "advanced" : "beginner";
       expect(copyPageIncludesField(page, `courseDetails.${other}.topic1`)).toBe(false);
