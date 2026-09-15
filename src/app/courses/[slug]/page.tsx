@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { Check } from "lucide-react";
-import { COURSE_LEVELS, COURSE_TOPIC_SLOTS } from "@/lib/courses-data";
+import { COURSE_LEVELS, courseOverviewItems } from "@/lib/courses-data";
 import { CoursePrice } from "@/components/marketing/course-price";
 import { Container } from "@/components/marketing/container";
 import { CrossPattern } from "@/components/marketing/cross-pattern";
@@ -43,9 +43,7 @@ export default async function CourseDetailPage({
 
   // Blank slots are dropped rather than rendered as an empty bullet: clearing
   // a topic in the editor is how you end up with a two-point course.
-  const topics = COURSE_TOPIC_SLOTS.map((slot) =>
-    tDetails(`${course.slug}.topic${slot}`).trim()
-  ).filter((topic) => topic.length > 0);
+  const topics = courseOverviewItems((slot) => tDetails(`${course.slug}.topic${slot}`));
 
   return (
     <>
@@ -86,10 +84,10 @@ export default async function CourseDetailPage({
               {t("overviewHeading")}
             </h2>
             <ul className="mt-6 space-y-3">
-              {topics.map((topic) => (
-                <li key={topic} className="flex items-start gap-3">
+              {topics.map(({ slot, text }) => (
+                <li key={slot} className="flex items-start gap-3">
                   <Check className="mt-1 size-4 shrink-0 text-accent" />
-                  <span className="text-muted-foreground">{topic}</span>
+                  <span className="text-muted-foreground">{text}</span>
                 </li>
               ))}
             </ul>

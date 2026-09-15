@@ -1,6 +1,6 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { afterEach, describe, expect, it } from "vitest";
-import { copyPages, saveCopyChanges, type CopyChange } from "./copy-desk-model";
+import { copyPages, copyPageIncludesField, saveCopyChanges, type CopyChange } from "./copy-desk-model";
 
 const shutdown: (() => Promise<void>)[] = [];
 afterEach(async () => { await Promise.all(shutdown.splice(0).map((close) => close())); });
@@ -24,6 +24,17 @@ async function endpoint(handle: (body: { changes: CopyChange[] }, response: Serv
 }
 
 describe("Copy Desk", () => {
+  it("separates each course's card copy and overview from the other levels", () => {
+    const pages = copyPages(["courseDetails", "courseLevels"].map((id) => ({ id, label: id, fields: [] })));
+    for (const level of ["beginner", "intermediate", "advanced"]) {
+      const page = pages.find((item) => item.id === level)!;
+      expect(page).toBeDefined();
+      expect(copyPageIncludesField(page, `courseLevels.${level}.title`)).toBe(true);
+      expect(copyPageIncludesField(page, `courseDetails.${level}.topic50`)).toBe(true);
+      const other = level === "beginner" ? "advanced" : "beginner";
+      expect(copyPageIncludesField(page, `courseDetails.${other}.topic1`)).toBe(false);
+    }
+  });
   it("keeps every namespace reachable, including future additions", () => {
     const sections = ["hero", "nav", "emails", "futureSection"].map((id) => ({ id, label: id, fields: [] }));
     expect(copyPages(sections).flatMap((page) => page.sections).sort()).toEqual(sections.map((section) => section.id).sort());

@@ -34,5 +34,10 @@ export const COURSE_LEVELS: CourseLevel[] = [
   { slug: "advanced", price: 10000, studentLevel: "ADVANCED" },
 ];
 
-/** The bullet list on a course detail page: courseDetails.<slug>.topic1..3. */
-export const COURSE_TOPIC_SLOTS = [1, 2, 3] as const;
+/** Spare slots stay blank until an admin adds an item; existing keys keep their edits. */
+export const COURSE_TOPIC_SLOTS = Array.from({ length: 50 }, (_, index) => index + 1);
+
+export function courseOverviewItems(readTopic: (slot: number) => string) {
+  return COURSE_TOPIC_SLOTS.map((slot) => ({ slot, text: readTopic(slot).trim() }))
+    .filter((item) => item.text.length > 0);
+}

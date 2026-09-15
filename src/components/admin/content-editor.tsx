@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { placeholderDrift } from "@/lib/site-copy-keys";
 import { MAX_COPY_LENGTH } from "@/lib/validations/site-copy";
-import { copyFieldId, copyPages, saveCopyChanges, type CopyField, type CopyLocale, type CopySection } from "./copy-desk-model";
+import { copyFieldId, copyPages, copyPageIncludesField, isCourseCopyPage, saveCopyChanges, type CopyField, type CopyLocale, type CopySection } from "./copy-desk-model";
 import styles from "./content-editor.module.css";
 
 export type { CopyFieldValue, CopyField, CopySection } from "./copy-desk-model";
@@ -119,7 +119,7 @@ export function ContentEditor({ sections }: { sections: CopySection[] }) {
         {Array.from(new Set(pages.map((item) => item.category))).map((category) => <div key={category}>
           <p className={styles.navLabel}>{category}</p>
           {pages.filter((item) => item.category === category).map((item) => {
-            const count = changes.filter(({ field }) => item.sections.includes(field.key.split(".")[0])).length;
+            const count = changes.filter(({ field }) => copyPageIncludesField(item, field.key)).length;
             return <button type="button" key={item.id} aria-current={!search && item.id === pageId ? "page" : undefined}
               onClick={() => { setPageId(item.id); setQuery(""); setSelected(null); }}>
               <span>{item.label}</span>{count > 0 && <span className={styles.count} aria-label={`${count} unsaved changes`}>{count}</span>}
@@ -170,6 +170,16 @@ export function ContentEditor({ sections }: { sections: CopySection[] }) {
               </article>)}</div>{edit("courseLevels.exploreCurriculum", "textLink")}
             </section>
             <section className={styles.block}>{edit("home.instrumentsEyebrow", "eyebrow")}{edit("home.instrumentsTitle", "heading")}{edit("home.instrumentsDescription")}</section>
+          </> : isCourseCopyPage(pageId) ? <>
+            {previewHeader}
+            <section className={styles.hero}>
+              {edit(`courseLevels.${pageId}.level`, "eyebrow")}
+              {edit(`courseLevels.${pageId}.title`, "heroTitle")}
+              {edit(`courseLevels.${pageId}.tagline`, "heading")}
+              {edit(`courseLevels.${pageId}.description`, "description")}
+            </section>
+            <CourseTopicEditor key={`${pageId}:${locale}`} fields={fields.filter((field) => field.key.startsWith(`courseDetails.${pageId}.topic`))}
+              values={values} locale={locale} disabled={saving} renderField={edit} onChange={change} />
           </> : <>
             {page?.category === "Pages on the site" && previewHeader}
             {page?.sections.map((id) => sections.find((section) => section.id === id)).filter((section): section is CopySection => !!section).map(fieldGroup)}
@@ -208,6 +218,34 @@ export function ContentEditor({ sections }: { sections: CopySection[] }) {
       </SheetContent>
     </Sheet>
   </div>;
+}
+
+function CourseTopicEditor({ fields, values, locale, disabled, renderField, onChange }: {
+  fields: CopyField[]; values: Record<string, string>; locale: CopyLocale; disabled: boolean;
+  renderField: (key: string) => React.ReactNode; onChange: (key: string, value: string) => void;
+}) {
+  const [added, setAdded] = useState<string[]>(() => fields.filter((field) => values[copyFieldId(locale, field.key)] !== "").map((field) => field.key));
+  const ordered = [...fields].sort((a, b) => Number(a.key.split("topic").pop()) - Number(b.key.split("topic").pop()));
+  const shown = ordered.filter((field) => values[copyFieldId(locale, field.key)] !== "" || added.includes(field.key));
+  const next = ordered.find((field) => !shown.includes(field));
+  return <section className={styles.block}>
+    <h3 className="font-heading text-2xl">Course overview</h3>
+    <p className="mt-2 mb-6 text-sm text-muted-foreground">Add the points visitors should know about this course. Each language has its own list. Empty items are not shown on the website.</p>
+    <ol className="space-y-5">
+      {shown.map((field, index) => <li key={field.key} className="flex items-start gap-4 border-b border-white/10 pb-3">
+        <span className="pt-2 text-xs text-primary" aria-hidden="true">{index + 1}.</span>
+        <div className="min-w-0 flex-1">{renderField(field.key)}</div>
+        <Button type="button" variant="ghost" size="sm" aria-label={`Remove item ${index + 1}`} disabled={disabled} onClick={() => {
+          onChange(field.key, ""); setAdded((current) => current.filter((key) => key !== field.key));
+        }}>Remove</Button>
+      </li>)}
+    </ol>
+    {!shown.length && <p className="my-5 text-sm text-muted-foreground">No overview items yet. Add your first item below.</p>}
+    <Button className="mt-5" type="button" variant="outline" disabled={disabled || !next} onClick={() => {
+      if (next) setAdded((current) => [...current, next.key]);
+    }}>+ Add item</Button>
+    <p className="mt-3 text-xs text-muted-foreground">{shown.length} of {fields.length} items · Review changes to save your edits.</p>
+  </section>;
 }
 
 /** React never reconciles the editable children, preserving the caret during typing. */

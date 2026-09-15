@@ -100,7 +100,7 @@ describe("course copy keys exist for every course, in every locale", () => {
           expect(
             copyField(courseDetails, slug, `topic${slot}`),
             `courseDetails.${slug}.topic${slot}`,
-          ).toBeTruthy();
+          ).toBeTypeOf("string");
         }
       }
     });

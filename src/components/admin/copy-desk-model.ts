@@ -15,8 +15,10 @@ export interface CopyPage { id: string; label: string; category: string; section
 const PAGES: CopyPage[] = [
   { id: "home", label: "Home", category: "Pages on the site", sections: ["hero", "mission", "home", "courseLevels"] },
   { id: "about", label: "About — your story", category: "Pages on the site", sections: ["about"] },
-  { id: "courses", label: "Courses", category: "Pages on the site", sections: ["courses"] },
-  { id: "courseDetails", label: "Course pages", category: "Pages on the site", sections: ["courseDetails", "coursePricing"] },
+  { id: "courses", label: "Courses — shared text", category: "Pages on the site", sections: ["courses", "coursePricing"] },
+  { id: "beginner", label: "Beginner", category: "Course pages", sections: ["courseDetails", "courseLevels"] },
+  { id: "intermediate", label: "Intermediate", category: "Course pages", sections: ["courseDetails", "courseLevels"] },
+  { id: "advanced", label: "Advanced", category: "Course pages", sections: ["courseDetails", "courseLevels"] },
   { id: "store", label: "Store", category: "Pages on the site", sections: ["store", "product", "instrumentCategories", "customOrderNotice"] },
   { id: "community", label: "Community", category: "Pages on the site", sections: ["community"] },
   { id: "contact", label: "Contact", category: "Pages on the site", sections: ["contact"] },
@@ -27,6 +29,12 @@ const PAGES: CopyPage[] = [
   { id: "student", label: "Student area", category: "Not on a page", sections: ["studentLogin", "studentSetPassword", "studentForgotPassword", "studentDashboard"] },
   { id: "errors", label: "Error messages", category: "Not on a page", sections: ["validation", "pageError"] },
 ];
+
+export function isCourseCopyPage(id: string) { return ["beginner", "intermediate", "advanced"].includes(id); }
+export function copyPageIncludesField(page: CopyPage, key: string) {
+  if (!page.sections.includes(key.split(".")[0])) return false;
+  return !isCourseCopyPage(page.id) || key.split(".")[1] === page.id;
+}
 
 /** Unknown future namespaces remain editable without updating this navigation. */
 export function copyPages(sections: CopySection[]): CopyPage[] {
