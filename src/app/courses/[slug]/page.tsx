@@ -64,8 +64,6 @@ export default async function CourseDetailPage({
           <div className="mt-6 text-[#d4a84b]">
             <CoursePrice slug={course.slug} />
           </div>
-          <p className="mt-4 max-w-xl text-sm text-[#f3e9d2]/80">{t("availability")}</p>
-          <p className="mt-4 max-w-xl text-sm text-[#f3e9d2]/80">{t("strings")}</p>
           <Button
             size="lg"
             className="mt-6"
