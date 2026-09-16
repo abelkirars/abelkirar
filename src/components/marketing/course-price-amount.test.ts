@@ -17,6 +17,7 @@ it.each([["en", en], ["am", am]] as const)("renders discounted cents and badge i
   expect(html).toContain("<del");
   expect(html).toContain("$85");
   expect(html).toContain("$42.50");
+  expect(html).toContain(locale === "en" ? "/ month" : "በወር");
   expect(html).toContain(locale === "en" ? "50% off" : "50% ቅናሽ");
 });
 
@@ -25,6 +26,7 @@ it("renders the base price alone when inactive", () => {
     pricing: { basePriceCents: 7000, finalPriceCents: 7000, discountAmountCents: 0, percentOff: 0, isDiscounted: false },
   })));
   expect(html).toContain("$70");
+  expect(html).toContain("/ month");
   expect(html).not.toContain("<del");
   expect(html).not.toContain("% off");
 });

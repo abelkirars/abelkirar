@@ -20,6 +20,7 @@ export function CoursePriceAmount({ pricing }: { pricing: CoursePricing }) {
       <span className="font-heading text-3xl font-semibold">
         <span className="sr-only">{t("finalPrice")} </span>{amount(pricing.finalPriceCents)}
       </span>
+      <span className="text-sm font-medium opacity-80">{t("perMonth")}</span>
       {pricing.isDiscounted && (
         <span className="rounded-full bg-accent px-3 py-1 text-sm font-semibold text-accent-foreground">{pricing.percentOff < 1 ? t("lessThanOnePercent") : t("percentOff", { percent: pricing.percentOff })}</span>
       )}
