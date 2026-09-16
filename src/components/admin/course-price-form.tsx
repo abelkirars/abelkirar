@@ -9,6 +9,7 @@ import { Field, FieldLabel, FieldError } from "@/components/ui/field";
 import { CoursePriceAmount } from "@/components/marketing/course-price-amount";
 import type { CoursePriceInput } from "@/lib/validations/course-price";
 import type { CoursePricing } from "@/lib/course-pricing";
+import { formatUsdInput, parseUsdInput } from "@/lib/usd-input";
 
 export function CoursePriceForm({ slug, title, initial, initialPricing }: {
   slug: string; title: string; initial: CoursePriceInput; initialPricing: CoursePricing;
@@ -16,7 +17,12 @@ export function CoursePriceForm({ slug, title, initial, initialPricing }: {
   const t = useTranslations("coursePricing");
   const router = useRouter();
   const uid = useId();
-  const [draft, setDraft] = useState({ priceCents: String(initial.priceCents), discountType: initial.discountType ?? "", discountValue: initial.discountValue === null ? "" : String(initial.discountValue), discountActive: initial.discountActive });
+  const [draft, setDraft] = useState({
+    price: formatUsdInput(initial.priceCents),
+    discountType: initial.discountType ?? "",
+    discountValue: initial.discountValue === null ? "" : initial.discountType === "FIXED" ? formatUsdInput(initial.discountValue) : String(initial.discountValue),
+    discountActive: initial.discountActive,
+  });
   const [preview, setPreview] = useState<CoursePricing | null>(initialPricing);
   const [error, setError] = useState<string | null>(null);
   const [errorField, setErrorField] = useState<string | null>(null);
@@ -24,7 +30,12 @@ export function CoursePriceForm({ slug, title, initial, initialPricing }: {
   const [saving, setSaving] = useState(false);
   const revision = useRef(0);
   const previewController = useRef<AbortController | null>(null);
-  const payload = JSON.stringify({ ...draft, discountType: draft.discountType || null, discountValue: draft.discountType ? draft.discountValue : null });
+  const payload = JSON.stringify({
+    priceCents: parseUsdInput(draft.price) ?? draft.price,
+    discountType: draft.discountType || null,
+    discountValue: draft.discountType === "FIXED" ? parseUsdInput(draft.discountValue) ?? draft.discountValue : draft.discountType ? draft.discountValue : null,
+    discountActive: draft.discountActive,
+  });
 
   // Abort older previews so a slow response cannot overwrite newer input.
   useEffect(() => {
@@ -87,7 +98,7 @@ export function CoursePriceForm({ slug, title, initial, initialPricing }: {
       <fieldset disabled={saving} className="space-y-5">
         <Field>
           <FieldLabel htmlFor={`${uid}-price`}>{t("priceCents")}</FieldLabel>
-          <Input id={`${uid}-price`} name="priceCents" inputMode="numeric" value={draft.priceCents} onChange={(e) => update({ priceCents: e.target.value })} aria-invalid={errorField === "priceCents"} aria-describedby={`${uid}-units${errorField === "priceCents" ? ` ${errorId}` : ""}`} />
+          <Input id={`${uid}-price`} name="price" inputMode="decimal" value={draft.price} onChange={(e) => update({ price: e.target.value })} aria-invalid={errorField === "priceCents"} aria-describedby={`${uid}-units${errorField === "priceCents" ? ` ${errorId}` : ""}`} />
           <p id={`${uid}-units`} className="text-sm text-muted-foreground">{t("unitsHint")}</p>
         </Field>
         <Field>
@@ -98,7 +109,7 @@ export function CoursePriceForm({ slug, title, initial, initialPricing }: {
         </Field>
         {draft.discountType && <Field>
           <FieldLabel htmlFor={`${uid}-discount`}>{t(draft.discountType === "PERCENT" ? "percentValue" : "fixedValue")}</FieldLabel>
-          <Input id={`${uid}-discount`} name="discountValue" inputMode="numeric" value={draft.discountValue} onChange={(e) => update({ discountValue: e.target.value })} aria-invalid={errorField === "discountValue"} aria-describedby={errorField === "discountValue" ? errorId : undefined} />
+          <Input id={`${uid}-discount`} name="discountValue" inputMode={draft.discountType === "FIXED" ? "decimal" : "numeric"} value={draft.discountValue} onChange={(e) => update({ discountValue: e.target.value })} aria-invalid={errorField === "discountValue"} aria-describedby={errorField === "discountValue" ? errorId : undefined} />
         </Field>}
         <label className="flex min-h-11 items-center gap-3 text-sm" htmlFor={`${uid}-active`}>
           <input id={`${uid}-active`} type="checkbox" className="size-5 accent-current" disabled={!draft.discountType} checked={draft.discountActive} onChange={(e) => update({ discountActive: e.target.checked })} />{t("active")}
