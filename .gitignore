@@ -78,6 +78,12 @@ remotion/
 # Locally-saved admin credentials — never commit
 ADMIN_PASSWORD.txt
 
+# Local production database safety artifacts — never commit
+/certs/
+/backups/
+*.dump
+*diagnostic*.log
+
 # Confidential teaching source material must stay outside the repository.
 **/Abel Kirar Academy Curriculum Manual*
 private-curriculum/

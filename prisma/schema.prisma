@@ -73,6 +73,83 @@ enum CourseDiscountType {
   FIXED
 }
 
+enum CustomerStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum CustomerStudentRelationType {
+  SELF
+  GUARDIAN
+}
+
+enum CourseFormat {
+  GROUP
+  ONE_TO_ONE
+}
+
+enum CourseBillingInterval {
+  MONTHLY
+}
+
+enum CourseWeekday {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+enum CourseCohortStatus {
+  DRAFT
+  OPEN
+  FULL
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum CourseEnrollmentStatus {
+  PENDING_PAYMENT
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum CoursePaymentKind {
+  INITIAL_ENROLLMENT
+  MONTHLY
+}
+
+enum CoursePaymentStatus {
+  PENDING
+  PAST_DUE
+  PROOF_SUBMITTED
+  VERIFIED
+  EXPIRED
+  CANCELLED
+}
+
+enum CoursePaymentSubmissionStatus {
+  SUBMITTED
+  ACCEPTED
+  REJECTED
+}
+
+enum CourseTuitionPaymentMethod {
+  ZELLE
+  CASH_APP
+}
+
+enum CoursePortalAccessStatus {
+  ENABLED
+  SUSPENDED
+  REVOKED
+}
+
 model CoursePrice {
   slug           String              @id
   priceCents     Int
@@ -81,6 +158,279 @@ model CoursePrice {
   discountValue  Int?
   discountActive Boolean             @default(false)
   updatedAt      DateTime            @updatedAt
+}
+
+/// A verified Supabase-backed account holder. This is deliberately distinct
+/// from StudentProfile: a customer may be the learner or a guardian, and
+/// existing StudentProfile login fields remain in place during migration.
+/// Security identity is supabaseUserId; email is searchable contact data and
+/// is intentionally not unique in this application database.
+model Customer {
+  id              String         @id @default(cuid())
+  supabaseUserId  String         @unique @db.Uuid
+  email           String
+  emailNormalized String
+  emailVerifiedAt DateTime
+  emailSyncedAt   DateTime
+  fullName        String?
+  phone           String?
+  locale          String?
+  status          CustomerStatus @default(ACTIVE)
+  deactivatedAt   DateTime?
+  archivedAt      DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  studentRelations CustomerStudentRelation[]
+  applications     CourseApplication[]
+  enrollments      CourseEnrollment[]        @relation("EnrollmentCustomer")
+  orders           Order[]
+
+  @@index([emailNormalized])
+  @@index([status])
+}
+
+/// Durable account-to-learner relationship. Ending or archiving a relationship
+/// preserves the row; Customer and StudentProfile deletes are restricted.
+model CustomerStudentRelation {
+  id         String                      @id @default(cuid())
+  customerId String
+  studentId  String
+  type       CustomerStudentRelationType
+  isPrimary  Boolean                     @default(false)
+  endedAt    DateTime?
+  archivedAt DateTime?
+  createdAt  DateTime                    @default(now())
+  updatedAt  DateTime                    @updatedAt
+
+  customer Customer       @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  student  StudentProfile @relation(fields: [studentId], references: [id], onDelete: Restrict)
+
+  @@unique([customerId, studentId])
+  @@index([studentId])
+  @@index([customerId, type])
+}
+
+/// Sellable monthly tuition configuration. CoursePrice remains intact as the
+/// legacy public pricing source until a later approved cutover phase.
+model CoursePlan {
+  id                   String                @id @default(cuid())
+  code                 String                @unique
+  level                StudentLevel
+  format               CourseFormat
+  billingInterval      CourseBillingInterval @default(MONTHLY)
+  monthlyPriceCents    Int
+  currency             String                @default("USD") @db.Char(3)
+  groupMinimumStudents Int?
+  groupMaximumStudents Int?
+  active               Boolean               @default(true)
+  archivedAt           DateTime?
+  displayOrder         Int                   @default(0)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+
+  cohorts      CourseCohort[]
+  applications CourseApplication[]
+  enrollments  CourseEnrollment[]
+  promotions   CoursePromotion[]
+
+  @@unique([level, format])
+  @@index([active, displayOrder])
+}
+
+/// A small Group cohort. It has exactly one maintainable weekly schedule;
+/// multiple weekly meetings and calendar exceptions are intentionally out of
+/// scope. localStartTime is interpreted only together with its IANA timeZone.
+model CourseCohort {
+  id              String             @id @default(cuid())
+  coursePlanId    String
+  code            String             @unique
+  name            String
+  status          CourseCohortStatus @default(DRAFT)
+  minimumStudents Int                @default(3)
+  maximumStudents Int                @default(4)
+  weeklyDay       CourseWeekday?
+  localStartTime  DateTime?          @db.Time(0)
+  durationMinutes Int?
+  timeZone        String?
+  courseStartDate DateTime?          @db.Date
+  courseEndDate   DateTime?          @db.Date
+  archivedAt      DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  coursePlan  CoursePlan         @relation(fields: [coursePlanId], references: [id], onDelete: Restrict)
+  seats       CourseCohortSeat[]
+  enrollments CourseEnrollment[]
+
+  @@index([coursePlanId, status])
+}
+
+/// One of a cohort's four operational capacity slots. currentEnrollmentId is
+/// cleared when a reservation is released; CourseEnrollment.cohortId is the
+/// durable membership history and is never cleared for seat reuse.
+model CourseCohortSeat {
+  id                  String    @id @default(cuid())
+  cohortId            String
+  position            Int
+  currentEnrollmentId String?   @unique
+  reservedUntil       DateTime?
+  assignedAt          DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  cohort            CourseCohort      @relation(fields: [cohortId], references: [id], onDelete: Restrict)
+  currentEnrollment CourseEnrollment? @relation("CurrentCohortSeat", fields: [currentEnrollmentId], references: [id], onDelete: SetNull)
+
+  @@unique([cohortId, position])
+  @@index([cohortId, currentEnrollmentId])
+}
+
+model CourseEnrollment {
+  id                           String                 @id @default(cuid())
+  studentId                    String
+  customerId                   String
+  coursePlanId                 String
+  applicationId                String?                @unique
+  cohortId                     String?
+  status                       CourseEnrollmentStatus @default(PENDING_PAYMENT)
+  levelSnapshot                StudentLevel
+  formatSnapshot               CourseFormat
+  planCodeSnapshot             String
+  startsAt                     DateTime?
+  completedAt                  DateTime?
+  cancelledAt                  DateTime?
+  cancellationReason           String?
+  concurrentEnrollmentOverride Boolean                @default(false)
+  overrideReason               String?
+  overrideByAdminId            String?
+  overrideAt                   DateTime?
+  archivedAt                   DateTime?
+  createdAt                    DateTime               @default(now())
+  updatedAt                    DateTime               @updatedAt
+
+  student           StudentProfile      @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  customer          Customer            @relation("EnrollmentCustomer", fields: [customerId], references: [id], onDelete: Restrict)
+  coursePlan        CoursePlan          @relation(fields: [coursePlanId], references: [id], onDelete: Restrict)
+  application       CourseApplication?  @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+  cohort            CourseCohort?       @relation(fields: [cohortId], references: [id], onDelete: Restrict)
+  overrideByAdmin   Admin?              @relation("CourseEnrollmentOverrideBy", fields: [overrideByAdminId], references: [id], onDelete: Restrict)
+  currentCohortSeat CourseCohortSeat?   @relation("CurrentCohortSeat")
+  payments          CoursePayment[]
+  portalAccess      CoursePortalAccess?
+
+  @@index([studentId, status])
+  @@index([customerId, status])
+  @@index([cohortId, status])
+}
+
+/// One plan-specific promotion. PostgreSQL prevents overlapping enabled
+/// periods for the same plan; there is no silent priority winner.
+model CoursePromotion {
+  id                     String             @id @default(cuid())
+  coursePlanId           String
+  name                   String
+  publicMessage          String?
+  discountType           CourseDiscountType
+  discountValue          Int
+  startsAt               DateTime           @db.Timestamptz(3)
+  endsAt                 DateTime           @db.Timestamptz(3)
+  enabled                Boolean            @default(true)
+  publicCountdownEnabled Boolean            @default(true)
+  cancelledAt            DateTime?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  coursePlan CoursePlan      @relation(fields: [coursePlanId], references: [id], onDelete: Restrict)
+  payments   CoursePayment[]
+
+  @@index([coursePlanId, startsAt, endsAt])
+}
+
+/// Immutable monthly tuition obligation. Amount and promotion columns are
+/// snapshots calculated by the server when the obligation is created.
+model CoursePayment {
+  id                    String              @id @default(cuid())
+  enrollmentId          String
+  promotionId           String?
+  kind                  CoursePaymentKind
+  periodStart           DateTime            @db.Date
+  periodEnd             DateTime            @db.Date
+  revision              Int                 @default(1)
+  dueAt                 DateTime?
+  expiresAt             DateTime
+  status                CoursePaymentStatus @default(PENDING)
+  baseAmountCents       Int
+  discountAmountCents   Int                 @default(0)
+  finalAmountCents      Int
+  currency              String              @default("USD") @db.Char(3)
+  pricingRuleVersion    String              @default("v1")
+  promotionNameSnapshot String?
+  discountTypeSnapshot  CourseDiscountType?
+  discountValueSnapshot Int?
+  verifiedAt            DateTime?
+  verifiedByAdminId     String?
+  supersedesPaymentId   String?             @unique
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  enrollment        CourseEnrollment          @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+  promotion         CoursePromotion?          @relation(fields: [promotionId], references: [id], onDelete: Restrict)
+  verifiedByAdmin   Admin?                    @relation("CoursePaymentVerifiedBy", fields: [verifiedByAdminId], references: [id], onDelete: Restrict)
+  submissions       CoursePaymentSubmission[]
+  supersedesPayment CoursePayment?            @relation("CoursePaymentRevision", fields: [supersedesPaymentId], references: [id], onDelete: Restrict)
+  supersededBy      CoursePayment?            @relation("CoursePaymentRevision")
+
+  @@unique([enrollmentId, periodStart, revision])
+  @@index([enrollmentId, status])
+  @@index([status, dueAt])
+  @@index([status, expiresAt])
+}
+
+model CoursePaymentSubmission {
+  id                   String                        @id @default(cuid())
+  paymentId            String
+  attemptNumber        Int
+  status               CoursePaymentSubmissionStatus @default(SUBMITTED)
+  method               CourseTuitionPaymentMethod
+  senderName           String?
+  transactionReference String?
+  amountSentCents      Int
+  sentAt               DateTime?
+  proofStoragePath     String
+  originalFileName     String?
+  mimeType             String
+  fileSizeBytes        Int
+  submittedAt          DateTime                      @default(now())
+  reviewedAt           DateTime?
+  reviewedByAdminId    String?
+  rejectionReason      String?
+  createdAt            DateTime                      @default(now())
+  updatedAt            DateTime                      @updatedAt
+
+  payment         CoursePayment @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  reviewedByAdmin Admin?        @relation("CoursePaymentSubmissionReviewedBy", fields: [reviewedByAdminId], references: [id], onDelete: Restrict)
+
+  @@unique([paymentId, attemptNumber])
+  @@index([status, submittedAt])
+  @@index([transactionReference])
+}
+
+/// Billing never mutates this row automatically. PAST_DUE and EXPIRED are
+/// payment states; manual portal suspension remains a separate audited fact.
+model CoursePortalAccess {
+  id               String                   @id @default(cuid())
+  enrollmentId     String                   @unique
+  status           CoursePortalAccessStatus @default(ENABLED)
+  reason           String?
+  changedByAdminId String?
+  changedAt        DateTime                 @default(now())
+  archivedAt       DateTime?
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+
+  enrollment     CourseEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+  changedByAdmin Admin?           @relation("CoursePortalAccessChangedBy", fields: [changedByAdminId], references: [id], onDelete: Restrict)
 }
 
 model Product {
@@ -136,6 +486,11 @@ model Order {
   customerEmail           String?
   customerName            String?
   customerPhone           String?
+  /// Additive Customer link. Guest orders remain null, and legacy orders are
+  /// never linked solely because an email string happens to match.
+  customerId              String?
+  customerLinkedAt        DateTime?
+  customer                Customer?      @relation(fields: [customerId], references: [id], onDelete: Restrict)
   shippingAddress         Json?
   // Locale the customer was checking out in (NEXT_LOCALE cookie at order
   // creation), so later admin-triggered emails (e.g. payment confirmed) can
@@ -169,22 +524,24 @@ model Order {
   customOrderImagePath   String?
   quotedAt               DateTime?
   quotedById             String?
-  quotedBy               Admin?         @relation("QuotedBy", fields: [quotedById], references: [id])
+  quotedBy               Admin?    @relation("QuotedBy", fields: [quotedById], references: [id])
 
   items                OrderItem[]
   paymentConfirmations PaymentConfirmation[]
   notes                OrderNote[]
   notificationLogs     OrderNotificationLog[]
+
+  @@index([customerId])
 }
 
 model Admin {
-  id           String    @id @default(cuid())
-  username     String    @unique
-  passwordHash String
-  displayName  String
-  isActive     Boolean   @default(true)
-  createdAt    DateTime  @default(now())
-  lastLoginAt  DateTime?
+  id                String    @id @default(cuid())
+  username          String    @unique
+  passwordHash      String
+  displayName       String
+  isActive          Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  lastLoginAt       DateTime?
   /// Set whenever this admin's password is changed. Compared against the
   /// session JWT's `iat` claim in verifyAdminSession() — any token issued
   /// before this timestamp is rejected, invalidating every other session on
@@ -206,6 +563,10 @@ model Admin {
 
   reviewedApplications    CourseApplication[]
   applicationStatusEvents CourseApplicationEvent[]
+  enrollmentOverrides     CourseEnrollment[]        @relation("CourseEnrollmentOverrideBy")
+  verifiedCoursePayments  CoursePayment[]           @relation("CoursePaymentVerifiedBy")
+  reviewedCoursePayments  CoursePaymentSubmission[] @relation("CoursePaymentSubmissionReviewedBy")
+  courseAccessChanges     CoursePortalAccess[]      @relation("CoursePortalAccessChangedBy")
 }
 
 /// A single logged practice session — duration and a short note on what
@@ -281,9 +642,9 @@ model OrderNote {
 /// history and the ability to tell which specific email failed. No
 /// application code reads or writes this table yet (Phase 1 — schema only).
 model OrderNotificationLog {
-  id      String @id @default(cuid())
-  orderId String
-  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  id        String                     @id @default(cuid())
+  orderId   String
+  order     Order                      @relation(fields: [orderId], references: [id], onDelete: Cascade)
   /// Which notificationService method produced this attempt, e.g.
   /// "customerOrderPending", "adminNewOrder", "customerQuoteReady". A plain
   /// string rather than a Postgres enum — same reasoning as
@@ -309,12 +670,12 @@ model RateLimitHit {
 }
 
 model OrderItem {
-  id                    String   @id @default(cuid())
-  orderId               String
-  order                 Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  productId             String?
-  product               Product? @relation(fields: [productId], references: [id])
-  selectedCustomization Json
+  id                            String   @id @default(cuid())
+  orderId                       String
+  order                         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId                     String?
+  product                       Product? @relation(fields: [productId], references: [id])
+  selectedCustomization         Json
   /// Resolved snapshot of the customer's picks at order-creation time —
   /// distinct from selectedCustomization above, which stays the raw
   /// {fieldId: choiceId} map used for repricing/audit and is never
@@ -331,13 +692,13 @@ model OrderItem {
   /// Schema only for now — no application code reads or writes this yet
   /// (see docs/DECISIONS.md).
   selectedCustomizationSnapshot Json?
-  unitPrice             Int
-  quantity              Int      @default(1)
-  productNameSnapshot   String
-  productImageSnapshot  String?
+  unitPrice                     Int
+  quantity                      Int      @default(1)
+  productNameSnapshot           String
+  productImageSnapshot          String?
   /// Product.variantName at order time (e.g. "Desalegn Kirar"), snapshotted
   /// the same way productNameSnapshot is — survives later product edits/deletes.
-  variantNameSnapshot   String?
+  variantNameSnapshot           String?
 }
 
 model ContactSubmission {
@@ -455,24 +816,27 @@ model StudentProfile {
   email          String @unique
   role           Role   @default(STUDENT)
 
-  fullName       String
-  phone          String?
-  level          StudentLevel?
-  enrollmentDate DateTime?
+  fullName          String
+  phone             String?
+  level             StudentLevel?
+  enrollmentDate    DateTime?
   /// Re-checked against the DB on every authenticated request (never trust
   /// the JWT alone) — the same pattern verifyAdminSession uses for Admin.isActive.
-  status         StudentStatus @default(ACTIVE)
-  notes          String?
+  status            StudentStatus @default(ACTIVE)
+  notes             String?
   /// "en" | "am" — validated app-side via src/i18n/locale.ts's isLocale(),
   /// same plain-string approach already used for Order.locale, rather than a
   /// second Prisma enum that would need to stay in sync with that file's
   /// `locales` array by hand.
-  locale         String        @default("en")
+  locale            String        @default("en")
+  /// Optional IANA timezone used for a secondary local rendering of cohort
+  /// meeting times. The cohort's configured timezone remains authoritative.
+  preferredTimeZone String?
   /// Set only when the student actually finishes /student/set-password (invite
   /// or recovery) and saves a password — NOT when they merely click the link.
   /// Replaces the old last_sign_in_at proxy (see supabase-admin-auth.ts git
   /// history), which over-counted "clicked but abandoned" as activated.
-  activatedAt DateTime?
+  activatedAt       DateTime?
 
   /// Whether this student may use the Student Portal at all. Deliberately a
   /// separate fact from `status`: "was approved to be here" and "account is
@@ -485,11 +849,14 @@ model StudentProfile {
   /// explicit grant on the approval path. Every row that existed before this
   /// column was added is backfilled to true by its migration — those students
   /// were approved by the teacher out of band, before applications existed.
-  portalAccess Boolean @default(false)
+  portalAccess Boolean   @default(false)
   /// When portal access was granted. Null for rows that predate this column,
   /// which is why it is nullable rather than defaulting to now() — a backfilled
   /// timestamp would be a fabricated approval date.
   approvedAt   DateTime?
+  /// Administrative archival is non-destructive; historical applications,
+  /// enrollments and payments restrict physical deletion of this profile.
+  archivedAt   DateTime?
 
   /// The teacher this student is currently associated with — one field, not
   /// a feature: no multi-teacher management UI is built on top of this yet.
@@ -501,12 +868,14 @@ model StudentProfile {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  weeklyPractices WeeklyPractice[]
-  monthlyLogs     MonthlyLog[]
+  weeklyPractices     WeeklyPractice[]
+  monthlyLogs         MonthlyLog[]
   studentNotes        StudentNote[]
   teacherPrivateNotes TeacherPrivateNote[]
   studentMilestones   StudentMilestone[]
   practiceLogEntries  PracticeLogEntry[]
+  customerRelations   CustomerStudentRelation[]
+  courseEnrollments   CourseEnrollment[]
 
   /// The application this account was provisioned from, if any. Optional
   /// because every student created before applications existed (and any the
@@ -550,9 +919,9 @@ model WeeklyPractice {
   /// E32/E33/C18/E34 mapping (unresolved). ADMIN-ONLY — see the model-level
   /// security note above. A student sees only teacher-authored text
   /// (weekTitle / instructions), never this field's raw value.
-  currentTechnique String?
+  currentTechnique      String?
   /// Whether the student must upload a recording for this assignment.
-  recordingRequired Boolean @default(false)
+  recordingRequired     Boolean @default(false)
 
   studentSubmission String?
   submittedAt       DateTime?
@@ -578,8 +947,8 @@ model WeeklyPractice {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  attachments  WeeklyPracticeAttachment[]
-  studentNotes StudentNote[]
+  attachments        WeeklyPracticeAttachment[]
+  studentNotes       StudentNote[]
   practiceLogEntries PracticeLogEntry[]
 
   @@index([studentId, weekStartDate])
@@ -596,13 +965,13 @@ model WeeklyPractice {
 /// every student-facing query must scope through weeklyPractice.studentId,
 /// same pattern as StudentNote.
 model WeeklyPracticeAttachment {
-  id               String               @id @default(cuid())
-  weeklyPracticeId String
-  weeklyPractice   WeeklyPractice       @relation(fields: [weeklyPracticeId], references: [id], onDelete: Cascade)
-  uploadedBy       AttachmentUploadedBy
+  id                String               @id @default(cuid())
+  weeklyPracticeId  String
+  weeklyPractice    WeeklyPractice       @relation(fields: [weeklyPracticeId], references: [id], onDelete: Cascade)
+  uploadedBy        AttachmentUploadedBy
   /// Object path in the private student-files bucket, not a public URL.
-  storagePath      String
-  fileName         String
+  storagePath       String
+  fileName          String
   /// Verified against the actual stored object at confirm time
   /// (verifyRecordingObject in src/lib/student-recordings.ts), not merely
   /// client-declared — createSignedUploadUrl enforces no content-type
@@ -612,11 +981,11 @@ model WeeklyPracticeAttachment {
   /// + the server-derived, ownership-scoped storage path + the private
   /// bucket + short-lived signed URLs — but it does now reflect what
   /// Supabase actually reports the object to be.
-  mimeType         String
+  mimeType          String
   /// Same verification as mimeType, same function, same reasoning: the
   /// value stored here is the ACTUAL uploaded object's size, not the
   /// client's declared File.size.
-  fileSize         Int
+  fileSize          Int
   /// Teacher-written or date-based label ONLY — per the spec, this must
   /// never be auto-generated from internal curriculum text. Enforced by
   /// authoring discipline in the route/UI that writes this, not by the
@@ -625,8 +994,8 @@ model WeeklyPracticeAttachment {
   /// Teacher can flag a recording as a milestone marker for later
   /// comparison (the comparison UI itself is Phase 2 — this just captures
   /// the flag from day one, per the spec).
-  isMilestoneMarker Boolean @default(false)
-  createdAt        DateTime             @default(now())
+  isMilestoneMarker Boolean              @default(false)
+  createdAt         DateTime             @default(now())
 
   @@index([weeklyPracticeId])
 }
@@ -821,6 +1190,11 @@ model MonthlyLogAttachment {
 model CourseApplication {
   id String @id @default(cuid())
 
+  /// Nullable compatibility links: existing guest applications remain valid
+  /// and are not retroactively claimed by matching an email address.
+  customerId      String?
+  requestedPlanId String?
+
   fullName String
   /// Always stored lower-cased on write. The partial unique index that allows
   /// only one open application per person indexes lower("email") rather than
@@ -839,9 +1213,9 @@ model CourseApplication {
   /// a NOT NULL default would assert something about them that nobody ever
   /// said. Zod requires a real value on every new submission, so null here
   /// means "this row predates the question", never "the applicant skipped it".
-  country          String?
-  lessonLanguage   LessonLanguage?
-  kirarModel       KirarModel?
+  country        String?
+  lessonLanguage LessonLanguage?
+  kirarModel     KirarModel?
 
   /// The level the APPLICANT asked for — a stated preference, never an
   /// assignment. StudentProfile.level is set by the teacher at approval and is
@@ -893,12 +1267,12 @@ model CourseApplication {
   ///
   ///   SELECT id, "createdAt" FROM "CourseApplication"
   ///   WHERE "notificationsSentAt" IS NULL ORDER BY "createdAt" DESC;
-  notificationsSentAt  DateTime?
+  notificationsSentAt DateTime?
   /// "en" | "am" — validated app-side via src/i18n/locale.ts's isLocale(), the
   /// same plain-string approach already used for StudentProfile.locale and
   /// Order.locale rather than a second Prisma enum to keep in sync by hand.
   /// Every notification about this application is sent in this locale.
-  locale           String       @default("en")
+  locale              String    @default("en")
 
   status CourseApplicationStatus @default(PENDING)
 
@@ -924,8 +1298,11 @@ model CourseApplication {
   /// conditional status update in the approve route — the check alone is racy).
   /// Unique so the database itself refuses to attach two applications to one
   /// student.
-  studentProfileId String?         @unique
-  studentProfile   StudentProfile? @relation(fields: [studentProfileId], references: [id], onDelete: SetNull)
+  studentProfileId String?           @unique
+  studentProfile   StudentProfile?   @relation(fields: [studentProfileId], references: [id], onDelete: SetNull)
+  customer         Customer?         @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  requestedPlan    CoursePlan?       @relation(fields: [requestedPlanId], references: [id], onDelete: Restrict)
+  courseEnrollment CourseEnrollment?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -942,6 +1319,8 @@ model CourseApplication {
   /// entirely, contradicting the decline email's own wording.
   @@index([status, createdAt])
   @@index([email])
+  @@index([customerId])
+  @@index([requestedPlanId])
 }
 
 /// Append-only audit trail of every status change on an application, so the
