@@ -38,6 +38,9 @@ const activeProfile = {
   fullName: "Alice",
   status: "ACTIVE",
   locale: "en",
+  portalAccess: true,
+  archivedAt: null,
+  courseEnrollments: [],
 };
 
 beforeEach(() => {
@@ -120,17 +123,104 @@ describe("requireStudentApi", () => {
       fullName: "Bob",
       status: "ACTIVE",
       locale: "en",
+      portalAccess: true,
+      archivedAt: null,
+      courseEnrollments: [],
     });
 
     const result = await requireStudentApi();
 
     expect(mockFindUnique).toHaveBeenCalledWith({
       where: { supabaseUserId: "sb-user-2" },
+      include: {
+        courseEnrollments: {
+          select: {
+            status: true,
+            archivedAt: true,
+            portalAccess: {
+              select: {
+                status: true,
+                archivedAt: true,
+              },
+            },
+          },
+        },
+      },
     });
     if ("session" in result) {
       expect(result.session.studentId).toBe("student-2");
       expect(result.session.studentId).not.toBe("student-1");
     }
+  });
+
+  it("denies an ACTIVE legacy profile whose portalAccess flag is false", async () => {
+    mockReadStudentAuthUser.mockResolvedValue({
+      supabaseUserId: "sb-user-1",
+      email: "alice@example.com",
+    });
+    mockFindUnique.mockResolvedValue({ ...activeProfile, portalAccess: false });
+
+    const result = await requireStudentApi();
+
+    expect("response" in result).toBe(true);
+    if ("response" in result) expect(result.response.status).toBe(403);
+  });
+
+  it("denies an archived student even when legacy portal access is enabled", async () => {
+    mockReadStudentAuthUser.mockResolvedValue({
+      supabaseUserId: "sb-user-1",
+      email: "alice@example.com",
+    });
+    mockFindUnique.mockResolvedValue({ ...activeProfile, archivedAt: new Date() });
+
+    const result = await requireStudentApi();
+
+    expect("response" in result).toBe(true);
+    if ("response" in result) expect(result.response.status).toBe(403);
+  });
+
+  it("uses enrollment lifecycle and CoursePortalAccess once enrollment history exists", async () => {
+    mockReadStudentAuthUser.mockResolvedValue({
+      supabaseUserId: "sb-user-1",
+      email: "alice@example.com",
+    });
+    mockFindUnique.mockResolvedValue({
+      ...activeProfile,
+      portalAccess: false,
+      courseEnrollments: [
+        {
+          status: "ACTIVE",
+          archivedAt: null,
+          portalAccess: { status: "ENABLED", archivedAt: null },
+        },
+      ],
+    });
+
+    const result = await requireStudentApi();
+
+    expect("session" in result).toBe(true);
+  });
+
+  it("does not fall back to the legacy flag after enrollment history exists", async () => {
+    mockReadStudentAuthUser.mockResolvedValue({
+      supabaseUserId: "sb-user-1",
+      email: "alice@example.com",
+    });
+    mockFindUnique.mockResolvedValue({
+      ...activeProfile,
+      courseEnrollments: [
+        {
+          status: "PENDING_PAYMENT",
+          archivedAt: null,
+          portalAccess: null,
+        },
+      ],
+    });
+
+    const result = await requireStudentApi();
+
+    expect("response" in result).toBe(true);
+    if ("response" in result) expect(result.response.status).toBe(403);
   });
 });
 

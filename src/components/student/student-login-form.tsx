@@ -41,10 +41,10 @@ export function StudentLoginForm() {
     }
 
     // Best-effort — a failure here should never block getting to the
-    // dashboard. requireStudentPage() there re-checks StudentProfile status
-    // against the DB and bounces (signing out first) an inactive or orphaned
-    // session straight back here with the right ?error=, so this page
-    // doesn't need to duplicate that check.
+    // dashboard. requireStudentPage() there re-checks profile lifecycle and
+    // portal authorization against the DB and bounces (signing out first) a
+    // blocked or orphaned session straight back here with the right ?error=,
+    // so this page doesn't need to duplicate that check.
     await syncStudentLocaleOnFirstLogin().catch((err) => {
       console.error("[StudentLoginForm] Failed to sync locale on login:", err);
     });

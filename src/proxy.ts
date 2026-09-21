@@ -13,7 +13,7 @@ import { decryptSession, ADMIN_SESSION_COOKIE_NAME } from "@/lib/admin/session";
  *   - admin: requireAdminPage/requireAdminApi (src/lib/admin/dal.ts) —
  *     re-checks Admin.isActive against the DB.
  *   - student: requireStudentPage/requireStudentApi (src/lib/student/dal.ts) —
- *     re-checks StudentProfile.status === ACTIVE against the DB.
+ *     re-checks profile lifecycle and portal authorization against the DB.
  */
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -119,7 +119,8 @@ async function handleStudentRoute(request: NextRequest, pathname: string) {
   // This check here is signature/expiry only — never queries StudentProfile,
   // so a deactivated-but-still-Supabase-logged-in student still passes this
   // step. The real block for that case (and for an authenticated user with
-  // no matching StudentProfile row at all) is requireStudentPage/requireStudentApi.
+  // no matching/authorized StudentProfile row at all) is
+  // requireStudentPage/requireStudentApi.
   const {
     data: { user },
   } = await supabase.auth.getUser();

@@ -5,6 +5,38 @@ import { prisma } from "@/lib/db";
 import { readStudentAuthUser } from "@/lib/student/session";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
+type PortalEnrollment = {
+  status: "PENDING_PAYMENT" | "ACTIVE" | "PAUSED" | "COMPLETED" | "CANCELLED";
+  archivedAt: Date | null;
+  portalAccess: {
+    status: "ENABLED" | "SUSPENDED" | "REVOKED";
+    archivedAt: Date | null;
+  } | null;
+};
+
+/**
+ * Explicit compatibility rule for the Phase 1 -> Phase 2 transition.
+ *
+ * A profile with no enrollment records remains governed by the legacy
+ * StudentProfile.portalAccess flag. As soon as enrollment history exists,
+ * the new enrollment/access ledger is authoritative: access requires a live,
+ * unarchived ACTIVE enrollment with an unarchived ENABLED access row.
+ */
+export function hasStudentPortalAccess(
+  legacyPortalAccess: boolean,
+  enrollments: PortalEnrollment[]
+): boolean {
+  if (enrollments.length === 0) return legacyPortalAccess;
+
+  return enrollments.some(
+    (enrollment) =>
+      enrollment.status === "ACTIVE" &&
+      enrollment.archivedAt === null &&
+      enrollment.portalAccess?.status === "ENABLED" &&
+      enrollment.portalAccess.archivedAt === null
+  );
+}
+
 export interface StudentSessionPayload {
   /** StudentProfile.id — the only student identifier any route/query should ever use. */
   studentId: string;
@@ -33,11 +65,14 @@ export type StudentSessionResolution =
    *  dashboard -> login -> dashboard. So this is handled exactly like
    *  "orphaned" — sign out, then redirect with a distinct error state. */
   | { kind: "inactive" }
+  | { kind: "archived" }
+  | { kind: "portal-denied" }
   | { kind: "active"; session: StudentSessionPayload };
 
 /**
  * Verifies the Supabase Auth session AND that the linked StudentProfile
- * still exists and is ACTIVE, re-checked against the DB on every request —
+ * still exists, is ACTIVE and has portal access, re-checked against the DB
+ * on every request —
  * the same pattern verifyAdminSession uses for Admin.isActive, never trusted
  * from the token alone. Memoized per request via React's cache().
  */
@@ -46,7 +81,7 @@ export type StudentSessionResolution =
  * below) so /student/login can peek at whether there's already a fully
  * valid, active session — WITHOUT redirecting — to decide whether to show
  * the form at all. Only an "active" result should trigger that redirect;
- * orphaned/inactive must not, or a still-Supabase-authenticated-but-blocked
+ * orphaned/blocked results must not, or a still-Supabase-authenticated-but-blocked
  * visitor could never even reach the login form to see their error banner.
  */
 export const resolveStudentSession = cache(async (): Promise<StudentSessionResolution> => {
@@ -55,10 +90,28 @@ export const resolveStudentSession = cache(async (): Promise<StudentSessionResol
 
   const profile = await prisma.studentProfile.findUnique({
     where: { supabaseUserId: authUser.supabaseUserId },
+    include: {
+      courseEnrollments: {
+        select: {
+          status: true,
+          archivedAt: true,
+          portalAccess: {
+            select: {
+              status: true,
+              archivedAt: true,
+            },
+          },
+        },
+      },
+    },
   });
 
   if (!profile) return { kind: "orphaned" };
   if (profile.status !== "ACTIVE") return { kind: "inactive" };
+  if (profile.archivedAt) return { kind: "archived" };
+  if (!hasStudentPortalAccess(profile.portalAccess, profile.courseEnrollments)) {
+    return { kind: "portal-denied" };
+  }
 
   return {
     kind: "active",
@@ -72,13 +125,13 @@ export const resolveStudentSession = cache(async (): Promise<StudentSessionResol
   };
 });
 
-/** For Server Component pages under /student — redirects to login if unauthenticated/inactive/orphaned. */
+/** For protected Server Component pages under /student — redirects any denied session to login. */
 export async function requireStudentPage(): Promise<StudentSessionPayload> {
   const result = await resolveStudentSession();
 
   if (result.kind === "active") return result.session;
 
-  if (result.kind === "orphaned" || result.kind === "inactive") {
+  if (result.kind !== "unauthenticated") {
     const supabase = await createSupabaseServerClient();
     await supabase.auth.signOut();
     const errorState = result.kind === "orphaned" ? "account-not-found" : "account-inactive";
@@ -107,6 +160,12 @@ export async function requireStudentApi(): Promise<
   if (result.kind === "inactive") {
     return {
       response: NextResponse.json({ error: "Account inactive" }, { status: 401 }),
+    };
+  }
+
+  if (result.kind === "archived" || result.kind === "portal-denied") {
+    return {
+      response: NextResponse.json({ error: "Portal access denied" }, { status: 403 }),
     };
   }
 
