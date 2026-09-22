@@ -99,6 +99,9 @@ export default async function AdminCourseApplicationDetailPage({
           </div>
 
           <aside>
+            {application.status === "APPROVED" && (
+              <Link href={`/admin/course-applications/${application.id}/prepare`} className="mb-4 block rounded-lg border border-primary bg-primary p-3 text-center font-medium text-primary-foreground">Prepare Enrollment</Link>
+            )}
             <CourseApplicationDecisionPanel
               applicationId={application.id}
               status={application.status}

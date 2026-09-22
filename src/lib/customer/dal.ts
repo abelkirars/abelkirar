@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { User } from "@supabase/supabase-js";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
@@ -30,7 +31,7 @@ async function readVerifiedCustomerIdentity(): Promise<VerifiedCustomerIdentity>
   return verifiedIdentityFromUser(user);
 }
 
-function verifiedIdentityFromUser(user: User): VerifiedCustomerIdentity {
+export function verifiedIdentityFromUser(user: User): VerifiedCustomerIdentity {
   if (!user.email || !user.email_confirmed_at) {
     throw new CustomerEmailNotVerifiedError("A verified email address is required");
   }
@@ -63,9 +64,14 @@ export async function getCurrentAuthenticatedCustomer() {
  */
 export async function getOrCreateCurrentCustomer() {
   const identity = await readVerifiedCustomerIdentity();
+  return upsertVerifiedCustomer(identity);
+}
+
+/** Internal server-only primitive; caller must obtain identity from verified Supabase Auth, never request email. */
+export async function upsertVerifiedCustomer(identity: VerifiedCustomerIdentity, db: Pick<Prisma.TransactionClient, "customer"> = prisma) {
   const syncedAt = new Date();
 
-  return prisma.customer.upsert({
+  return db.customer.upsert({
     where: { supabaseUserId: identity.supabaseUserId },
     create: {
       supabaseUserId: identity.supabaseUserId,
