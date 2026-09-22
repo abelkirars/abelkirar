@@ -749,6 +749,7 @@
     "submit": "Sign in"
   },
   "coursePayment": {
+    "submissionTime": "Proof submitted: {timestamp}",
     "eyebrow": "Secure course payment",
     "title": "Complete your enrollment payment",
     "deadline": "Complete enrollment by {deadline}",
@@ -816,6 +817,17 @@
       "closedTitle": "Proof upload is closed",
       "closedBody": "This payment is no longer accepting a new proof. Contact Abel Kirar Academy if you need help."
     }
+  },
+  "coursePaymentReviewEmails": {
+    "verifiedSubject": "Your course payment is verified — Abel Kirar Academy",
+    "rejectedSubject": "Your course payment proof needs attention — Abel Kirar Academy",
+    "summary": "Learner: {learner}. Course: {course}. Tuition: {amount}.",
+    "verifiedLogin": "Your payment has been manually verified. The enrollment and course access are active. The learner can sign in with their existing account.",
+    "verifiedLoginless": "Your payment has been manually verified. The learner's enrollment and course access are active. This does not create a learner login or grant access through the guardian's login. Please contact your teacher about how the learner will access lessons.",
+    "reason": "The proof could not be verified. Reason: {reason}",
+    "resubmit": "Payment remains unverified and course access is inactive. You may submit another proof using your authenticated payment page before the original deadline: {deadline}. This deadline has not been extended.",
+    "expired": "The original enrollment-completion window has expired. Payment remains unverified, the pending enrollment has been cancelled, and course access remains inactive. No further proof can be submitted for this obligation. Please contact your teacher for next steps.",
+    "openAccount": "Open your authenticated account page"
   },
   "coursePaymentEmails": {
     "requiredSubject": "Complete your Abel Kirar Academy enrollment payment",

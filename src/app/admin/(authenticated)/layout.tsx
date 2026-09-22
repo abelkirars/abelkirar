@@ -20,6 +20,7 @@ export default async function AuthenticatedAdminLayout({
             <Link href="/admin/orders">Orders</Link>
             <Link href="/admin/course-applications">Applications</Link>
             <Link href="/admin/course-cohorts">Cohorts</Link>
+            <Link href="/admin/course-payments">Course payments</Link>
             <Link href="/admin/students">Students</Link>
             <Link href="/admin/milestones">Milestones</Link>
             <Link href="/admin/products">Products</Link>

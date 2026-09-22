@@ -50,11 +50,12 @@ export async function uploadPaymentScreenshot(
 /** Short-lived signed URL for admin viewing only — never expose this publicly. */
 export async function getPaymentScreenshotSignedUrl(
   path: string,
-  expiresInSeconds = 300
+  expiresInSeconds = 300,
+  download = false,
 ): Promise<string | null> {
   const { data, error } = await supabaseAdmin.storage
     .from(BUCKET)
-    .createSignedUrl(path, expiresInSeconds);
+    .createSignedUrl(path, expiresInSeconds, download ? { download: true } : undefined);
 
   if (error || !data) return null;
   return data.signedUrl;

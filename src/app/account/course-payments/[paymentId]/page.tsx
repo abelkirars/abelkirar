@@ -169,6 +169,13 @@ export default async function CoursePaymentPage({
                 <CardTitle>{canSubmit ? t("upload.title") : t("state.title")}</CardTitle>
               </CardHeader>
               <CardContent>
+                {payment.latestSubmission?.status === "REJECTED" && <div className="mb-4 rounded-lg bg-muted p-4">
+                  <p className="font-semibold">{t("state.rejectedTitle")}</p>
+                  <p className="mt-1 text-sm">{payment.latestSubmission.rejectionReason}</p>
+                </div>}
+                {payment.latestSubmission && <p className="mb-4 text-sm text-muted-foreground">
+                  {t("submissionTime", { timestamp: formatPaymentDeadline(locale, payment.latestSubmission.submittedAt) })}
+                </p>}
                 {canSubmit && instructions.length > 0 ? (
                   <CoursePaymentProofForm
                     paymentId={payment.id}

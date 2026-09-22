@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => {
     current: null,
   };
   const tx = {
+    $queryRaw: vi.fn(),
     coursePayment: { findFirst: vi.fn(), update: vi.fn() },
     coursePaymentSubmission: { findFirst: vi.fn(), aggregate: vi.fn(), create: vi.fn() },
   };
@@ -106,7 +107,7 @@ describe("course payment proof transaction", () => {
   it("creates one SUBMITTED attempt and transitions only PENDING to PROOF_SUBMITTED", async () => {
     const result = await submitCoursePaymentProofForCustomer("customer-1", "payment-1", fields, proof, now);
     expect(result).toMatchObject({ idempotent: false, submission: { status: "SUBMITTED", submittedAt: now } });
-    expect(mocks.tx.coursePayment.findFirst.mock.calls[0][0].where).toEqual({ id: "payment-1", enrollment: { customerId: "customer-1" } });
+    expect(mocks.tx.coursePayment.findFirst.mock.calls[0][0].where).toMatchObject({ id: "payment-1", enrollment: { customerId: "customer-1" } });
     expect(mocks.tx.coursePaymentSubmission.create).toHaveBeenCalledWith({ data: expect.objectContaining({
       paymentId: "payment-1",
       attemptNumber: 1,

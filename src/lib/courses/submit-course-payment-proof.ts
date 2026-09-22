@@ -81,7 +81,7 @@ export async function submitCoursePaymentProofForCustomer(
   paymentId: string,
   fields: CoursePaymentProofFields,
   proof: ValidatedCoursePaymentProof,
-  authoritativeNow = new Date(),
+  authoritativeNow?: Date,
 ): Promise<SubmissionResult> {
   let preflight;
   try {
@@ -123,9 +123,9 @@ export async function submitCoursePaymentProofForCustomer(
   let outcome: TransactionOutcome;
   try {
     outcome = await serializable(async tx => {
-      const expiration = await expireInitialPaymentInTransaction(tx, paymentId, authoritativeNow);
+      await tx.$queryRaw`SELECT id FROM "CoursePayment" WHERE id = ${paymentId} FOR UPDATE`;
       const payment = await tx.coursePayment.findFirst({
-        where: { id: paymentId, enrollment: { customerId } },
+        where: { id: paymentId, enrollment: { customerId, customer: { status: "ACTIVE", archivedAt: null, deactivatedAt: null } } },
         include: {
           enrollment: {
             include: {
@@ -138,6 +138,9 @@ export async function submitCoursePaymentProofForCustomer(
         },
       });
       if (!payment) throw new CoursePaymentSubmissionError("NOT_FOUND", "Course payment not found");
+      // Upload time and lock waits do not extend the original deadline.
+      const submittedAt = authoritativeNow ?? new Date();
+      const expiration = await expireInitialPaymentInTransaction(tx, paymentId, submittedAt);
       if (expiration.outcome === "EXPIRED" || payment.status === "EXPIRED") return { kind: "EXPIRED" };
 
       const current = await tx.coursePaymentSubmission.findFirst({
@@ -166,7 +169,7 @@ export async function submitCoursePaymentProofForCustomer(
           originalFileName: proof.originalFileName,
           mimeType: proof.mimeType,
           fileSizeBytes: proof.fileSizeBytes,
-          submittedAt: authoritativeNow,
+          submittedAt,
         },
         select: { id: true, submittedAt: true },
       });
