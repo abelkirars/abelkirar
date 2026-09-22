@@ -119,7 +119,12 @@ export default async function AdminStudentsPage({
                       {student.fullName}
                     </Link>
                   </td>
-                  <td className="py-2 pr-4">{student.email}</td>
+                  <td className="py-2 pr-4">
+                    {student.email ?? "No learner email"}
+                    <span className="block text-xs text-muted-foreground">
+                      {student.supabaseUserId ? "LOGIN ENABLED" : "NO LEARNER LOGIN"}
+                    </span>
+                  </td>
                   <td className="py-2 pr-4">
                     {student.level ? LEVEL_LABELS[student.level] : "—"}
                   </td>

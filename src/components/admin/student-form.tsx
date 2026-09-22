@@ -32,7 +32,7 @@ const LOCALE_LABELS: Record<Locale, string> = {
 };
 
 function toDateInputValue(date: Date | null | undefined): string {
-  if (!date) return new Date().toISOString().slice(0, 10);
+  if (!date) return "";
   return date.toISOString().slice(0, 10);
 }
 
@@ -108,18 +108,20 @@ export function StudentForm({
       </Field>
 
       <Field orientation="responsive">
-        <FieldLabel htmlFor="email">Email</FieldLabel>
+        <FieldLabel htmlFor="email">Learner login/contact email</FieldLabel>
         <Input
           id="email"
           name="email"
           type="email"
-          defaultValue={student?.email}
-          required
+          defaultValue={student?.email ?? ""}
+          required={!student}
           disabled={!!student}
         />
         {student && (
           <p className="text-xs text-muted-foreground">
-            Email can&apos;t be changed here — it&apos;s linked to the student&apos;s login.
+            {student.supabaseUserId
+              ? "Learner email cannot be changed here; use the account email correction action."
+              : "No learner login. Guardian/customer account email is separate."}
           </p>
         )}
       </Field>
@@ -151,8 +153,8 @@ export function StudentForm({
           id="enrollmentDate"
           name="enrollmentDate"
           type="date"
-          defaultValue={toDateInputValue(student?.enrollmentDate)}
-          required
+          defaultValue={student ? toDateInputValue(student.enrollmentDate) : new Date().toISOString().slice(0, 10)}
+          required={!student}
         />
       </Field>
 

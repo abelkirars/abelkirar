@@ -96,27 +96,32 @@ export default async function AdminStudentProfilePage({
         <div className="mt-2 flex items-center justify-between gap-4">
           <div>
             <h1 className="font-heading text-2xl font-semibold">{student.fullName}</h1>
-            <p className="text-sm text-muted-foreground">{student.email}</p>
+            <p className="text-sm text-muted-foreground">{student.email ?? "No learner email"}</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Badge variant={student.status === "ACTIVE" ? "default" : "outline"}>
               {student.status === "ACTIVE" ? "Active" : "Inactive"}
             </Badge>
-            <Badge variant={student.activatedAt ? "default" : "outline"}>
-              {student.activatedAt
-                ? `Activated ${student.activatedAt.toLocaleDateString()}`
-                : "Not yet activated"}
+            <Badge variant="outline">
+              {student.supabaseUserId ? "LOGIN ENABLED" : "NO LEARNER LOGIN"}
             </Badge>
+            {student.supabaseUserId && (
+              <Badge variant={student.activatedAt ? "default" : "outline"}>
+                {student.activatedAt
+                  ? `Activated ${student.activatedAt.toLocaleDateString()}`
+                  : "Not yet activated"}
+              </Badge>
+            )}
           </div>
         </div>
 
         <div className="mt-4 flex flex-wrap gap-3">
           <StudentStatusToggle studentId={student.id} status={student.status} />
-          <ResendInviteButton studentId={student.id} />
+          {student.supabaseUserId && student.email && <ResendInviteButton studentId={student.id} />}
         </div>
 
         <div className="mt-4">
-          <StudentEmailCorrection studentId={student.id} canChange={!student.activatedAt} />
+          {student.supabaseUserId && <StudentEmailCorrection studentId={student.id} canChange={!student.activatedAt} />}
         </div>
 
         <div className="mt-8 flex items-center justify-between rounded-lg border border-destructive/30 bg-destructive/5 p-4">

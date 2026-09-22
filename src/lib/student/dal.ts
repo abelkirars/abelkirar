@@ -41,7 +41,7 @@ export interface StudentSessionPayload {
   /** StudentProfile.id — the only student identifier any route/query should ever use. */
   studentId: string;
   supabaseUserId: string;
-  email: string;
+  email: string | null;
   fullName: string;
   locale: string;
 }
@@ -106,7 +106,9 @@ export const resolveStudentSession = cache(async (): Promise<StudentSessionResol
     },
   });
 
-  if (!profile) return { kind: "orphaned" };
+  if (!profile || !profile.supabaseUserId || profile.supabaseUserId !== authUser.supabaseUserId) {
+    return { kind: "orphaned" };
+  }
   if (profile.status !== "ACTIVE") return { kind: "inactive" };
   if (profile.archivedAt) return { kind: "archived" };
   if (!hasStudentPortalAccess(profile.portalAccess, profile.courseEnrollments)) {

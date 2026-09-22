@@ -811,9 +811,10 @@ enum KirarModel {
 
 model StudentProfile {
   id             String @id @default(cuid())
-  /// Supabase Auth's auth.users.id — the actual login identity for this student.
-  supabaseUserId String @unique
-  email          String @unique
+  /// Optional learner-owned Supabase login. Never use a guardian's identity.
+  supabaseUserId String? @unique
+  /// Optional learner contact/login email, never inferred from a payer/application.
+  email          String? @unique
   role           Role   @default(STUDENT)
 
   fullName          String
@@ -877,10 +878,8 @@ model StudentProfile {
   customerRelations   CustomerStudentRelation[]
   courseEnrollments   CourseEnrollment[]
 
-  /// The application this account was provisioned from, if any. Optional
-  /// because every student created before applications existed (and any the
-  /// teacher still adds directly from /admin/students) has none.
-  courseApplication CourseApplication?
+  /// Historical applications across courses; a learner may apply again later.
+  courseApplications CourseApplication[]
 
   @@index([status])
 }
@@ -1292,13 +1291,9 @@ model CourseApplication {
   reviewedById String?
   reviewedBy   Admin?    @relation(fields: [reviewedById], references: [id], onDelete: SetNull)
 
-  /// Set exactly once, when approval provisions the account. Its presence is
-  /// the durable record that an account already exists for this application,
-  /// and the first half of the double-approval guard (the second half is the
-  /// conditional status update in the approve route — the check alone is racy).
-  /// Unique so the database itself refuses to attach two applications to one
-  /// student.
-  studentProfileId String?           @unique
+  /// Optional learner link. Multiple historical applications may name one learner.
+  /// Approval alone neither provisions a login nor grants course access.
+  studentProfileId String?
   studentProfile   StudentProfile?   @relation(fields: [studentProfileId], references: [id], onDelete: SetNull)
   customer         Customer?         @relation(fields: [customerId], references: [id], onDelete: Restrict)
   requestedPlan    CoursePlan?       @relation(fields: [requestedPlanId], references: [id], onDelete: Restrict)
@@ -1321,6 +1316,7 @@ model CourseApplication {
   @@index([email])
   @@index([customerId])
   @@index([requestedPlanId])
+  @@index([studentProfileId])
 }
 
 /// Append-only audit trail of every status change on an application, so the

@@ -23,13 +23,17 @@ export async function PATCH(
   // The status-toggle action only sends `status`, so every other field
   // falls back to the existing row instead of failing validation on a
   // missing fullName/enrollmentDate.
-  const parsed = studentSchema.safeParse({
+  const parsed = studentSchema.extend({
+    email: studentSchema.shape.email.nullable(),
+    enrollmentDate: studentSchema.shape.enrollmentDate.nullable(),
+  }).safeParse({
     fullName: formData.get("fullName") ?? existing.fullName,
     email: formData.get("email") ?? existing.email,
     phone: formData.get("phone") ?? existing.phone ?? undefined,
     level: formData.get("level") ?? existing.level ?? undefined,
     enrollmentDate:
-      formData.get("enrollmentDate") ?? existing.enrollmentDate?.toISOString().slice(0, 10),
+      formData.get("enrollmentDate") === "" ? null :
+        formData.get("enrollmentDate") ?? existing.enrollmentDate?.toISOString().slice(0, 10) ?? null,
     status: formData.has("status") ? formData.get("status") : existing.status,
     notes: formData.get("notes") ?? existing.notes ?? undefined,
     locale: formData.get("locale") ?? existing.locale,
@@ -42,10 +46,9 @@ export async function PATCH(
     );
   }
 
-  // Email is the Supabase Auth identity key (StudentProfile.supabaseUserId
-  // was linked against it at invite time) — changing it here would desync
-  // the two without also updating the Supabase user's email, so it's
-  // rejected rather than silently accepted.
+  // Login identity is supabaseUserId, never email matching. Contact/account
+  // email changes use a separate workflow; general edits cannot provision
+  // a learner login or substitute a guardian's contact details.
   if (parsed.data.email !== existing.email) {
     return NextResponse.json({ error: "Email cannot be changed here." }, { status: 400 });
   }
@@ -58,7 +61,7 @@ export async function PATCH(
       fullName,
       phone: phone || null,
       level: level || null,
-      enrollmentDate: new Date(enrollmentDate),
+      enrollmentDate: enrollmentDate ? new Date(enrollmentDate) : null,
       status,
       notes: notes || null,
       locale,
@@ -97,10 +100,19 @@ export async function DELETE(
 
   const student = await prisma.studentProfile.findUnique({
     where: { id: studentId },
-    select: { id: true, supabaseUserId: true, fullName: true },
+    select: {
+      id: true, supabaseUserId: true, fullName: true,
+      _count: { select: { customerRelations: true, courseEnrollments: true, courseApplications: true } },
+    },
   });
   if (!student) {
     return NextResponse.json({ error: "Student not found" }, { status: 404 });
+  }
+
+  // Check history BEFORE deleting storage or Auth. Database restrictions alone
+  // would reject too late, after external account data had already been removed.
+  if (student._count.customerRelations || student._count.courseEnrollments || student._count.courseApplications) {
+    return NextResponse.json({ error: "This learner has customer/course history. Deactivate instead of deleting." }, { status: 409 });
   }
 
   // Collect every stored recording object BEFORE anything is deleted —
@@ -137,7 +149,7 @@ export async function DELETE(
   // this point; the database row (and the supabaseUserId on it) still
   // exists, so a failure here is still recoverable the same way.
   try {
-    await deleteStudentAuthAccount(student.supabaseUserId);
+    if (student.supabaseUserId) await deleteStudentAuthAccount(student.supabaseUserId);
   } catch (err) {
     console.error(
       `[admin/students/${studentId}] Failed to delete the Supabase Auth account ` +

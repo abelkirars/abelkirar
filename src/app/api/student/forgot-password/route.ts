@@ -50,7 +50,7 @@ export async function POST(request: Request) {
   // is identical either way, so this never leaks which case it was. A
   // deactivated student's link would be rejected by /api/student/set-password
   // anyway, so sending one would serve no purpose.
-  if (student && student.status === "ACTIVE") {
+  if (student?.supabaseUserId && student.email && student.status === "ACTIVE" && !student.archivedAt) {
     try {
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL as string;
       const { actionLink } = await generateStudentRecoveryLink(

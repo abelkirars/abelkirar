@@ -8,6 +8,7 @@ vi.mock("@/lib/admin/dal", () => ({
 
 const mockFindUniqueStudent = vi.fn();
 const mockDeleteStudent = vi.fn();
+const mockUpdateStudent = vi.fn();
 const mockFindManyAttachment = vi.fn();
 const mockDeleteManyAttachment = vi.fn();
 // $transaction mocked in array form, per the established convention (see
@@ -20,6 +21,7 @@ vi.mock("@/lib/db", () => ({
     studentProfile: {
       findUnique: (...args: unknown[]) => mockFindUniqueStudent(...args),
       delete: (...args: unknown[]) => mockDeleteStudent(...args),
+      update: (...args: unknown[]) => mockUpdateStudent(...args),
     },
     weeklyPracticeAttachment: {
       findMany: (...args: unknown[]) => mockFindManyAttachment(...args),
@@ -39,7 +41,7 @@ vi.mock("@/lib/supabase-admin-auth", () => ({
   deleteStudentAuthAccount: (...args: unknown[]) => mockDeleteStudentAuthAccount(...args),
 }));
 
-import { DELETE } from "@/app/api/admin/students/[studentId]/route";
+import { DELETE, PATCH } from "@/app/api/admin/students/[studentId]/route";
 
 function buildRequest(): Request {
   return new Request("http://localhost/api/admin/students/student-1", { method: "DELETE" });
@@ -53,6 +55,7 @@ const existingStudent = {
   id: "student-1",
   supabaseUserId: "auth-user-1",
   fullName: "Test Student",
+  _count: { customerRelations: 0, courseEnrollments: 0, courseApplications: 0 },
 };
 
 beforeEach(() => {
@@ -68,6 +71,31 @@ beforeEach(() => {
 });
 
 describe("DELETE /api/admin/students/[studentId]", () => {
+  it("does not call Auth deletion for a learner without a login", async () => {
+    mockFindUniqueStudent.mockResolvedValue({ ...existingStudent, supabaseUserId: null });
+    expect((await DELETE(buildRequest(), params())).status).toBe(200);
+    expect(mockDeleteStudentAuthAccount).not.toHaveBeenCalled();
+  });
+
+  it.each(["customerRelations", "courseEnrollments", "courseApplications"])("preserves %s history before any external deletion", async (relation) => {
+    mockFindUniqueStudent.mockResolvedValue({ ...existingStudent, _count: { ...existingStudent._count, [relation]: 1 } });
+    expect((await DELETE(buildRequest(), params())).status).toBe(409);
+    expect(mockFindManyAttachment).not.toHaveBeenCalled();
+    expect(mockDeleteStudentAuthAccount).not.toHaveBeenCalled();
+    expect(mockDeleteStudent).not.toHaveBeenCalled();
+  });
+
+  it.each([false, true])("deactivates a null-identity learner without fabricating data (blank date submitted: %s)", async (blankDate) => {
+    mockFindUniqueStudent.mockResolvedValue({ ...existingStudent, email: null, supabaseUserId: null, enrollmentDate: null, locale: "en", status: "ACTIVE" });
+    const form = new FormData();
+    form.set("status", "INACTIVE");
+    if (blankDate) form.set("enrollmentDate", "");
+    const res = await PATCH(new Request("http://localhost/api/admin/students/student-1", { method: "PATCH", body: form }), params());
+    expect(res.status).toBe(200);
+    expect(mockUpdateStudent).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: "INACTIVE", enrollmentDate: null }) }));
+    expect(mockUpdateStudent.mock.calls[0][0].data).not.toHaveProperty("email");
+    expect(mockUpdateStudent.mock.calls[0][0].data).not.toHaveProperty("supabaseUserId");
+  });
   it("admin can delete a student — recordings removed, then the auth account, then the database, in that order", async () => {
     mockFindManyAttachment.mockResolvedValue([
       { storagePath: "student-1/recording-a.webm" },

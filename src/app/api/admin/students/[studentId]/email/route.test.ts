@@ -71,6 +71,13 @@ beforeEach(() => {
 });
 
 describe("PATCH /api/admin/students/[studentId]/email", () => {
+  it("does not provision a login by correcting a no-login learner's email", async () => {
+    mockFindUniqueStudent.mockResolvedValue({ ...baseStudent, supabaseUserId: null, email: null });
+    expect((await callPatch(buildRequest("new@example.com"))).status).toBe(409);
+    expect(mockUpdateStudent).not.toHaveBeenCalled();
+    expect(mockUpdateUserById).not.toHaveBeenCalled();
+    expect(mockGenerateStudentInviteLink).not.toHaveBeenCalled();
+  });
   it("rejects a non-admin caller before any Supabase call happens", async () => {
     mockRequireAdminApi.mockResolvedValue({
       response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),

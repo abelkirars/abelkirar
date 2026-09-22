@@ -44,9 +44,17 @@ beforeEach(() => {
 });
 
 describe("POST /api/student/forgot-password", () => {
+  it.each([null, "contact@example.com"])("does not send recovery to a no-login learner with email %s", async (email) => {
+    mockFindUniqueStudent.mockResolvedValue({ supabaseUserId: null, email, status: "ACTIVE" });
+    const response = await POST(buildRequest("contact@example.com"));
+    expect(await response.json()).toEqual({ ok: true });
+    expect(mockGenerateStudentRecoveryLink).not.toHaveBeenCalled();
+    expect(mockNotifyStudentPasswordReset).not.toHaveBeenCalled();
+  });
   it("returns the exact same response for an existing, active student as for a nonexistent email", async () => {
     mockFindUniqueStudent.mockResolvedValueOnce({
       id: "student-1",
+      supabaseUserId: "sb-user-1",
       email: "alice@example.com",
       fullName: "Alice",
       locale: "en",
@@ -93,6 +101,7 @@ describe("POST /api/student/forgot-password", () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     mockFindUniqueStudent.mockResolvedValue({
       id: "student-1",
+      supabaseUserId: "sb-user-1",
       email: "alice@example.com",
       fullName: "Alice",
       locale: "en",

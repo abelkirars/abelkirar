@@ -54,7 +54,7 @@ export async function POST(request: Request) {
     where: { supabaseUserId: sessionData.user.id },
   });
 
-  if (!student) {
+  if (!student?.supabaseUserId || student.supabaseUserId !== sessionData.user.id) {
     await supabase.auth.signOut();
     return NextResponse.json({ error: "account_not_found" }, { status: 404 });
   }
@@ -62,7 +62,7 @@ export async function POST(request: Request) {
   // Blocks a deactivated student from ever completing this flow — checked
   // BEFORE updateUser() below, so a deactivated account's Supabase password
   // is never actually changed via this route.
-  if (student.status !== "ACTIVE") {
+  if (student.status !== "ACTIVE" || student.archivedAt) {
     await supabase.auth.signOut();
     return NextResponse.json({ error: "account_inactive" }, { status: 403 });
   }

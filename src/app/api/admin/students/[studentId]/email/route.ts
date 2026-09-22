@@ -27,6 +27,9 @@ export async function PATCH(
   if (!student) {
     return NextResponse.json({ error: "Student not found" }, { status: 404 });
   }
+  if (!student.supabaseUserId) {
+    return NextResponse.json({ error: "No learner login to correct. Account provisioning is separate." }, { status: 409 });
+  }
 
   const formData = await request.formData();
   const parsed = emailCorrectionSchema.safeParse({ email: formData.get("email") });

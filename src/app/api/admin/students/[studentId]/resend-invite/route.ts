@@ -24,6 +24,9 @@ export async function POST(
   if (!student) {
     return NextResponse.json({ error: "Student not found" }, { status: 404 });
   }
+  if (!student.supabaseUserId || !student.email) {
+    return NextResponse.json({ error: "No learner login available for invitations." }, { status: 409 });
+  }
 
   const allowed = await checkRateLimit(`student-invite-resend:${studentId}`, {
     limit: INVITE_RESEND_LIMIT,

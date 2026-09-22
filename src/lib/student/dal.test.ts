@@ -48,6 +48,20 @@ beforeEach(() => {
 });
 
 describe("requireStudentApi", () => {
+  it("rejects a learner without a login even if a same-email auth user exists", async () => {
+    mockReadStudentAuthUser.mockResolvedValue({ supabaseUserId: "guardian", email: activeProfile.email });
+    mockFindUnique.mockResolvedValue({ ...activeProfile, supabaseUserId: null });
+    const result = await requireStudentApi();
+    expect("response" in result && result.response.status).toBe(401);
+    expect(mockFindUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { supabaseUserId: "guardian" } }));
+  });
+
+  it("allows an authorized ID-linked learner with null contact email without substituting another email", async () => {
+    mockReadStudentAuthUser.mockResolvedValue({ supabaseUserId: activeProfile.supabaseUserId, email: "auth@example.com" });
+    mockFindUnique.mockResolvedValue({ ...activeProfile, email: null });
+    const result = await requireStudentApi();
+    expect("session" in result && result.session.email).toBeNull();
+  });
   it("rejects with 401 when there is no Supabase session", async () => {
     mockReadStudentAuthUser.mockResolvedValue(null);
 

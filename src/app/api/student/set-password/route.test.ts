@@ -57,6 +57,14 @@ beforeEach(() => {
 });
 
 describe("POST /api/student/set-password", () => {
+  it("never sets a password for a null-ID learner", async () => {
+    mockFindUniqueStudent.mockResolvedValue({ ...activeStudent, supabaseUserId: null });
+    const res = await POST(buildRequest(validBody));
+    expect(res.status).toBe(404);
+    expect(mockUpdateUser).not.toHaveBeenCalled();
+    expect(mockUpdateStudent).not.toHaveBeenCalled();
+    expect(mockSignOut).toHaveBeenCalled();
+  });
   it("sets activatedAt and succeeds when the student has never activated before", async () => {
     mockFindUniqueStudent.mockResolvedValue(activeStudent);
     mockUpdateUser.mockResolvedValue({ data: { user: {} }, error: null });
