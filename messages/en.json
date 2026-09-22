@@ -703,6 +703,17 @@
     "retry": "Try again",
     "contact": "Contact us"
   },
+  "courseApplicationDecisionEmails": {
+    "greeting": "Hello {name},",
+    "approvedSubject": "Your Abel Kirar Academy application was approved",
+    "approvedBody": "Your application has been approved. We will guide you through the enrollment and payment step next. Approval does not yet activate course or portal access.",
+    "waitlistedSubject": "Update on your Abel Kirar Academy application",
+    "waitlistedBody": "Your application has been placed on the waitlist. We will contact you when an appropriate place becomes available.",
+    "declinedSubject": "Update on your Abel Kirar Academy application",
+    "declinedBody": "We are unable to approve your application at this time.",
+    "reasonLabel": "Reason",
+    "signoff": "Abel Kirar Academy"
+  },
   "courseApplicationEmails": {
     "adminSubject": "New Kirar lesson application",
     "adminHeading": "A new application has arrived.",

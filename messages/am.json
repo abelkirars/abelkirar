@@ -703,6 +703,17 @@
     "retry": "እንደገና ይሞክሩ",
     "contact": "ያግኙን"
   },
+  "courseApplicationDecisionEmails": {
+    "greeting": "ሰላም {name}፣",
+    "approvedSubject": "የአቤል ክራር አካዳሚ ማመልከቻዎ ጸድቋል",
+    "approvedBody": "ማመልከቻዎ ጸድቋል። ቀጣዩን የምዝገባና የክፍያ ደረጃ እንመራዎታለን። ማመልከቻው መጽደቁ ብቻ የትምህርት ወይም የተማሪ መግቢያ ፈቃድን ገና አያነቃም።",
+    "waitlistedSubject": "ስለ አቤል ክራር አካዳሚ ማመልከቻዎ መረጃ",
+    "waitlistedBody": "ማመልከቻዎ በተጠባባቂ ዝርዝር ላይ ተቀምጧል። ተስማሚ ቦታ ሲገኝ እናነጋግርዎታለን።",
+    "declinedSubject": "ስለ አቤል ክራር አካዳሚ ማመልከቻዎ መረጃ",
+    "declinedBody": "በዚህ ጊዜ ማመልከቻዎን ማጽደቅ አልቻልንም።",
+    "reasonLabel": "ምክንያት",
+    "signoff": "አቤል ክራር አካዳሚ"
+  },
   "courseApplicationEmails": {
     "adminSubject": "አዲስ የክራር ትምህርት ማመልከቻ",
     "adminHeading": "አዲስ ማመልከቻ ደርሷል።",
