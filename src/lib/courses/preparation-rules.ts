@@ -15,6 +15,10 @@ export function monthlyPeriod(start: string) {
   end.setUTCDate(Math.min(day, lastDay));
   return { periodStart: start, periodEnd: end.toISOString().slice(0, 10) };
 }
+export function dateOnlyToUtc(value: string): Date {
+  dateOnly.parse(value);
+  return new Date(`${value}T00:00:00.000Z`);
+}
 export const cohortCreateSchema = z.object({
   code: z.string().trim().min(1).max(60).regex(/^[A-Za-z0-9_-]+$/),
   name: z.string().trim().min(1).max(150),
@@ -40,6 +44,8 @@ export const preparationSchema = z.object({
   agreedStartDate: dateOnly.nullable(),
 }).strict();
 export type PreparationInput = z.infer<typeof preparationSchema>;
+export const finalEnrollmentSchema = preparationSchema.extend({ confirmation: z.literal(true) }).strict();
+export type FinalEnrollmentInput = z.infer<typeof finalEnrollmentSchema>;
 export const PAYMENT_DEADLINE_RULE = "7 days after the enrollment payment obligation is created. Course start is independent.";
 
 type Seats = { position: number; currentEnrollmentId: string | null; assignedAt: Date | null; reservedUntil: Date | null }[];
