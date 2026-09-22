@@ -16,7 +16,7 @@ it("renders the authoritative creation result and safety warnings", () => {
   const html = renderToStaticMarkup(createElement(EnrollmentCreationView, { result: {
     idempotent: false,
     learner: { id: "learner", fullName: "Learner" },
-    customer: { id: "customer", email: "payer@example.invalid" },
+    customer: { id: "customer", email: "payer@example.invalid", locale: "en" },
     relationship: "GUARDIAN",
     course: { code: "BEGINNER_GROUP", level: "BEGINNER", format: "GROUP" },
     cohort: { id: "cohort", code: "Group A", seatPosition: 1 },

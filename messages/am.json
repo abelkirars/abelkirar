@@ -737,5 +737,60 @@
     "applicantNoPayment": "ማመልከት ነፃ ነው፤ በዚህ ደረጃ ምንም ክፍያ አይወሰድም።",
     "applicantWhenToExpect": "ዲያቆን አቤል ማመልከቻዎችን በራሱ ይገመግማል፤ አብዛኛውን ጊዜ በጥቂት ቀናት ውስጥ መልስ ይሰጣል።",
     "applicantSignoff": "አቤል ክራር አካዳሚ"
+  },
+  "coursePaymentLogin": {
+    "eyebrow": "አቤል ክራር አካዳሚ",
+    "title": "ለመቀጠል ይግቡ",
+    "description": "ከዚህ ምዝገባ ጋር የተገናኘውን የተረጋገጠ መለያ ይጠቀሙ። የክፍያ ገጽዎ ከገቡ በኋላም የተጠበቀ ነው።",
+    "email": "ኢሜይል",
+    "password": "የይለፍ ቃል",
+    "invalidCredentials": "በእነዚህ መረጃዎች ማስገባት አልቻልንም።",
+    "submitting": "በመግባት ላይ…",
+    "submit": "ይግቡ"
+  },
+  "coursePayment": {
+    "eyebrow": "የተጠበቀ የትምህርት ክፍያ",
+    "title": "የምዝገባ ክፍያዎን ያጠናቅቁ",
+    "deadline": "እስከ {deadline} ድረስ ምዝገባውን ያጠናቅቁ",
+    "status": {
+      "pending": "ክፍያ ያስፈልጋል", "proofSubmitted": "ማስረጃው ግምገማ ላይ ነው", "verified": "ክፍያው ተረጋግጧል",
+      "rejected": "አዲስ ማስረጃ ያስፈልጋል", "expired": "ጊዜው አልፏል", "pastDue": "የክፍያ ጊዜው አልፏል", "cancelled": "ተሰርዟል"
+    },
+    "summary": {
+      "title": "የክፍያ ማጠቃለያ", "learner": "ተማሪ", "relationship": "የከፋዩ ዝምድና", "levelFormat": "ትምህርት",
+      "billingPeriod": "የክፍያ ወቅት", "base": "መደበኛ ክፍያ", "discount": "የማስተዋወቂያ ቅናሽ", "amountDue": "የሚከፈል"
+    },
+    "relationship": { "SELF": "ራስ", "GUARDIAN": "ወላጅ ወይም አሳዳጊ", "unknown": "የመለያ ባለቤት" },
+    "level": { "BEGINNER": "ጀማሪ", "INTERMEDIATE": "መካከለኛ", "ADVANCED": "ከፍተኛ" },
+    "format": { "GROUP": "አነስተኛ ቡድን", "ONE_TO_ONE": "አንድ ለአንድ" },
+    "weekday": {
+      "MONDAY": "በየሰኞው", "TUESDAY": "በየማክሰኞው", "WEDNESDAY": "በየረቡዕ", "THURSDAY": "በየሐሙሱ",
+      "FRIDAY": "በየዓርቡ", "SATURDAY": "በየቅዳሜው", "SUNDAY": "በየእሁዱ"
+    },
+    "instructions": {
+      "title": "ክፍያዎን ይላኩ", "description": "ከታች ካሉት መንገዶች አንዱን ይምረጡ። ከዚያ በእጅ እንዲረጋገጥ ማስረጃዎን ይስቀሉ።",
+      "recipient": "ተቀባይ፦ {name}", "sendTo": "ወደዚህ ይላኩ፦ {destination}", "memo": "ይህን የክፍያ ማጣቀሻ በማስታወሻው ውስጥ ያካትቱ፦ {reference}",
+      "unavailable": "የክፍያ መመሪያዎች ለጊዜው አይገኙም። ክፍያ ከመላክዎ በፊት አቤል ክራር አካዳሚን ያነጋግሩ።"
+    },
+    "upload": {
+      "title": "የክፍያ ማስረጃ ይስቀሉ", "method": "የተጠቀሙበት መንገድ", "selected": "ተመርጧል", "senderName": "የላኪው ስም",
+      "amountSent": "የተላከው መጠን", "sentAt": "የተላከበት ቀንና ሰዓት", "referenceOptional": "የግብይት ማጣቀሻ (አማራጭ)", "proof": "የማስረጃ ፋይል",
+      "fileHelp": "PNG፣ JPG/JPEG ወይም PDF። ከፍተኛው 8 MB።", "submit": "ማስረጃውን ለግምገማ ይላኩ", "submitting": "በደህንነት በመላክ ላይ…",
+      "genericError": "ማስረጃዎን መላክ አልቻልንም። እባክዎ እንደገና ይሞክሩ።", "notVerifiedNotice": "ማስረጃ መላክ ክፍያን አያረጋግጥም ወይም የትምህርት ፈቃድን አያነቃም።",
+      "successTitle": "የክፍያ ማስረጃ ደርሷል", "successBody": "ማስረጃዎ በእጅ እንዲረጋገጥ እየጠበቀ ነው። ክፍያው ገና አልተረጋገጠም፤ የትምህርት ፈቃድም ገና አልነቃም።"
+    },
+    "state": {
+      "title": "የክፍያ ሁኔታ", "receivedTitle": "ማስረጃው ደርሷል", "receivedBody": "ማስረጃዎ በእጅ እንዲረጋገጥ እየጠበቀ ነው። ክፍያውና የትምህርት ፈቃዱ ገና አልተረጋገጡም።",
+      "verifiedTitle": "ክፍያው ተረጋግጧል", "verifiedBody": "ይህ ክፍያ በእጅ ተረጋግጧል።", "rejectedTitle": "አዲስ ማስረጃ ያስፈልጋል",
+      "rejectedBody": "ቀዳሚው ማስረጃ ሊረጋገጥ አልቻለም። የክፍያ ጊዜው ክፍት ሳለ አዲስ ማስረጃ ይላኩ።", "pastDueTitle": "የወር ክፍያው ጊዜ አልፏል",
+      "pastDueBody": "ይህ ሁኔታ ለክትትል ይታያል። የትምህርት ፈቃድ በራስ-ሰር አይታገድም።", "closedTitle": "ማስረጃ መላክ ተዘግቷል", "closedBody": "ይህ ክፍያ አዲስ ማስረጃ አይቀበልም። እርዳታ ከፈለጉ አቤል ክራር አካዳሚን ያነጋግሩ።"
+    }
+  },
+  "coursePaymentEmails": {
+    "requiredSubject": "የአቤል ክራር አካዳሚ የምዝገባ ክፍያዎን ያጠናቅቁ", "requiredGreeting": "ሰላም፣",
+    "requiredBody": "ለ{learner} — {course} — የምዝገባ ክፍያ ዝግጁ ነው። መጠን፦ {amount}። እስከ {deadline} UTC ድረስ ክፍያውን ያጠናቅቁ።",
+    "requiredAction": "የተጠበቀውን የክፍያ ገጽ ይክፈቱ", "requiredSecurity": "ከዚህ ምዝገባ ጋር በተገናኘው የተረጋገጠ መለያ መግባት አለብዎት። ማመልከቻው መጽደቁ ብቻ የትምህርት ፈቃድን አያነቃም።",
+    "receivedSubject": "የትምህርት ክፍያ ማስረጃዎ ደርሷል", "receivedGreeting": "ሰላም፣", "receivedBody": "ለ{learner} — {course} — የ{amount} ማስረጃ ደርሶናል።",
+    "receivedNotice": "ማስረጃው በእጅ እንዲረጋገጥ እየጠበቀ ነው። ክፍያው ገና አልተረጋገጠም፤ የትምህርት ፈቃድም ገና አልነቃም።"
   }
 }

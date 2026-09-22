@@ -737,5 +737,95 @@
     "applicantNoPayment": "Applying is free and no payment is taken at this stage.",
     "applicantWhenToExpect": "Deacon Abel reviews applications personally and will usually reply within a few days.",
     "applicantSignoff": "Abel Kirar Academy"
+  },
+  "coursePaymentLogin": {
+    "eyebrow": "Abel Kirar Academy",
+    "title": "Sign in to continue",
+    "description": "Use the verified account connected to this enrollment. Your payment page remains protected after sign-in.",
+    "email": "Email",
+    "password": "Password",
+    "invalidCredentials": "We couldn't sign you in with those details.",
+    "submitting": "Signing in…",
+    "submit": "Sign in"
+  },
+  "coursePayment": {
+    "eyebrow": "Secure course payment",
+    "title": "Complete your enrollment payment",
+    "deadline": "Complete enrollment by {deadline}",
+    "status": {
+      "pending": "Payment required",
+      "proofSubmitted": "Proof awaiting review",
+      "verified": "Payment verified",
+      "rejected": "New proof required",
+      "expired": "Window expired",
+      "pastDue": "Past due",
+      "cancelled": "Cancelled"
+    },
+    "summary": {
+      "title": "Payment summary",
+      "learner": "Learner",
+      "relationship": "Payer relationship",
+      "levelFormat": "Course",
+      "billingPeriod": "Billing period",
+      "base": "Base tuition",
+      "discount": "Promotion discount",
+      "amountDue": "Amount due"
+    },
+    "relationship": { "SELF": "Self", "GUARDIAN": "Parent or guardian", "unknown": "Account holder" },
+    "level": { "BEGINNER": "Beginner", "INTERMEDIATE": "Intermediate", "ADVANCED": "Advanced" },
+    "format": { "GROUP": "Small Group", "ONE_TO_ONE": "1-to-1" },
+    "weekday": {
+      "MONDAY": "Every Monday", "TUESDAY": "Every Tuesday", "WEDNESDAY": "Every Wednesday",
+      "THURSDAY": "Every Thursday", "FRIDAY": "Every Friday", "SATURDAY": "Every Saturday", "SUNDAY": "Every Sunday"
+    },
+    "instructions": {
+      "title": "Send your payment",
+      "description": "Choose one of the configured methods below. Then upload your proof for manual review.",
+      "recipient": "Recipient: {name}",
+      "sendTo": "Send to: {destination}",
+      "memo": "Include this payment reference in the note: {reference}",
+      "unavailable": "Payment instructions are temporarily unavailable. Please contact Abel Kirar Academy before sending payment."
+    },
+    "upload": {
+      "title": "Upload payment proof",
+      "method": "Method used",
+      "selected": "Selected",
+      "senderName": "Sender name",
+      "amountSent": "Amount sent",
+      "sentAt": "Date and time sent",
+      "referenceOptional": "Transaction reference (optional)",
+      "proof": "Proof file",
+      "fileHelp": "PNG, JPG/JPEG, or PDF. Maximum 8 MB.",
+      "submit": "Submit proof for review",
+      "submitting": "Submitting securely…",
+      "genericError": "We couldn't submit your proof. Please try again.",
+      "notVerifiedNotice": "Submitting proof does not verify payment or activate course access.",
+      "successTitle": "Payment proof received",
+      "successBody": "Your proof is awaiting manual verification. Payment is not yet confirmed and course access is not yet active."
+    },
+    "state": {
+      "title": "Payment status",
+      "receivedTitle": "Proof received",
+      "receivedBody": "Your proof is awaiting manual verification. Payment is not yet confirmed and course access is not yet active.",
+      "verifiedTitle": "Payment confirmed",
+      "verifiedBody": "This payment has been manually verified.",
+      "rejectedTitle": "A new proof is needed",
+      "rejectedBody": "The previous proof could not be verified. Submit a new proof while the payment window remains open.",
+      "pastDueTitle": "Monthly payment is past due",
+      "pastDueBody": "This status is visible for follow-up. Course access is not automatically suspended.",
+      "closedTitle": "Proof upload is closed",
+      "closedBody": "This payment is no longer accepting a new proof. Contact Abel Kirar Academy if you need help."
+    }
+  },
+  "coursePaymentEmails": {
+    "requiredSubject": "Complete your Abel Kirar Academy enrollment payment",
+    "requiredGreeting": "Hello,",
+    "requiredBody": "Enrollment payment for {learner} — {course} — is ready. Amount: {amount}. Complete payment by {deadline} UTC.",
+    "requiredAction": "Open the secure payment page",
+    "requiredSecurity": "You must sign in with the verified account connected to this enrollment. Approval alone does not activate course access.",
+    "receivedSubject": "Your course payment proof was received",
+    "receivedGreeting": "Hello,",
+    "receivedBody": "We received proof for {learner} — {course} — for {amount}.",
+    "receivedNotice": "The proof is awaiting manual review. Payment is not yet confirmed and course access is not yet active."
   }
 }

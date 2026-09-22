@@ -22,7 +22,7 @@ type Tx = Prisma.TransactionClient;
 export type EnrollmentCreationResult = {
   idempotent: boolean;
   learner: { id: string; fullName: string };
-  customer: { id: string; email: string };
+  customer: { id: string; email: string; locale: string };
   relationship: "SELF" | "GUARDIAN";
   course: { code: string; level: string; format: string };
   cohort: { id: string; code: string; seatPosition: number } | null;
@@ -62,6 +62,7 @@ async function existingConversionResult(
       coursePlan: true,
       cohort: true,
       currentCohortSeat: true,
+      application: { select: { locale: true } },
       payments: { where: { kind: "INITIAL_ENROLLMENT", revision: 1 }, orderBy: { createdAt: "asc" } },
     },
   });
@@ -104,7 +105,8 @@ function resultDto(
     status: string;
     startsAt: Date | null;
     student: { id: string; fullName: string };
-    customer: { id: string; email: string };
+    customer: { id: string; email: string; locale: string | null };
+    application?: { locale: string } | null;
     coursePlan: { code: string; level: string; format: string };
     cohort: { id: string; code: string } | null;
     currentCohortSeat: { position: number } | null;
@@ -130,7 +132,11 @@ function resultDto(
   return {
     idempotent,
     learner: { id: enrollment.student.id, fullName: enrollment.student.fullName },
-    customer: { id: enrollment.customer.id, email: enrollment.customer.email },
+    customer: {
+      id: enrollment.customer.id,
+      email: enrollment.customer.email,
+      locale: enrollment.application?.locale || enrollment.customer.locale || "en",
+    },
     relationship,
     course: enrollment.coursePlan,
     cohort: enrollment.cohort && enrollment.currentCohortSeat
@@ -341,6 +347,7 @@ export async function createEnrollmentAndInitialPayment(applicationId: string, r
       coursePlan: plan,
       cohort: cohort ? { id: cohort.id, code: cohort.code } : null,
       currentCohortSeat: seat,
+      application: { locale: application.locale },
     }, payment, input.relationship, false);
   });
 }

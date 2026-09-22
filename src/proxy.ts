@@ -26,7 +26,43 @@ export async function proxy(request: NextRequest) {
     return handleStudentRoute(request, pathname);
   }
 
+  if (pathname.startsWith("/account")) {
+    return handleAccountRoute(request, pathname);
+  }
+
   return NextResponse.next();
+}
+
+async function handleAccountRoute(request: NextRequest, pathname: string) {
+  if (pathname === "/account/login") return NextResponse.next();
+
+  let response = NextResponse.next({ request });
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string,
+    {
+      cookies: {
+        getAll: () => request.cookies.getAll(),
+        setAll(cookiesToSet) {
+          for (const { name, value } of cookiesToSet) request.cookies.set(name, value);
+          response = NextResponse.next({ request });
+          for (const { name, value, options } of cookiesToSet) {
+            response.cookies.set(name, value, options);
+          }
+        },
+      },
+    },
+  );
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    const next = `${pathname}${request.nextUrl.search}`;
+    const loginUrl = new URL("/account/login", request.url);
+    loginUrl.searchParams.set("next", next);
+    const redirectResponse = NextResponse.redirect(loginUrl);
+    for (const cookie of response.cookies.getAll()) redirectResponse.cookies.set(cookie);
+    return redirectResponse;
+  }
+  return response;
 }
 
 async function handleAdminRoute(request: NextRequest, pathname: string) {
@@ -140,5 +176,5 @@ async function handleStudentRoute(request: NextRequest, pathname: string) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/student/:path*"],
+  matcher: ["/admin/:path*", "/student/:path*", "/account/:path*"],
 };
