@@ -152,6 +152,9 @@ enum CoursePaymentNotificationKind {
   INITIAL_PAYMENT_REMINDER_48H
   INITIAL_PAYMENT_REMINDER_24H
   INITIAL_PAYMENT_EXPIRED
+  MONTHLY_PAYMENT_REMINDER_72H
+  MONTHLY_PAYMENT_REMINDER_24H
+  MONTHLY_PAYMENT_PAST_DUE
 }
 
 enum CoursePaymentNotificationStatus {
@@ -317,6 +320,9 @@ model CourseEnrollment {
   formatSnapshot               CourseFormat
   planCodeSnapshot             String
   startsAt                     DateTime?
+  /// Immutable IANA timezone snapshot governing billing boundaries.
+  /// Nullable only for expand-compatible migration of pre-existing rows.
+  billingTimeZone              String?
   completedAt                  DateTime?
   cancelledAt                  DateTime?
   cancellationReason           String?
@@ -341,6 +347,7 @@ model CourseEnrollment {
   @@index([studentId, status])
   @@index([customerId, status])
   @@index([cohortId, status])
+  @@index([status, archivedAt])
 }
 
 /// One plan-specific promotion. PostgreSQL prevents overlapping enabled

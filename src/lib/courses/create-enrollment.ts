@@ -92,10 +92,10 @@ async function existingConversionResult(
     throw new PreparationValidationError("Existing conversion relationship requires review");
   }
   if (enrollment.formatSnapshot === "GROUP") {
-    if (input.cohortId !== enrollment.cohortId || input.agreedStartDate || !enrollment.cohort || !enrollment.currentCohortSeat) {
+    if (input.cohortId !== enrollment.cohortId || input.agreedStartDate || input.billingTimeZone || !enrollment.cohort || !enrollment.currentCohortSeat) {
       throw new PreparationValidationError("Application was already converted to a different cohort");
     }
-  } else if (input.cohortId || !input.agreedStartDate || dateKey(enrollment.startsAt!) !== input.agreedStartDate) {
+  } else if (input.cohortId || !input.agreedStartDate || !input.billingTimeZone || enrollment.billingTimeZone !== input.billingTimeZone || dateKey(enrollment.startsAt!) !== input.agreedStartDate) {
     throw new PreparationValidationError("Application was already converted with a different start date");
   }
   return resultDto(enrollment, enrollment.payments[0], input.relationship, true);
@@ -199,8 +199,9 @@ export async function createEnrollmentAndInitialPayment(applicationId: string, r
       seats: { id: string; position: number; currentEnrollmentId: string | null }[];
     } | null = null;
     let startsAt: Date;
+    let billingTimeZone: string;
     if (plan.format === "GROUP") {
-      if (!input.cohortId || input.agreedStartDate) {
+      if (!input.cohortId || input.agreedStartDate || input.billingTimeZone) {
         throw new PreparationValidationError("Group start must come from the selected cohort");
       }
       await tx.$queryRaw`SELECT id FROM "CourseCohort" WHERE id = ${input.cohortId} FOR UPDATE`;
@@ -212,11 +213,13 @@ export async function createEnrollmentAndInitialPayment(applicationId: string, r
       assertCohortSelectable(loaded, plan.id);
       cohort = loaded;
       startsAt = loaded.courseStartDate!;
+      billingTimeZone = loaded.timeZone!;
     } else {
-      if (input.cohortId || !input.agreedStartDate) {
+      if (input.cohortId || !input.agreedStartDate || !input.billingTimeZone) {
         throw new PreparationValidationError("1-to-1 requires an explicit start date and no cohort");
       }
       startsAt = dateOnlyToUtc(input.agreedStartDate);
+      billingTimeZone = input.billingTimeZone;
     }
 
     const customer = await upsertVerifiedCustomer(identity, tx);
@@ -297,6 +300,7 @@ export async function createEnrollmentAndInitialPayment(applicationId: string, r
       formatSnapshot: plan.format,
       planCodeSnapshot: plan.code,
       startsAt,
+      billingTimeZone,
       createdAt,
     } });
 

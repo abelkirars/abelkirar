@@ -92,7 +92,7 @@ describe("preparation identity and write boundary",()=>{
     m.tx.coursePlan.findUnique.mockResolvedValue({...plan,format:"ONE_TO_ONE",monthlyPriceCents:8500});
     await expect(prepareEnrollment("app",input)).rejects.toThrow("1-to-1");
     await expect(prepareEnrollment("app",{...input,cohortId:null})).rejects.toThrow("1-to-1");
-    const result=await prepareEnrollment("app",{...input,cohortId:null,agreedStartDate:"2028-01-31"});
+    const result=await prepareEnrollment("app",{...input,cohortId:null,agreedStartDate:"2028-01-31",billingTimeZone:"America/New_York"});
     expect(result.periodEnd).toBe("2028-02-29");expect(result.plan.monthlyPriceCents).toBe(8500);expect(result).not.toHaveProperty("expiresAt");
   });
 });

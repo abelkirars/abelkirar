@@ -15,12 +15,12 @@ vi.mock("@/lib/supabase-admin", () => ({ supabaseAdmin: { auth: { admin: {
 } } } }));
 vi.mock("@/lib/supabase-server", () => ({ createSupabaseServerClient: vi.fn() }));
 vi.mock("@/lib/db", async () => {
-  const url = new URL(process.env.COURSE_PREPARATION_TEST_DATABASE_URL!);
-  if (url.hostname !== "127.0.0.1" || url.pathname !== "/learner_compat") throw new Error("Refusing non-disposable DB");
+  const url = new URL(process.env.COURSE_FINAL_ENROLLMENT_TEST_DATABASE_URL!);
+  if (url.hostname !== "127.0.0.1" || url.pathname !== "/final_enrollment") throw new Error("Refusing non-disposable DB");
   return { prisma: new PrismaClient({ adapter: new PrismaPg({ connectionString: url.toString(), max: 8 }) }) };
 });
 
-describe.runIf(Boolean(process.env.COURSE_PREPARATION_TEST_DATABASE_URL))("real PostgreSQL final enrollment safety", () => {
+describe.runIf(Boolean(process.env.COURSE_FINAL_ENROLLMENT_TEST_DATABASE_URL))("real PostgreSQL final enrollment safety", () => {
   let db: PrismaClient;
   let create: typeof import("./create-enrollment");
   let expiration: typeof import("./expire-initial-payments");
@@ -160,25 +160,20 @@ describe.runIf(Boolean(process.env.COURSE_PREPARATION_TEST_DATABASE_URL))("real 
     const proofCohort = await createCohort("proof");
     const proofApp = await createApprovedApplication("proof");
     const proofResult = await create.createEnrollmentAndInitialPayment(proofApp.application.id, input(proofApp, proofCohort.id));
-    const createdAt = new Date("2026-01-01T00:00:00Z");
-    const expiresAt = new Date("2026-01-08T00:00:00Z");
-    await db.coursePayment.update({ where: { id: proofResult.payment.id }, data: { createdAt, expiresAt } });
-    await db.courseCohortSeat.updateMany({ where: { currentEnrollmentId: proofResult.enrollment.id }, data: { reservedUntil: expiresAt } });
+    const expiresAt = new Date(proofResult.payment.expiresAt);
     await db.coursePaymentSubmission.create({ data: {
       paymentId: proofResult.payment.id, attemptNumber: 1, method: "ZELLE", amountSentCents: 5000,
       proofStoragePath: "disposable/proof.png", mimeType: "image/png", fileSizeBytes: 10,
-      submittedAt: new Date("2026-01-07T23:59:59Z"),
+      submittedAt: new Date(expiresAt.getTime() - 1),
     } });
-    expect(await expiration.expireInitialPayment(proofResult.payment.id, new Date("2026-01-09T00:00:00Z"))).toEqual({ paymentId: proofResult.payment.id, outcome: "PROOF_REVIEWABLE" });
+    expect(await expiration.expireInitialPayment(proofResult.payment.id, new Date(expiresAt.getTime() + 1))).toEqual({ paymentId: proofResult.payment.id, outcome: "PROOF_REVIEWABLE" });
     expect((await db.coursePayment.findUniqueOrThrow({ where: { id: proofResult.payment.id } })).status).toBe("PENDING");
 
     const unpaidCohort = await createCohort("expire");
     const unpaidApp = await createApprovedApplication("expire");
     const unpaid = await create.createEnrollmentAndInitialPayment(unpaidApp.application.id, input(unpaidApp, unpaidCohort.id));
     await db.courseCohort.update({ where: { id: unpaidCohort.id }, data: { status: "FULL" } });
-    await db.coursePayment.update({ where: { id: unpaid.payment.id }, data: { createdAt, expiresAt } });
-    await db.courseCohortSeat.updateMany({ where: { currentEnrollmentId: unpaid.enrollment.id }, data: { reservedUntil: expiresAt } });
-    expect(await expiration.expireInitialPayment(unpaid.payment.id, new Date("2026-01-09T00:00:00Z"))).toEqual({ paymentId: unpaid.payment.id, outcome: "EXPIRED" });
+    expect(await expiration.expireInitialPayment(unpaid.payment.id, new Date(new Date(unpaid.payment.expiresAt).getTime() + 1))).toEqual({ paymentId: unpaid.payment.id, outcome: "EXPIRED" });
     expect(await db.coursePayment.findUniqueOrThrow({ where: { id: unpaid.payment.id } })).toMatchObject({ status: "EXPIRED" });
     expect(await db.courseEnrollment.findUniqueOrThrow({ where: { id: unpaid.enrollment.id } })).toMatchObject({ status: "CANCELLED", cancellationReason: "INITIAL_PAYMENT_EXPIRED" });
     expect(await db.courseCohortSeat.count({ where: { cohortId: unpaidCohort.id, currentEnrollmentId: null } })).toBe(4);

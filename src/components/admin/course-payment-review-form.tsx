@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
-export function CoursePaymentReviewForm({ paymentId, submissionId, afterDeadline }: { paymentId: string; submissionId: string; afterDeadline: boolean }) {
+export function CoursePaymentReviewForm({ paymentId, submissionId, afterDeadline, kind }: { paymentId: string; submissionId: string; afterDeadline: boolean; kind: "INITIAL_ENROLLMENT" | "MONTHLY" }) {
   const router = useRouter();
   const [action, setAction] = useState<"VERIFY" | "REJECT">("VERIFY");
   const [reason, setReason] = useState("");
@@ -42,11 +42,12 @@ export function CoursePaymentReviewForm({ paymentId, submissionId, afterDeadline
         <Textarea value={reason} onChange={e => setReason(e.target.value)} minLength={5} maxLength={1000} required />
       </label>}
       <p className="rounded-lg bg-muted p-3 text-sm">{action === "VERIFY"
-        ? "Verification activates this enrollment and its course access. The learner's login identity is unchanged."
+        ? kind === "MONTHLY" ? "Verification records this monthly payment. Enrollment, portal access, and cohort seat remain unchanged." : "Verification activates this enrollment and its course access. The learner's login identity is unchanged."
+        : kind === "MONTHLY" ? "Rejection keeps this as a financial issue. It never cancels the active enrollment, suspends access, or releases a cohort seat."
         : afterDeadline ? "The original deadline has passed. Rejection expires the payment, cancels the pending enrollment, and releases its group seat."
         : "Rejection keeps the payment unpaid. The payer may resubmit before the original deadline; it will not be extended. If the deadline passes before this action completes, the payment will expire."}</p>
       <label className="flex items-start gap-3 text-sm"><input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)} required className="mt-1" />
-        {action === "VERIFY" ? "I verified receipt of the full required payment and confirm activation." : "I confirm this rejection reason is accurate and suitable to share with the payer."}
+        {action === "VERIFY" ? kind === "MONTHLY" ? "I verified receipt of the full required monthly payment." : "I verified receipt of the full required payment and confirm activation." : "I confirm this rejection reason is accurate and suitable to share with the payer."}
       </label>
       <Button type="submit" disabled={!confirmed || busy || done || (action === "REJECT" && reason.trim().length < 5)} variant={action === "VERIFY" ? "secondary" : "destructive"}>
         {busy ? "Saving review…" : action === "VERIFY" ? "Confirm payment verification" : "Confirm rejection"}

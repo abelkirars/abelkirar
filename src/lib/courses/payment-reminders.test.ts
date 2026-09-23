@@ -3,7 +3,12 @@ vi.mock("server-only", () => ({}));
 const mocks = vi.hoisted(() => ({ findMany: vi.fn(), enqueue: vi.fn() }));
 vi.mock("@/lib/db", () => ({ prisma: { coursePayment: { findMany: mocks.findMany } } }));
 vi.mock("@/lib/notifications/course-payment-outbox", () => ({ enqueueCoursePaymentNotification: mocks.enqueue }));
-import { generateInitialPaymentReminders, reminderWindow } from "./payment-reminders";
+import {
+  generateInitialPaymentReminders,
+  generateMonthlyPaymentReminders,
+  monthlyReminderWindow,
+  reminderWindow,
+} from "./payment-reminders";
 
 const HOUR = 60 * 60 * 1000;
 const now = new Date("2026-10-01T12:00:00Z");
@@ -18,9 +23,38 @@ function payment(hours: number, id = `payment-${hours}`) {
   };
 }
 
+function monthlyPayment(hours: number, id = `monthly-${hours}`) {
+  return { ...payment(hours, id), dueAt: new Date(now.getTime() + hours * HOUR) };
+}
+
 beforeEach(() => {
   vi.resetAllMocks();
   mocks.enqueue.mockResolvedValue(true);
+});
+
+describe("monthly payment reminder generation", () => {
+  it.each([
+    [72, 72], [49, 72], [48, null], [25, null], [24, 24], [13, 24], [12, null], [0, null],
+  ])("maps %sh before due to %s", (hours, expected) => {
+    expect(monthlyReminderWindow(new Date(now.getTime() + Number(hours) * HOUR), now)).toBe(expected);
+  });
+
+  it("creates distinct durable 72h and 24h reminder kinds", async () => {
+    mocks.findMany.mockResolvedValue([monthlyPayment(72), monthlyPayment(24)]);
+    expect(await generateMonthlyPaymentReminders(now)).toEqual({ candidates: 2, created: 2, duplicate: 0, hasMore: false });
+    expect(mocks.enqueue.mock.calls.map(call => call[1].kind)).toEqual([
+      "MONTHLY_PAYMENT_REMINDER_72H", "MONTHLY_PAYMENT_REMINDER_24H",
+    ]);
+  });
+
+  it("selects only pending monthly obligations on active enrollment", async () => {
+    mocks.findMany.mockResolvedValue([]);
+    await generateMonthlyPaymentReminders(now);
+    expect(mocks.findMany.mock.calls[0][0].where).toMatchObject({
+      kind: "MONTHLY", status: "PENDING",
+      enrollment: { status: "ACTIVE", archivedAt: null },
+    });
+  });
 });
 
 describe("initial payment reminder generation", () => {

@@ -23,6 +23,7 @@ export function PreparationSummaryView({ summary: s, onCreate, busy }: {
     ["Monthly base price", new Intl.NumberFormat("en-US", { style: "currency", currency: s.plan.currency }).format(s.plan.monthlyPriceCents / 100) + ` ${s.plan.currency}`],
     ...(s.cohort ? [["Cohort", s.cohort.code], ["Weekly class", `${s.cohort.weeklyDay} · ${s.cohort.localStartTime} · ${s.cohort.timeZone} · ${s.cohort.durationMinutes} minutes`]] : []),
     [s.cohort ? "Cohort course start" : "Agreed lesson start", s.periodStart],
+    ["Billing timezone", s.billingTimeZone],
     ["First billing period [start, end)", `[${s.periodStart}, ${s.periodEnd})`],
     ["Payment deadline rule", s.paymentDeadlineRule],
   ];
@@ -87,6 +88,7 @@ export function PrepareEnrollmentForm({ applicationId, plans, cohorts, learners,
         relationship: d.get("relationship"), supabaseUserId: d.get("supabaseUserId"), coursePlanId: planId,
         learner: mode === "NEW" ? { mode: "NEW", fullName: d.get("fullName") } : { mode: "EXISTING", studentId },
         cohortId: group ? d.get("cohortId") : null, agreedStartDate: group ? null : d.get("agreedStartDate"),
+        billingTimeZone: group ? null : d.get("billingTimeZone"),
       };
       const response = await fetch(`/api/admin/course-applications/${applicationId}/prepare`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       const result = await response.json();
@@ -121,7 +123,7 @@ export function PrepareEnrollmentForm({ applicationId, plans, cohorts, learners,
         <label className="block">Learner choice<select value={mode} onChange={e => setMode(e.target.value)} className={selectStyle}><option value="EXISTING">Select existing learner by ID</option><option value="NEW">Create new learner explicitly</option></select></label>
         {mode === "EXISTING" ? <label className="block">Learner ID<Input list="learner-options" value={studentId} onChange={e => setStudentId(e.target.value)} required /><datalist id="learner-options">{learners.map(l => <option key={l.id} value={l.id}>{l.fullName}</option>)}</datalist></label> : <label className="block">Actual learner full name<Input name="fullName" required maxLength={200} /><span className="text-sm text-muted-foreground">For GUARDIAN, the new learner receives no login identity or email.</span></label>}
         <label className="block">Course plan<select value={planId} onChange={e => setPlanId(e.target.value)} required className={selectStyle}><option value="" disabled>Choose course plan</option>{plans.map(p => <option key={p.id} value={p.id}>{p.code}</option>)}</select></label>
-        {group ? <label className="block">OPEN cohort<select key={planId} name="cohortId" className={selectStyle} defaultValue="" required><option value="" disabled>Choose eligible cohort</option>{cohorts.filter(c => c.coursePlanId === planId).map(c => <option key={c.id} value={c.id}>{c.code} · starts {c.courseStartDate}</option>)}</select></label> : <label className="block">Agreed lesson start date<Input name="agreedStartDate" type="date" required /></label>}
+        {group ? <label className="block">OPEN cohort<select key={planId} name="cohortId" className={selectStyle} defaultValue="" required><option value="" disabled>Choose eligible cohort</option>{cohorts.filter(c => c.coursePlanId === planId).map(c => <option key={c.id} value={c.id}>{c.code} · starts {c.courseStartDate}</option>)}</select></label> : <div className="grid gap-4 sm:grid-cols-2"><label className="block">Agreed lesson start date<Input name="agreedStartDate" type="date" required /></label><label className="block">Billing IANA timezone<Input name="billingTimeZone" required placeholder="America/New_York" /></label></div>}
         <Button type="submit">{busy ? "Preparing…" : "Resolve identities & prepare summary"}</Button>
       </fieldset>
       {error && <p role="alert" className="text-destructive">{error}</p>}

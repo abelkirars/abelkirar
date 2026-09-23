@@ -122,7 +122,7 @@ describe("final enrollment transaction", () => {
 
   it("creates 1-to-1 without a cohort or seat and requires the explicit start", async () => {
     mocks.tx.coursePlan.findUnique.mockResolvedValue({ ...plan, code: "INTERMEDIATE_ONE_TO_ONE", level: "INTERMEDIATE", format: "ONE_TO_ONE", monthlyPriceCents: 8500 });
-    const result = await createEnrollmentAndInitialPayment("app", { ...input, cohortId: null, agreedStartDate: "2028-01-31" });
+    const result = await createEnrollmentAndInitialPayment("app", { ...input, cohortId: null, agreedStartDate: "2028-01-31", billingTimeZone: "America/New_York" });
     expect(result.cohort).toBeNull();
     expect(result.payment.periodEnd).toBe("2028-02-29");
     expect(mocks.tx.courseCohortSeat.update).not.toHaveBeenCalled();

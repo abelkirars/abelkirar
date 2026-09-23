@@ -1,7 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/db";
 import { enqueueCoursePaymentNotification } from "@/lib/notifications/course-payment-outbox";
-import { paymentReminderEmail } from "@/lib/notifications/course-payment-content";
+import { monthlyReminderEmail, paymentReminderEmail } from "@/lib/notifications/course-payment-content";
 
 const HOUR = 60 * 60 * 1000;
 const LIMIT = 100;
@@ -12,6 +12,13 @@ const LIMIT = 100;
 export function reminderWindow(expiresAt: Date, now: Date): 48 | 24 | null {
   const remaining = expiresAt.getTime() - now.getTime();
   if (remaining > 36 * HOUR && remaining <= 48 * HOUR) return 48;
+  if (remaining > 12 * HOUR && remaining <= 24 * HOUR) return 24;
+  return null;
+}
+
+export function monthlyReminderWindow(dueAt: Date, now: Date): 72 | 24 | null {
+  const remaining = dueAt.getTime() - now.getTime();
+  if (remaining > 48 * HOUR && remaining <= 72 * HOUR) return 72;
   if (remaining > 12 * HOUR && remaining <= 24 * HOUR) return 24;
   return null;
 }
@@ -55,6 +62,32 @@ export async function generateInitialPaymentReminders(now = new Date()) {
         deadline: payment.expiresAt,
         hours,
       }),
+    });
+    if (inserted) created++; else duplicate++;
+  }
+  return { candidates: Math.min(payments.length, LIMIT), created, duplicate, hasMore: payments.length > LIMIT };
+}
+
+export async function generateMonthlyPaymentReminders(now = new Date()) {
+  const plus = (hours: number) => new Date(now.getTime() + hours * HOUR);
+  const payments = await prisma.coursePayment.findMany({ where: {
+    kind: "MONTHLY", status: "PENDING",
+    submissions: { none: { status: "SUBMITTED" } },
+    OR: [{ dueAt: { gt: plus(48), lte: plus(72) } }, { dueAt: { gt: plus(12), lte: plus(24) } }],
+    enrollment: { status: "ACTIVE", archivedAt: null, customer: { status: "ACTIVE", archivedAt: null, deactivatedAt: null } },
+  }, include: { enrollment: { include: { customer: true, student: true, application: true } } },
+  orderBy: [{ dueAt: "asc" }, { id: "asc" }], take: LIMIT + 1 });
+  let created = 0, duplicate = 0;
+  for (const payment of payments.slice(0, LIMIT)) {
+    const hours = monthlyReminderWindow(payment.dueAt!, now);
+    if (!hours) continue;
+    const enrollment = payment.enrollment;
+    const inserted = await enqueueCoursePaymentNotification(prisma, {
+      paymentId: payment.id, kind: hours === 72 ? "MONTHLY_PAYMENT_REMINDER_72H" : "MONTHLY_PAYMENT_REMINDER_24H",
+      payload: monthlyReminderEmail({ paymentId: payment.id, customerEmail: enrollment.customer.email,
+        locale: enrollment.application?.locale || enrollment.customer.locale, learnerName: enrollment.student.fullName,
+        courseCode: enrollment.planCodeSnapshot, amountCents: payment.finalAmountCents, currency: payment.currency,
+        dueAt: payment.dueAt!, hours }),
     });
     if (inserted) created++; else duplicate++;
   }

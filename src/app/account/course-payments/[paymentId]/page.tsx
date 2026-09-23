@@ -51,6 +51,7 @@ export default async function CoursePaymentPage({
   }
 
   const [locale, t] = await Promise.all([getLocale(), getTranslations("coursePayment")]);
+  const monthly = await getTranslations("courseMonthlyPaymentEmails");
   const instructions = getConfiguredCoursePaymentInstructions();
   const money = new Intl.NumberFormat(locale, { style: "currency", currency: payment.currency });
   const inputAmount = (payment.finalAmountCents / 100).toFixed(2);
@@ -63,7 +64,10 @@ export default async function CoursePaymentPage({
     PAST_DUE: t("status.pastDue"),
     CANCELLED: t("status.cancelled"),
   } as const;
-  const canSubmit = payment.status === "PENDING";
+  const now = new Date();
+  const canSubmit = payment.kind === "INITIAL_ENROLLMENT"
+    ? payment.status === "PENDING"
+    : ["PENDING", "PAST_DUE"].includes(payment.status) && now < payment.expiresAt;
   const isWaiting = payment.status === "PROOF_SUBMITTED";
   const isVerified = payment.status === "VERIFIED";
   const cohort = payment.enrollment.cohort;
@@ -137,6 +141,7 @@ export default async function CoursePaymentPage({
                 <p className="flex items-start gap-2 font-semibold"><CalendarDays className="mt-0.5 size-5 text-primary" />{t("deadline", { deadline: formatPaymentDeadline(locale, payment.expiresAt) })}</p>
               </div>
             )}
+            {payment.kind === "MONTHLY" && payment.dueAt && <div className="rounded-xl border border-primary/30 bg-primary/5 p-4"><p className="font-semibold">{monthly("dueLabel", { date: formatPaymentDeadline(locale, payment.dueAt) })}</p><p className="mt-1 text-sm text-muted-foreground">{monthly("graceNotice", { date: formatPaymentDeadline(locale, payment.expiresAt) })}</p></div>}
 
             {canSubmit && (
               <Card className="border border-border/80 shadow-sm">
@@ -183,7 +188,7 @@ export default async function CoursePaymentPage({
                     availableMethods={instructions.map(({ method, label }) => ({ method, label }))}
                   />
                 ) : isWaiting ? (
-                  <StateMessage icon={<ShieldCheck />} title={t("state.receivedTitle")} body={t("state.receivedBody")} />
+                  <StateMessage icon={<ShieldCheck />} title={t("state.receivedTitle")} body={payment.kind === "MONTHLY" ? monthly("awaitingBody") : t("state.receivedBody")} />
                 ) : isVerified ? (
                   <StateMessage icon={<CheckCircle2 />} title={t("state.verifiedTitle")} body={t("state.verifiedBody")} />
                 ) : payment.displayStatus === "REJECTED" ? (

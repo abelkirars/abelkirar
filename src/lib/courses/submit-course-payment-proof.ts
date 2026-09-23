@@ -12,7 +12,7 @@ import {
 } from "./course-payment-proofs";
 import { expireInitialPaymentInTransaction } from "./expire-initial-payments";
 import { enqueueCoursePaymentNotification } from "@/lib/notifications/course-payment-outbox";
-import { proofReceivedEmail } from "@/lib/notifications/course-payment-content";
+import { monthlyProofReceivedEmail, proofReceivedEmail } from "@/lib/notifications/course-payment-content";
 
 export type CoursePaymentSubmissionProblem =
   | "EXPIRED"
@@ -94,8 +94,9 @@ export async function submitCoursePaymentProofForCustomer(
     }
     throw error;
   }
-  if (preflight.status === "EXPIRED") {
-    throw new CoursePaymentSubmissionError("EXPIRED", "The enrollment payment window has expired");
+  const preflightNow = authoritativeNow ?? new Date();
+  if (preflight.status === "EXPIRED" || (preflight.kind === "MONTHLY" && preflight.expiresAt <= preflightNow)) {
+    throw new CoursePaymentSubmissionError("EXPIRED", "The normal payment proof window has expired");
   }
   if (preflight.status === "PROOF_SUBMITTED" && preflight.latestSubmission?.status === "SUBMITTED") {
     return {
@@ -116,7 +117,7 @@ export async function submitCoursePaymentProofForCustomer(
       },
     };
   }
-  if (preflight.status !== "PENDING") {
+  if (preflight.status !== "PENDING" && !(preflight.kind === "MONTHLY" && preflight.status === "PAST_DUE")) {
     throw new CoursePaymentSubmissionError("NOT_PENDING", "This payment is not accepting a new proof");
   }
 
@@ -140,17 +141,22 @@ export async function submitCoursePaymentProofForCustomer(
         },
       });
       if (!payment) throw new CoursePaymentSubmissionError("NOT_FOUND", "Course payment not found");
+      if (payment.kind === "MONTHLY" && (payment.enrollment.status !== "ACTIVE" || payment.enrollment.archivedAt)) {
+        return { kind: "NOT_PENDING" };
+      }
       // Upload time and lock waits do not extend the original deadline.
       const submittedAt = authoritativeNow ?? new Date();
-      const expiration = await expireInitialPaymentInTransaction(tx, paymentId, submittedAt);
-      if (expiration.outcome === "EXPIRED" || payment.status === "EXPIRED") return { kind: "EXPIRED" };
+      if (payment.kind === "INITIAL_ENROLLMENT") {
+        const expiration = await expireInitialPaymentInTransaction(tx, paymentId, submittedAt);
+        if (expiration.outcome === "EXPIRED" || payment.status === "EXPIRED") return { kind: "EXPIRED" };
+      } else if (submittedAt >= payment.expiresAt) return { kind: "EXPIRED" };
 
       const current = await tx.coursePaymentSubmission.findFirst({
         where: { paymentId, status: "SUBMITTED" },
         select: { id: true, submittedAt: true },
       });
       if (current) return { kind: "DUPLICATE", result: resultFrom(payment, current, true) };
-      if (payment.status !== "PENDING") return { kind: "NOT_PENDING" };
+      if (payment.status !== "PENDING" && !(payment.kind === "MONTHLY" && payment.status === "PAST_DUE")) return { kind: "NOT_PENDING" };
 
       const aggregate = await tx.coursePaymentSubmission.aggregate({
         where: { paymentId },
@@ -183,7 +189,7 @@ export async function submitCoursePaymentProofForCustomer(
         paymentId,
         submissionId: submission.id,
         kind: "PROOF_RECEIVED",
-        payload: proofReceivedEmail({
+        payload: (payment.kind === "MONTHLY" ? monthlyProofReceivedEmail : proofReceivedEmail)({
           customerEmail: payment.enrollment.customer.email,
           locale: payment.enrollment.application?.locale || payment.enrollment.customer.locale,
           learnerName: payment.enrollment.student.fullName,

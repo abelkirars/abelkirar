@@ -23,7 +23,7 @@ function escapeHtml(value: string) {
     .replaceAll('"', "&quot;").replaceAll("'", "&#39;");
 }
 
-type CourseEmailNamespace = "coursePaymentEmails" | "coursePaymentReviewEmails" | "courseExpirationEmail" | "coursePaymentReminderEmails";
+type CourseEmailNamespace = "coursePaymentEmails" | "coursePaymentReviewEmails" | "courseExpirationEmail" | "coursePaymentReminderEmails" | "courseMonthlyPaymentEmails";
 
 function translator<N extends CourseEmailNamespace>(localeValue: string | null | undefined, namespace: N) {
   const locale = isLocale(localeValue || "") ? localeValue! : defaultLocale;
@@ -137,4 +137,52 @@ export function paymentReminderEmail(data: Common & {
       t("notice"),
     ]) + (link ? `<p><a href="${escapeHtml(link)}">${escapeHtml(t("action"))}</a></p>` : ""),
   };
+}
+
+function monthlyCommon(data: Common & { amountCents: number; currency: string }) {
+  const { locale, t } = translator(data.locale, "courseMonthlyPaymentEmails");
+  return { locale, t, amount: new Intl.NumberFormat(locale, { style: "currency", currency: data.currency }).format(data.amountCents / 100) };
+}
+
+export function monthlyPaymentRequiredEmail(data: Common & { paymentId: string; amountCents: number; currency: string; dueAt: Date }): CourseEmailSnapshot {
+  const { locale, t, amount } = monthlyCommon(data);
+  const link = paymentLink(data.paymentId);
+  return { recipientEmailSnapshot: data.customerEmail, subjectSnapshot: t("requiredSubject"), htmlSnapshot: paragraphs([
+    t("summary", { learner: data.learnerName, course: data.courseCode.replaceAll("_", " "), amount }),
+    t("required", { due: formatPaymentDeadline(locale, data.dueAt) }),
+  ]) + (link ? `<p><a href="${escapeHtml(link)}">${escapeHtml(t("action"))}</a></p>` : "") };
+}
+
+export function monthlyProofReceivedEmail(data: Common & { amountCents: number; currency: string }): CourseEmailSnapshot {
+  const { t, amount } = monthlyCommon(data);
+  return { recipientEmailSnapshot: data.customerEmail, subjectSnapshot: t("receivedSubject"), htmlSnapshot: paragraphs([
+    t("summary", { learner: data.learnerName, course: data.courseCode.replaceAll("_", " "), amount }), t("received"),
+  ]) };
+}
+
+export function monthlyPaymentReviewedEmail(data: Common & { paymentId: string; amountCents: number; currency: string; result: "VERIFIED" | "PENDING" | "PAST_DUE"; reason: string | null }): CourseEmailSnapshot {
+  const { t, amount } = monthlyCommon(data);
+  const link = paymentLink(data.paymentId);
+  return { recipientEmailSnapshot: data.customerEmail, subjectSnapshot: t(data.result === "VERIFIED" ? "verifiedSubject" : "rejectedSubject"), htmlSnapshot: paragraphs([
+    t("summary", { learner: data.learnerName, course: data.courseCode.replaceAll("_", " "), amount }),
+    data.result === "VERIFIED" ? t("verified") : t("rejected", { reason: data.reason || "" }),
+  ]) + (link ? `<p><a href="${escapeHtml(link)}">${escapeHtml(t("action"))}</a></p>` : "") };
+}
+
+export function monthlyReminderEmail(data: Common & { paymentId: string; amountCents: number; currency: string; dueAt: Date; hours: 72 | 24 }): CourseEmailSnapshot {
+  const { locale, t, amount } = monthlyCommon(data);
+  const link = paymentLink(data.paymentId);
+  return { recipientEmailSnapshot: data.customerEmail, subjectSnapshot: t(data.hours === 72 ? "reminder72Subject" : "reminder24Subject"), htmlSnapshot: paragraphs([
+    t("summary", { learner: data.learnerName, course: data.courseCode.replaceAll("_", " "), amount }),
+    t("reminder", { due: formatPaymentDeadline(locale, data.dueAt) }),
+  ]) + (link ? `<p><a href="${escapeHtml(link)}">${escapeHtml(t("action"))}</a></p>` : "") };
+}
+
+export function monthlyPastDueEmail(data: Common & { paymentId: string; amountCents: number; currency: string; expiresAt: Date }): CourseEmailSnapshot {
+  const { locale, t, amount } = monthlyCommon(data);
+  const link = paymentLink(data.paymentId);
+  return { recipientEmailSnapshot: data.customerEmail, subjectSnapshot: t("pastDueSubject"), htmlSnapshot: paragraphs([
+    t("summary", { learner: data.learnerName, course: data.courseCode.replaceAll("_", " "), amount }),
+    t("pastDue", { expires: formatPaymentDeadline(locale, data.expiresAt) }), t("accessUnaffected"),
+  ]) + (link ? `<p><a href="${escapeHtml(link)}">${escapeHtml(t("action"))}</a></p>` : "") };
 }

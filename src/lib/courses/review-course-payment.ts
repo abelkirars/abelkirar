@@ -5,7 +5,7 @@ import { courseAdmin, serializable } from "./admin-service";
 import { assertFourSeats, assertRelationship } from "./preparation-rules";
 import { expireInitialPaymentInTransaction } from "./expire-initial-payments";
 import { enqueueCoursePaymentNotification } from "@/lib/notifications/course-payment-outbox";
-import { paymentReviewedEmail } from "@/lib/notifications/course-payment-content";
+import { monthlyPaymentReviewedEmail, paymentReviewedEmail } from "@/lib/notifications/course-payment-content";
 
 export class CoursePaymentReviewError extends Error {}
 
@@ -35,14 +35,59 @@ export async function reviewCoursePayment(paymentId: string, raw: unknown) {
         enrollment: { include: { customer: true, student: true, coursePlan: true, application: true, portalAccess: true } },
       },
     });
-    if (!payment || payment.kind !== "INITIAL_ENROLLMENT") {
-      throw new CoursePaymentReviewError("An initial enrollment payment is required");
-    }
+    if (!payment) throw new CoursePaymentReviewError("Course payment not found");
     const enrollment = payment.enrollment;
     const submission = payment.submissions.find(s => s.id === input.submissionId);
     if (!submission || payment.submissions[0]?.id !== submission.id) {
       throw new CoursePaymentReviewError("This is not the latest submission; reload before reviewing");
     }
+    if (payment.kind === "MONTHLY") {
+      const resultDto = (idempotent: boolean, status: "VERIFIED" | "PENDING" | "PAST_DUE") => ({
+        idempotent, paymentId, submissionId: submission.id, status,
+        customerEmail: enrollment.customer.email, locale: enrollment.application?.locale || enrollment.customer.locale || "en",
+        learnerName: enrollment.student.fullName, hasLearnerLogin: Boolean(enrollment.student.supabaseUserId),
+        selfPayer: enrollment.student.supabaseUserId === enrollment.customer.supabaseUserId,
+        courseCode: enrollment.planCodeSnapshot, amountCents: payment.finalAmountCents,
+        currency: payment.currency, deadline: payment.expiresAt,
+        reason: input.action === "REJECT" ? input.reason : null,
+      });
+      if (input.action === "VERIFY" && payment.status === "VERIFIED" && submission.status === "ACCEPTED") return resultDto(true, "VERIFIED");
+      if (input.action === "REJECT" && submission.status === "REJECTED" && ["PENDING", "PAST_DUE"].includes(payment.status)) {
+        if (submission.rejectionReason !== input.reason) throw new CoursePaymentReviewError("This submission already has a recorded rejection");
+        return resultDto(true, payment.status as "PENDING" | "PAST_DUE");
+      }
+      if (payment.status !== "PROOF_SUBMITTED" || submission.status !== "SUBMITTED"
+        || payment.submissions.filter(s => s.status === "SUBMITTED").length !== 1) {
+        throw new CoursePaymentReviewError("The payment no longer has this reviewable proof; reload before reviewing");
+      }
+      if (!payment.dueAt || enrollment.status !== "ACTIVE" || enrollment.archivedAt || !enrollment.portalAccess) {
+        throw new CoursePaymentReviewError("Monthly review requires an active enrollment with existing access history");
+      }
+      const reviewedAt = new Date();
+      const resultingStatus = input.action === "VERIFY" ? "VERIFIED" : reviewedAt < payment.dueAt ? "PENDING" : "PAST_DUE";
+      await tx.coursePaymentSubmission.update({ where: { id: submission.id }, data: {
+        status: input.action === "VERIFY" ? "ACCEPTED" : "REJECTED", reviewedAt, reviewedByAdminId: admin.id,
+        rejectionReason: input.action === "REJECT" ? input.reason : null,
+      } });
+      await tx.coursePayment.update({ where: { id: paymentId }, data: input.action === "VERIFY"
+        ? { status: "VERIFIED", verifiedAt: reviewedAt, verifiedByAdminId: admin.id }
+        : { status: resultingStatus } });
+      await enqueueCoursePaymentNotification(tx, {
+        paymentId, submissionId: input.action === "REJECT" ? submission.id : null,
+        kind: input.action === "VERIFY" ? "PAYMENT_VERIFIED" : "PROOF_REJECTED",
+        payload: monthlyPaymentReviewedEmail({ paymentId, customerEmail: enrollment.customer.email,
+          locale: enrollment.application?.locale || enrollment.customer.locale, learnerName: enrollment.student.fullName,
+          courseCode: enrollment.planCodeSnapshot, amountCents: payment.finalAmountCents, currency: payment.currency,
+          result: resultingStatus, reason: input.action === "REJECT" ? input.reason : null }),
+      });
+      if (enrollment.applicationId) await tx.courseApplicationEvent.create({ data: {
+        applicationId: enrollment.applicationId, actorAdminId: admin.id,
+        fromStatus: "APPROVED", toStatus: "APPROVED",
+        note: `Monthly payment ${paymentId}; submission ${submission.id}; review ${input.action}; PROOF_SUBMITTED -> ${resultingStatus}. Enrollment, portal access, and seat unchanged.`,
+      } });
+      return resultDto(false, resultingStatus);
+    }
+    if (payment.kind !== "INITIAL_ENROLLMENT") throw new CoursePaymentReviewError("Unsupported course payment kind");
     const dto = (idempotent: boolean, status: "VERIFIED" | "PENDING" | "EXPIRED") => ({
       idempotent, paymentId, submissionId: submission.id, status,
       customerEmail: enrollment.customer.email,

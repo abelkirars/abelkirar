@@ -1,11 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 const mocks = vi.hoisted(() => ({
-  find: vi.fn(), expire: vi.fn(), reminders: vi.fn(), deliver: vi.fn(),
+  find: vi.fn(), expire: vi.fn(), reminders: vi.fn(), monthlyReminders: vi.fn(),
+  generateMonthly: vi.fn(), markMonthlyPastDue: vi.fn(), deliver: vi.fn(),
 }));
 vi.mock("@/lib/db", () => ({ prisma: { coursePayment: { findMany: mocks.find } } }));
 vi.mock("./expire-initial-payments", () => ({ expireInitialPayment: mocks.expire }));
-vi.mock("./payment-reminders", () => ({ generateInitialPaymentReminders: mocks.reminders }));
+vi.mock("./payment-reminders", () => ({
+  generateInitialPaymentReminders: mocks.reminders,
+  generateMonthlyPaymentReminders: mocks.monthlyReminders,
+}));
+vi.mock("./monthly-billing", () => ({
+  generateEligibleMonthlyPayments: mocks.generateMonthly,
+  markEligibleMonthlyPaymentsPastDue: mocks.markMonthlyPastDue,
+}));
 vi.mock("@/lib/notifications/course-payment-worker", () => ({ deliverCoursePaymentNotifications: mocks.deliver }));
 import { runInitialPaymentExpirationJob } from "./expiration-job";
 
@@ -18,6 +26,9 @@ describe("bounded expiration/outbox runner", () => {
     mocks.find.mockResolvedValue([{ id: "payment" }]);
     mocks.expire.mockResolvedValue({ paymentId: "payment", outcome: "EXPIRED" });
     mocks.reminders.mockResolvedValue({ candidates: 0, created: 0, duplicate: 0, hasMore: false });
+    mocks.monthlyReminders.mockResolvedValue({ candidates: 0, created: 0, duplicate: 0, hasMore: false });
+    mocks.generateMonthly.mockResolvedValue({ results: [], hasMore: false });
+    mocks.markMonthlyPastDue.mockResolvedValue({ results: [], hasMore: false });
     mocks.deliver.mockResolvedValue({ claimed: 1, sent: 1, retried: 0, failed: 0, cancelled: 0, uncertain: 0, configurationUnavailable: false });
   });
   afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); });
@@ -28,6 +39,10 @@ describe("bounded expiration/outbox runner", () => {
     expect(mocks.find.mock.calls[0][0]).toMatchObject({ where: { kind: "INITIAL_ENROLLMENT", status: "PENDING", expiresAt: { lte: expect.any(Date) }, enrollment: { status: "PENDING_PAYMENT" } }, select: { id: true }, take: 101 });
     expect(mocks.reminders).toHaveBeenCalledWith(expect.any(Date));
     expect(mocks.deliver).toHaveBeenCalledWith(20, expect.any(Date));
+    expect(mocks.generateMonthly.mock.invocationCallOrder[0]).toBeLessThan(mocks.reminders.mock.invocationCallOrder[0]);
+    expect(mocks.monthlyReminders.mock.invocationCallOrder[0]).toBeLessThan(mocks.find.mock.invocationCallOrder[0]);
+    expect(mocks.find.mock.invocationCallOrder[0]).toBeLessThan(mocks.markMonthlyPastDue.mock.invocationCallOrder[0]);
+    expect(mocks.markMonthlyPastDue.mock.invocationCallOrder[0]).toBeLessThan(mocks.deliver.mock.invocationCallOrder[0]);
   });
 
   it.each(["SKIPPED", "PROOF_REVIEWABLE"])("does not count an outbox record for %s", async outcome => {

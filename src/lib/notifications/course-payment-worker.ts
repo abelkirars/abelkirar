@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import type { CoursePaymentNotificationKind } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { sendEmail } from "./email";
-import { reminderWindow } from "@/lib/courses/payment-reminders";
+import { monthlyReminderWindow, reminderWindow } from "@/lib/courses/payment-reminders";
 
 const MAX_ATTEMPTS = 5;
 const LEASE_MS = 5 * 60 * 1000;
@@ -19,7 +19,7 @@ function safeErrorCode(value: string | undefined) {
 }
 
 function eligible(kind: CoursePaymentNotificationKind, row: {
-  payment: { status: string; kind: string; expiresAt: Date; enrollment: {
+  payment: { status: string; kind: string; dueAt: Date | null; expiresAt: Date; enrollment: {
     status: string; archivedAt: Date | null; cancellationReason: string | null; portalAccess: unknown;
     customer: { status: string; archivedAt: Date | null; deactivatedAt: Date | null };
   } };
@@ -33,13 +33,15 @@ function eligible(kind: CoursePaymentNotificationKind, row: {
   if (!enrollmentOkay) return false;
   switch (kind) {
     case "PAYMENT_REQUIRED":
-      return payment.status === "PENDING" && payment.enrollment.status === "PENDING_PAYMENT" && !payment.enrollment.portalAccess;
+      return payment.status === "PENDING" && (payment.kind === "INITIAL_ENROLLMENT"
+        ? payment.enrollment.status === "PENDING_PAYMENT" && !payment.enrollment.portalAccess
+        : payment.kind === "MONTHLY" && payment.enrollment.status === "ACTIVE");
     case "PROOF_RECEIVED":
       return payment.status === "PROOF_SUBMITTED" && submission?.status === "SUBMITTED";
     case "PAYMENT_VERIFIED":
       return payment.status === "VERIFIED" && payment.enrollment.status === "ACTIVE" && Boolean(payment.enrollment.portalAccess);
     case "PROOF_REJECTED":
-      return submission?.status === "REJECTED" && ["PENDING", "EXPIRED"].includes(payment.status);
+      return submission?.status === "REJECTED" && ["PENDING", "PAST_DUE", "EXPIRED"].includes(payment.status);
     case "INITIAL_PAYMENT_REMINDER_48H":
       return payment.kind === "INITIAL_ENROLLMENT" && payment.status === "PENDING"
         && payment.enrollment.status === "PENDING_PAYMENT" && !payment.enrollment.portalAccess
@@ -53,6 +55,14 @@ function eligible(kind: CoursePaymentNotificationKind, row: {
         && payment.enrollment.status === "CANCELLED"
         && payment.enrollment.cancellationReason === "INITIAL_PAYMENT_EXPIRED"
         && !payment.enrollment.portalAccess;
+    case "MONTHLY_PAYMENT_REMINDER_72H":
+      return payment.kind === "MONTHLY" && payment.status === "PENDING" && payment.enrollment.status === "ACTIVE"
+        && payment.dueAt !== null && monthlyReminderWindow(payment.dueAt, now) === 72;
+    case "MONTHLY_PAYMENT_REMINDER_24H":
+      return payment.kind === "MONTHLY" && payment.status === "PENDING" && payment.enrollment.status === "ACTIVE"
+        && payment.dueAt !== null && monthlyReminderWindow(payment.dueAt, now) === 24;
+    case "MONTHLY_PAYMENT_PAST_DUE":
+      return payment.kind === "MONTHLY" && payment.status === "PAST_DUE" && payment.enrollment.status === "ACTIVE";
   }
 }
 

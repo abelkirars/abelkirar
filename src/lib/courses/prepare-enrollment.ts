@@ -23,15 +23,18 @@ export async function prepareEnrollment(applicationId: string, raw: unknown) {
     if (application.requestedPlanId && application.requestedPlanId !== plan.id) throw new PreparationValidationError("Plan must match the approved application");
     let cohort = null;
     let start: string;
+    let billingTimeZone: string;
     if (plan.format === "GROUP") {
-      if (!input.cohortId || input.agreedStartDate) throw new PreparationValidationError("Group start must come from the selected cohort");
+      if (!input.cohortId || input.agreedStartDate || input.billingTimeZone) throw new PreparationValidationError("Group start and timezone must come from the selected cohort");
       cohort = await tx.courseCohort.findUnique({ where: { id: input.cohortId }, include: { seats: true, coursePlan: true } });
       if (!cohort) throw new PreparationValidationError("Cohort not found");
       assertCohortSelectable(cohort, plan.id);
       start = cohort.courseStartDate!.toISOString().slice(0, 10);
+      billingTimeZone = cohort.timeZone!;
     } else {
-      if (input.cohortId || !input.agreedStartDate) throw new PreparationValidationError("1-to-1 requires an explicit start date and no cohort");
+      if (input.cohortId || !input.agreedStartDate || !input.billingTimeZone) throw new PreparationValidationError("1-to-1 requires an explicit start date, billing timezone, and no cohort");
       start = input.agreedStartDate;
+      billingTimeZone = input.billingTimeZone;
     }
 
     const customer = await upsertVerifiedCustomer(identity, tx);
@@ -75,6 +78,7 @@ export async function prepareEnrollment(applicationId: string, raw: unknown) {
       relationship: input.relationship, relationshipState: existing ? "ACTIVE_EXISTING" : "DEFERRED_TO_FINAL_TRANSACTION",
       plan: { id: plan.id, code: plan.code, level: plan.level, format: plan.format, monthlyPriceCents: plan.monthlyPriceCents, currency: plan.currency },
       cohort: cohort ? { id: cohort.id, code: cohort.code, weeklyDay: cohort.weeklyDay, localStartTime: cohort.localStartTime!.toISOString().slice(11, 16), timeZone: cohort.timeZone, durationMinutes: cohort.durationMinutes } : null,
+      billingTimeZone,
       ...monthlyPeriod(start), paymentDeadlineRule: PAYMENT_DEADLINE_RULE,
       warnings: ["NOT ENROLLED YET", "NO PAYMENT CREATED YET", "NO PORTAL ACCESS YET"],
     };

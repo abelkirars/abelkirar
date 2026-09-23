@@ -2,7 +2,8 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/db";
 import { expireInitialPayment } from "./expire-initial-payments";
-import { generateInitialPaymentReminders } from "./payment-reminders";
+import { generateInitialPaymentReminders, generateMonthlyPaymentReminders } from "./payment-reminders";
+import { generateEligibleMonthlyPayments, markEligibleMonthlyPaymentsPastDue } from "./monthly-billing";
 import { deliverCoursePaymentNotifications } from "@/lib/notifications/course-payment-worker";
 
 const LIMIT = 100;
@@ -18,10 +19,28 @@ export async function runInitialPaymentExpirationJob() {
     notificationsCreated: 0, remindersCreated: 0, notificationsClaimed: 0,
     notificationsSent: 0, notificationsRetried: 0, notificationsFailed: 0,
     notificationsCancelled: 0, notificationsUncertain: 0,
+    monthlyGenerated: 0, monthlyGenerationSkipped: 0, monthlyPartialPeriods: 0, monthlyPastDue: 0,
     deferred: 0, hasMore: false, durationMs: 0,
   };
   console.info("[course-expiration] Started", { jobId: summary.jobId });
   try {
+    const generation = await generateEligibleMonthlyPayments(now, LIMIT);
+    summary.monthlyGenerated = generation.results.filter(result => result.outcome === "CREATED").length;
+    summary.notificationsCreated += summary.monthlyGenerated;
+    summary.failed += generation.results.filter(result => result.outcome === "FAILED").length;
+    summary.monthlyPartialPeriods = generation.results.filter(result => result.outcome === "PARTIAL_FINAL_PERIOD").length;
+    summary.monthlyGenerationSkipped = generation.results.length - summary.monthlyGenerated;
+    summary.hasMore ||= generation.hasMore;
+    try {
+      const reminders = await generateInitialPaymentReminders(now);
+      const monthlyReminders = await generateMonthlyPaymentReminders(now);
+      summary.remindersCreated = reminders.created + monthlyReminders.created;
+      summary.notificationsCreated += summary.remindersCreated;
+      summary.hasMore ||= reminders.hasMore || monthlyReminders.hasMore;
+    } catch {
+      summary.failed++;
+      console.error("[course-expiration] Reminder generation failed", { jobId: summary.jobId });
+    }
     // Existing status/expiresAt index bounds this query; only IDs leave the DB.
     const candidates = await prisma.coursePayment.findMany({
       where: { kind: "INITIAL_ENROLLMENT", status: "PENDING", expiresAt: { lte: now },
@@ -29,7 +48,7 @@ export async function runInitialPaymentExpirationJob() {
       select: { id: true }, orderBy: [{ expiresAt: "asc" }, { id: "asc" }], take: LIMIT + 1,
     });
     summary.candidates = Math.min(candidates.length, LIMIT);
-    summary.hasMore = candidates.length > LIMIT;
+    summary.hasMore ||= candidates.length > LIMIT;
     for (const candidate of candidates.slice(0, LIMIT)) {
       if (performance.now() - started >= WORK_BUDGET_MS) break;
       summary.processed++;
@@ -45,13 +64,13 @@ export async function runInitialPaymentExpirationJob() {
       }
     }
     try {
-      const reminders = await generateInitialPaymentReminders(now);
-      summary.remindersCreated = reminders.created;
-      summary.notificationsCreated += reminders.created;
-      summary.hasMore ||= reminders.hasMore;
+      const overdue = await markEligibleMonthlyPaymentsPastDue(now, LIMIT);
+      summary.monthlyPastDue = overdue.results.filter(result => result.outcome === "PAST_DUE").length;
+      summary.notificationsCreated += summary.monthlyPastDue;
+      summary.hasMore ||= overdue.hasMore;
     } catch {
       summary.failed++;
-      console.error("[course-expiration] Reminder generation failed", { jobId: summary.jobId });
+      console.error("[course-expiration] Monthly past-due transition failed", { jobId: summary.jobId });
     }
     try {
       const delivery = await deliverCoursePaymentNotifications(20, now);

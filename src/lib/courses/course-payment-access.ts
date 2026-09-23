@@ -82,7 +82,7 @@ export async function getOwnedCoursePayment(
 
   const latestSubmission = payment.submissions[0] ?? null;
   const displayStatus =
-    payment.status === "PENDING" && latestSubmission?.status === "REJECTED"
+    ["PENDING", "PAST_DUE"].includes(payment.status) && latestSubmission?.status === "REJECTED"
       ? "REJECTED"
       : payment.status;
 
@@ -93,6 +93,7 @@ export async function getOwnedCoursePayment(
     displayStatus,
     periodStart: payment.periodStart,
     periodEnd: payment.periodEnd,
+    dueAt: payment.dueAt,
     expiresAt: payment.expiresAt,
     baseAmountCents: payment.baseAmountCents,
     discountAmountCents: payment.discountAmountCents,
@@ -127,6 +128,15 @@ export async function getCurrentCustomerCoursePayment(
 ) {
   const customer = await requireActiveCourseCustomer();
   return getOwnedCoursePayment(customer.id, paymentId, authoritativeNow);
+}
+
+export async function listCurrentCustomerCoursePayments() {
+  const customer = await requireActiveCourseCustomer();
+  return prisma.coursePayment.findMany({
+    where: { enrollment: { customerId: customer.id } },
+    include: { enrollment: { select: { planCodeSnapshot: true, billingTimeZone: true, student: { select: { fullName: true } } } }, submissions: { orderBy: { attemptNumber: "desc" }, take: 1 } },
+    orderBy: [{ periodStart: "desc" }, { createdAt: "desc" }], take: 100,
+  });
 }
 
 export {

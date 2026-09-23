@@ -42,6 +42,7 @@ export const preparationSchema = z.object({
   coursePlanId: z.string().min(1),
   cohortId: z.string().min(1).nullable(),
   agreedStartDate: dateOnly.nullable(),
+  billingTimeZone: z.string().trim().refine(isIanaTimeZone, "Choose a valid IANA timezone").nullable().default(null),
 }).strict();
 export type PreparationInput = z.infer<typeof preparationSchema>;
 export const finalEnrollmentSchema = preparationSchema.extend({ confirmation: z.literal(true) }).strict();

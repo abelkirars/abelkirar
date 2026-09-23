@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requireAdminPage } from "@/lib/admin/dal";
 import { getAdminCoursePayment } from "@/lib/courses/admin-payments";
 import { formatPaymentDeadline } from "@/lib/courses/payment-deadline";
+import { dateKey, nextMonthlyPeriod } from "@/lib/courses/monthly-billing-calendar";
 import { CoursePaymentReviewForm } from "@/components/admin/course-payment-review-form";
 import { Container } from "@/components/marketing/container";
 
@@ -14,6 +15,15 @@ export default async function AdminCoursePaymentPage({ params }: { params: Promi
   const e = payment.enrollment;
   const cohort = e.cohort;
   const current = payment.submissions.find(s => s.status === "SUBMITTED");
+  const initial = e.payments.find(item => item.kind === "INITIAL_ENROLLMENT");
+  const latest = e.payments[0];
+  let nextBillingPeriod = "Unavailable";
+  if (initial && latest) {
+    try {
+      const next = nextMonthlyPeriod(dateKey(initial.periodStart), dateKey(latest.periodStart));
+      nextBillingPeriod = `${next.periodStart} – ${next.periodEnd}`;
+    } catch { /* Historical/manual periods remain visible without breaking admin review. */ }
+  }
   const money = (cents: number) => new Intl.NumberFormat("en", { style: "currency", currency: payment.currency }).format(cents / 100);
   const facts = [
     ["Payment", payment.id], ["Status", payment.status], ["Kind", payment.kind], ["Learner", e.student.fullName],
@@ -26,6 +36,8 @@ export default async function AdminCoursePaymentPage({ params }: { params: Promi
     ["Pricing rule / revision", `${payment.pricingRuleVersion} / ${payment.revision}`],
     ["Discount", money(payment.discountAmountCents)], ["Final amount", `${money(payment.finalAmountCents)} ${payment.currency}`],
     ["Created", formatPaymentDeadline("en", payment.createdAt)], ["Original deadline", formatPaymentDeadline("en", payment.expiresAt)],
+    ["Due", payment.dueAt ? formatPaymentDeadline("en", payment.dueAt) : "Initial enrollment window"],
+    ["Derived next billing period", nextBillingPeriod],
     ["Verified", payment.verifiedAt ? `${formatPaymentDeadline("en", payment.verifiedAt)} · ${payment.verifiedByAdmin?.displayName}` : "Not verified"],
   ];
   return <Container className="max-w-5xl space-y-6 py-10">
@@ -56,8 +68,11 @@ export default async function AdminCoursePaymentPage({ params }: { params: Promi
         {s.rejectionReason && <p>Reason shared with payer: {s.rejectionReason}</p>}
       </article>)}
     </section>
-    {payment.kind === "INITIAL_ENROLLMENT" && payment.status === "PROOF_SUBMITTED" && e.status === "PENDING_PAYMENT" && !e.archivedAt && !e.portalAccess && current
-      ? <CoursePaymentReviewForm key={current.id} paymentId={payment.id} submissionId={current.id} afterDeadline={payment.expiresAt <= new Date()} />
-      : <p className="rounded-lg bg-muted p-4">This payment is not currently eligible for initial-payment review.</p>}
+    <section className="space-y-3"><h2 className="text-2xl">Enrollment payment history</h2>{e.payments.map(item => <Link key={item.id} href={`/admin/course-payments/${item.id}`} className="block rounded-lg border p-3"><strong>{item.kind} · {item.status}</strong><br />{item.periodStart.toISOString().slice(0,10)} – {item.periodEnd.toISOString().slice(0,10)} · {money(item.finalAmountCents)}</Link>)}</section>
+    {payment.status === "PROOF_SUBMITTED" && current && !e.archivedAt
+      && ((payment.kind === "INITIAL_ENROLLMENT" && e.status === "PENDING_PAYMENT" && !e.portalAccess)
+        || (payment.kind === "MONTHLY" && e.status === "ACTIVE" && Boolean(e.portalAccess)))
+      ? <CoursePaymentReviewForm key={current.id} paymentId={payment.id} submissionId={current.id} afterDeadline={payment.expiresAt <= new Date()} kind={payment.kind} />
+      : <p className="rounded-lg bg-muted p-4">This payment is not currently eligible for review.</p>}
   </Container>;
 }

@@ -6,6 +6,8 @@ import { getPaymentScreenshotSignedUrl } from "@/lib/payment-screenshots";
 
 export const PAYMENT_QUEUE_FILTERS = ["PROOF_SUBMITTED", "PENDING", "VERIFIED", "EXPIRED", "PAST_DUE", "CANCELLED"] as const;
 export type PaymentQueueFilter = typeof PAYMENT_QUEUE_FILTERS[number];
+export const PAYMENT_KIND_FILTERS = ["ALL", "INITIAL_ENROLLMENT", "MONTHLY"] as const;
+export type PaymentKindFilter = typeof PAYMENT_KIND_FILTERS[number];
 export function paymentQueueFilter(raw?: string): PaymentQueueFilter {
   return PAYMENT_QUEUE_FILTERS.find(value => value === raw) ?? "PROOF_SUBMITTED";
 }
@@ -14,9 +16,9 @@ const enrollmentInclude = {
   student: true, customer: true, coursePlan: true, cohort: true, currentCohortSeat: true, portalAccess: true,
 } satisfies Prisma.CourseEnrollmentInclude;
 
-export async function listAdminCoursePayments(status: PaymentQueueFilter, page = 1) {
+export async function listAdminCoursePayments(status: PaymentQueueFilter, page = 1, kind: PaymentKindFilter = "ALL") {
   await courseAdmin();
-  const where = { status };
+  const where = { status, ...(kind === "ALL" ? {} : { kind }) };
   const [payments, count] = await Promise.all([
     prisma.coursePayment.findMany({
       where, include: { enrollment: { include: enrollmentInclude }, submissions: { orderBy: { attemptNumber: "desc" }, take: 1 } },
@@ -35,7 +37,7 @@ export async function listAdminCoursePayments(status: PaymentQueueFilter, page =
 export async function getAdminCoursePayment(paymentId: string) {
   await courseAdmin();
   const payment = await prisma.coursePayment.findUnique({ where: { id: paymentId }, include: {
-    enrollment: { include: enrollmentInclude },
+    enrollment: { include: { ...enrollmentInclude, payments: { select: { id: true, kind: true, status: true, periodStart: true, periodEnd: true, dueAt: true, finalAmountCents: true }, orderBy: { periodStart: "desc" } } } },
     submissions: { orderBy: { attemptNumber: "desc" }, include: { reviewedByAdmin: { select: { displayName: true } } } },
     verifiedByAdmin: { select: { displayName: true } },
   } });

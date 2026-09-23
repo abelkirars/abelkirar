@@ -18,7 +18,7 @@ function row(overrides: Record<string, unknown> = {}) {
     senderEmailSnapshot: "courses@example.invalid", attemptCount: 1, firstAttemptAt: now,
     nextAttemptAt: now, leaseToken: "lease", submission: null,
     payment: {
-      status: "PENDING", kind: "INITIAL_ENROLLMENT", expiresAt: new Date(now.getTime() + 47 * 60 * 60 * 1000),
+      status: "PENDING", kind: "INITIAL_ENROLLMENT", dueAt: null, expiresAt: new Date(now.getTime() + 47 * 60 * 60 * 1000),
       enrollment: {
         status: "PENDING_PAYMENT", archivedAt: null, cancellationReason: null, portalAccess: null,
         customer: { status: "ACTIVE", archivedAt: null, deactivatedAt: null },
@@ -73,6 +73,35 @@ describe("course payment notification worker", () => {
     expect(await deliverCoursePaymentNotifications(1, now)).toMatchObject({ cancelled: 1, sent: 0 });
     expect(mocks.send).not.toHaveBeenCalled();
     expect(mocks.updateMany).toHaveBeenLastCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: "CANCELLED", lastErrorCode: "STATE_NOT_ELIGIBLE" }) }));
+  });
+
+  it.each([
+    ["PAYMENT_REQUIRED", 100],
+    ["MONTHLY_PAYMENT_REMINDER_72H", 72],
+    ["MONTHLY_PAYMENT_REMINDER_24H", 24],
+  ])("delivers eligible monthly %s notifications", async (kind, hours) => {
+    mocks.findMany.mockResolvedValue([row({
+      kind,
+      payment: {
+        ...row().payment,
+        kind: "MONTHLY",
+        dueAt: new Date(now.getTime() + Number(hours) * 60 * 60 * 1000),
+        enrollment: { ...row().payment.enrollment, status: "ACTIVE", portalAccess: { status: "ENABLED" } },
+      },
+    })]);
+    expect(await deliverCoursePaymentNotifications(1, now)).toMatchObject({ sent: 1, cancelled: 0 });
+  });
+
+  it("delivers past-due notice without suspending or requiring absent access", async () => {
+    mocks.findMany.mockResolvedValue([row({
+      kind: "MONTHLY_PAYMENT_PAST_DUE",
+      payment: {
+        ...row().payment,
+        kind: "MONTHLY", status: "PAST_DUE", dueAt: new Date(now.getTime() - 1),
+        enrollment: { ...row().payment.enrollment, status: "ACTIVE", portalAccess: { status: "ENABLED" } },
+      },
+    })]);
+    expect(await deliverCoursePaymentNotifications(1, now)).toMatchObject({ sent: 1 });
   });
 
   it("retries a transient provider failure with bounded backoff and redacted code", async () => {
