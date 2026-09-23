@@ -6,6 +6,8 @@ import { randomUUID } from "node:crypto";
 
 vi.mock("server-only", () => ({}));
 const state = vi.hoisted(() => ({ adminId: "", authorized: true, advanceAtUpload: null as Date | null }));
+const expiredNotify = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/notifications/course-payment-expired", () => ({ notifyCoursePaymentExpired: expiredNotify }));
 vi.mock("@/lib/admin/dal", () => ({ verifyAdminSession: async () => state.authorized ? { adminId: state.adminId } : null }));
 vi.mock("@/lib/supabase-server", () => ({ createSupabaseServerClient: vi.fn() }));
 vi.mock("./course-payment-proofs", () => ({
@@ -27,6 +29,7 @@ describe.runIf(Boolean(process.env.COURSE_REVIEW_TEST_DATABASE_URL))("PostgreSQL
   let submit: typeof import("./submit-course-payment-proof").submitCoursePaymentProofForCustomer;
   let expire: typeof import("./expire-initial-payments").expireInitialPayment;
   let portalGuard: typeof import("@/lib/student/dal").hasStudentPortalAccess;
+  let runJob: typeof import("./expiration-job").runInitialPaymentExpirationJob;
   const day = 86400000;
   beforeAll(async () => {
     db = (await import("@/lib/db")).prisma;
@@ -35,9 +38,10 @@ describe.runIf(Boolean(process.env.COURSE_REVIEW_TEST_DATABASE_URL))("PostgreSQL
     submit = (await import("./submit-course-payment-proof")).submitCoursePaymentProofForCustomer;
     expire = (await import("./expire-initial-payments")).expireInitialPayment;
     portalGuard = (await import("@/lib/student/dal")).hasStudentPortalAccess;
+    runJob = (await import("./expiration-job")).runInitialPaymentExpirationJob;
     state.adminId = (await db.admin.create({ data: { username: randomUUID(), displayName: "Disposable reviewer", passwordHash: "local-test-only" } })).id;
   });
-  afterEach(() => { state.authorized = true; state.advanceAtUpload = null; vi.useRealTimers(); });
+  afterEach(() => { state.authorized = true; state.advanceAtUpload = null; vi.useRealTimers(); vi.restoreAllMocks(); expiredNotify.mockReset(); });
   afterAll(async () => { await db?.$disconnect(); });
 
   async function fixture({ self = false, group = true, expired = false, pending = false, deadline }: {
@@ -85,6 +89,20 @@ describe.runIf(Boolean(process.env.COURSE_REVIEW_TEST_DATABASE_URL))("PostgreSQL
   async function assertInactive(f: Fixture) {
     expect(await db.coursePortalAccess.count({ where: { enrollmentId: f.enrollment.id } })).toBe(0);
     expect((await db.studentProfile.findUniqueOrThrow({ where: { id: f.learner.id } })).portalAccess).toBe(false);
+  }
+
+  function isolateJob(...ids: string[]) {
+    // Keep each job test independent of the other synthetic fixtures while
+    // retaining the production candidate filters and real PostgreSQL queries.
+    const find = db.coursePayment.findMany.bind(db.coursePayment);
+    vi.spyOn(db.coursePayment, "findMany").mockImplementation(((args?: import("@prisma/client").Prisma.CoursePaymentFindManyArgs) => find({ ...args, where: { ...args?.where, id: { in: ids } } })) as typeof db.coursePayment.findMany);
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    expiredNotify.mockImplementation(async paymentId => {
+      const p = await db.coursePayment.findUniqueOrThrow({ where: { id: paymentId }, include: { enrollment: true } });
+      expect(p.status).toBe("EXPIRED"); expect(p.enrollment.status).toBe("CANCELLED");
+      return { sent: true };
+    });
   }
 
   it("requires an authorized, still-active admin", async () => {
@@ -241,5 +259,66 @@ describe.runIf(Boolean(process.env.COURSE_REVIEW_TEST_DATABASE_URL))("PostgreSQL
     expect(await db.coursePaymentSubmission.findUnique({ where: { id: f.proof!.id } })).toMatchObject({ status: "SUBMITTED", reviewedAt: null });
     expect(await db.courseEnrollment.findUnique({ where: { id: f.enrollment.id } })).toMatchObject({ status: "PENDING_PAYMENT" });
     expect(await db.courseCohortSeat.findUnique({ where: { id: f.cohort!.seats[0].id } })).toMatchObject({ reservedUntil: f.payment.expiresAt });
+  });
+
+  it("scheduler vs scheduler and restart produce one transition, audit and email", async () => {
+    const f = await fixture({ expired: true, pending: true }); isolateJob(f.payment.id);
+    await db.courseCohort.update({ where: { id: f.cohort!.id }, data: { status: "FULL" } });
+    const jobs = await Promise.all([runJob(), runJob()]);
+    expect(jobs.reduce((n, j) => n + j.expired, 0)).toBe(1);
+    expect(expiredNotify).toHaveBeenCalledTimes(1);
+    expect(await db.courseApplicationEvent.count({ where: { applicationId: f.application.id } })).toBe(1);
+    expect(await db.courseCohortSeat.findUnique({ where: { id: f.cohort!.seats[0].id } })).toMatchObject({ currentEnrollmentId: null, reservedUntil: null });
+    expect(await db.courseCohort.findUnique({ where: { id: f.cohort!.id } })).toMatchObject({ status: "OPEN" });
+    expect((await runJob()).expired).toBe(0); expect(expiredNotify).toHaveBeenCalledTimes(1);
+    expect((await db.coursePayment.findUniqueOrThrow({ where: { id: f.payment.id } })).expiresAt).toEqual(f.payment.expiresAt);
+  });
+
+  it("scheduler vs VERIFY protects timely proof and active access", async () => {
+    const f = await fixture({ expired: true }); isolateJob(f.payment.id);
+    await Promise.all([runJob(), review(f.payment.id, verifyInput(f))]);
+    expect(await db.coursePayment.findUnique({ where: { id: f.payment.id } })).toMatchObject({ status: "VERIFIED" });
+    expect(await db.coursePortalAccess.count({ where: { enrollmentId: f.enrollment.id, status: "ENABLED" } })).toBe(1);
+    expect((await runJob()).expired).toBe(0); expect(expiredNotify).not.toHaveBeenCalled();
+  });
+
+  it("scheduler vs REJECT expires once without sending a second rejection email", async () => {
+    const f = await fixture({ expired: true }); isolateJob(f.payment.id);
+    await Promise.all([runJob(), review(f.payment.id, rejectInput(f))]);
+    expect(await db.coursePayment.findUnique({ where: { id: f.payment.id } })).toMatchObject({ status: "EXPIRED" });
+    expect((await runJob()).expired).toBe(0); expect(expiredNotify).not.toHaveBeenCalled();
+    // One expiration event plus the existing explicit admin-rejection event.
+    expect(await db.courseApplicationEvent.count({ where: { applicationId: f.application.id } })).toBe(2);
+    await assertInactive(f);
+  });
+
+  it("scheduler vs proof submission accepts timely proof but never a late proof", async () => {
+    const f = await fixture({ pending: true }); isolateJob(f.payment.id);
+    await Promise.all([runJob(), submit(f.customer.id, f.payment.id, proofFields, proofFile)]);
+    expect(await db.coursePayment.findUnique({ where: { id: f.payment.id } })).toMatchObject({ status: "PROOF_SUBMITTED" });
+    vi.restoreAllMocks();
+    const g = await fixture({ pending: true, expired: true }); isolateJob(g.payment.id);
+    await Promise.allSettled([runJob(), submit(g.customer.id, g.payment.id, proofFields, proofFile)]);
+    expect(await db.coursePayment.findUnique({ where: { id: g.payment.id } })).toMatchObject({ status: "EXPIRED" });
+    expect(await db.coursePaymentSubmission.count({ where: { paymentId: g.payment.id } })).toBe(0);
+    expect(await db.courseCohortSeat.count({ where: { currentEnrollmentId: g.enrollment.id } })).toBe(0);
+  });
+
+  it("scheduler cannot touch an active enrollment even with an inconsistent pending obligation", async () => {
+    const f = await fixture({ pending: true, expired: true }); isolateJob(f.payment.id);
+    await db.courseEnrollment.update({ where: { id: f.enrollment.id }, data: { status: "ACTIVE" } });
+    const access = await db.coursePortalAccess.create({ data: { enrollmentId: f.enrollment.id, status: "ENABLED" } });
+    expect((await runJob()).expired).toBe(0);
+    expect((await expire(f.payment.id)).outcome).toBe("SKIPPED");
+    expect(await db.coursePortalAccess.findUnique({ where: { id: access.id } })).toEqual(access);
+    expect(await db.coursePayment.findUnique({ where: { id: f.payment.id } })).toMatchObject({ status: "PENDING" });
+  });
+
+  it("scheduler notification failure never rolls back expiration", async () => {
+    const f = await fixture({ pending: true, expired: true }); isolateJob(f.payment.id);
+    expiredNotify.mockResolvedValue({ sent: false });
+    expect(await runJob()).toMatchObject({ expired: 1, emailFailed: 1, failed: 0 });
+    expect(await db.coursePayment.findUnique({ where: { id: f.payment.id } })).toMatchObject({ status: "EXPIRED" });
+    expect((await runJob()).expired).toBe(0); expect(expiredNotify).toHaveBeenCalledTimes(1);
   });
 });

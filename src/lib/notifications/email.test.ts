@@ -25,6 +25,16 @@ afterEach(() => {
 });
 
 describe("sendEmail", () => {
+  it.each(["api", "transport"])("redacts course %s failures without leaking provider payloads", async mode => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    if (mode === "api") mockSend.mockResolvedValue({ error: { message: "private provider payload" } });
+    else mockSend.mockRejectedValue(new Error("private provider payload"));
+    const result = await sendEmail({ to: "payer@example.invalid", subject: "Private subject", html: "Private body", redactErrors: true });
+    expect(result.sent).toBe(false);
+    expect(JSON.stringify([result, errorSpy.mock.calls])).not.toContain("private provider payload");
+    expect(JSON.stringify(errorSpy.mock.calls)).not.toContain("payer@example.invalid");
+    errorSpy.mockRestore();
+  });
   it("returns { sent: true } when Resend resolves without an error", async () => {
     mockSend.mockResolvedValue({ data: { id: "email_123" }, error: null });
 

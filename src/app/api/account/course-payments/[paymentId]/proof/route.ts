@@ -87,9 +87,9 @@ export async function POST(
     if (!result.idempotent) {
       try {
         const email = await notifyCoursePaymentProofReceived(result.notification);
-        if (!email.sent) console.error(`[course-payment-proof] Receipt email not sent for payment ${paymentId}:`, email.error);
-      } catch (error) {
-        console.error(`[course-payment-proof] Receipt email failed for payment ${paymentId}:`, error);
+        if (!email.sent) console.error(`[course-payment-proof] Receipt email not sent for payment ${paymentId}`);
+      } catch {
+        console.error(`[course-payment-proof] Receipt email failed for payment ${paymentId}`);
       }
     }
 
@@ -107,7 +107,7 @@ export async function POST(
       const status = error.problem === "NOT_FOUND" ? 404 : 409;
       return NextResponse.json({ error: error.message }, { status });
     }
-    console.error(`[course-payment-proof] Submission failed for payment ${paymentId}:`, error);
+    console.error(`[course-payment-proof] Submission failed for payment ${paymentId}`);
     return NextResponse.json({ error: "Unable to save payment proof" }, { status: 500 });
   }
 }

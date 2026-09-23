@@ -818,6 +818,11 @@
       "closedBody": "This payment is no longer accepting a new proof. Contact Abel Kirar Academy if you need help."
     }
   },
+  "courseExpirationEmail": {
+    "subject": "Your enrollment payment window has expired — Abel Kirar Academy",
+    "body": "The enrollment-completion payment window for {learner} — {course} — has expired. Payment was not verified, the pending enrollment has been cancelled, and course access was not activated.",
+    "next": "Please contact your teacher about next steps. This notice does not confirm a refund or a new payment deadline."
+  },
   "coursePaymentReviewEmails": {
     "verifiedSubject": "Your course payment is verified — Abel Kirar Academy",
     "rejectedSubject": "Your course payment proof needs attention — Abel Kirar Academy",

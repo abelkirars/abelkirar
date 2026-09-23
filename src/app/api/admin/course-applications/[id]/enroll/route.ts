@@ -25,10 +25,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
             securePaymentUrl,
           });
           if (!email.sent) {
-            console.error(`[course-enrollment] Payment-required email not sent for payment ${result.payment.id}:`, email.error);
+            console.error(`[course-enrollment] Payment-required email not sent for payment ${result.payment.id}`);
           }
-        } catch (error) {
-          console.error(`[course-enrollment] Payment-required email failed for payment ${result.payment.id}:`, error);
+        } catch {
+          console.error(`[course-enrollment] Payment-required email failed for payment ${result.payment.id}`);
         }
       } else {
         console.error(`[course-enrollment] Payment-required email skipped for payment ${result.payment.id}: NEXT_PUBLIC_SITE_URL is not configured`);

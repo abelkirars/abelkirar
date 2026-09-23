@@ -28,11 +28,11 @@ export async function notifyCoursePaymentReviewed(result: CoursePaymentReviewRes
   if (site) {
     try {
       const base = new URL(site);
-      if (base.protocol === "https:" || (base.protocol === "http:" && ["localhost", "127.0.0.1"].includes(base.hostname))) {
+      if (!base.username && !base.password && (base.protocol === "https:" || (base.protocol === "http:" && ["localhost", "127.0.0.1"].includes(base.hostname)))) {
         const path = verified && result.selfPayer && result.hasLearnerLogin ? "/student/dashboard" : `/account/course-payments/${encodeURIComponent(result.paymentId)}`;
         link = `<p><a href="${escape(new URL(path, base).toString())}">${escape(t("openAccount"))}</a></p>`;
       }
     } catch { /* A misconfigured link must not block the result notification. */ }
   }
-  return sendEmail({ to: result.customerEmail, subject: t(verified ? "verifiedSubject" : "rejectedSubject"), html: paragraphs.map(p => `<p>${escape(p)}</p>`).join("\n") + link });
+  return sendEmail({ to: result.customerEmail, subject: t(verified ? "verifiedSubject" : "rejectedSubject"), html: paragraphs.map(p => `<p>${escape(p)}</p>`).join("\n") + link, redactErrors: true });
 }

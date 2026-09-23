@@ -27,6 +27,12 @@ export async function notifyCoursePaymentRequired(data: {
   deadline: Date;
   securePaymentUrl: string;
 }): Promise<SendEmailResult> {
+  try {
+    const target = new URL(data.securePaymentUrl);
+    const safeProtocol = target.protocol === "https:" || (target.protocol === "http:" && ["localhost", "127.0.0.1"].includes(target.hostname));
+    if (!safeProtocol || target.username || target.password || target.search || target.hash
+      || !/^\/account\/course-payments\/[^/]+$/.test(target.pathname)) return { sent: false, error: "Invalid authenticated payment link" };
+  } catch { return { sent: false, error: "Invalid authenticated payment link" }; }
   const locale = localeOf(data.locale);
   const t = await getTranslations({ locale, namespace: "coursePaymentEmails" });
   const amount = new Intl.NumberFormat(locale, { style: "currency", currency: data.currency }).format(data.amountCents / 100);
@@ -37,7 +43,7 @@ export async function notifyCoursePaymentRequired(data: {
     `<p><a href="${escapeHtml(data.securePaymentUrl)}">${escapeHtml(t("requiredAction"))}</a></p>`,
     `<p>${escapeHtml(t("requiredSecurity"))}</p>`,
   ].join("\n");
-  return sendEmail({ to: data.customerEmail, subject: t("requiredSubject"), html });
+  return sendEmail({ to: data.customerEmail, subject: t("requiredSubject"), html, redactErrors: true });
 }
 
 export async function notifyCoursePaymentProofReceived(data: {
@@ -56,5 +62,5 @@ export async function notifyCoursePaymentProofReceived(data: {
     `<p>${escapeHtml(t("receivedBody", { learner: data.learnerName, course: data.courseCode.replaceAll("_", " "), amount }))}</p>`,
     `<p><strong>${escapeHtml(t("receivedNotice"))}</strong></p>`,
   ].join("\n");
-  return sendEmail({ to: data.customerEmail, subject: t("receivedSubject"), html });
+  return sendEmail({ to: data.customerEmail, subject: t("receivedSubject"), html, redactErrors: true });
 }

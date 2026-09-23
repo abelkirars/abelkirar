@@ -152,6 +152,7 @@ describe("initial payment expiration", () => {
   };
 
   it("expires payment, cancels pending enrollment, releases the seat and reopens a full cohort", async () => {
+    mocks.tx.courseCohortSeat.updateMany.mockResolvedValue({ count: 1 });
     mocks.tx.coursePayment.findUnique.mockResolvedValue(expiredPayment);
     mocks.tx.coursePaymentSubmission.findFirst.mockResolvedValue(null);
     expect(await expireInitialPayment("payment", new Date("2026-10-09T00:00:00Z"))).toEqual({ paymentId: "payment", outcome: "EXPIRED" });
@@ -171,11 +172,19 @@ describe("initial payment expiration", () => {
     expect(mocks.tx.courseEnrollment.update).not.toHaveBeenCalled();
   });
 
+  it("does not reopen a full cohort when no seat belonging to this enrollment was released", async () => {
+    mocks.tx.coursePayment.findUnique.mockResolvedValue(expiredPayment);
+    mocks.tx.coursePaymentSubmission.findFirst.mockResolvedValue(null);
+    mocks.tx.courseCohortSeat.updateMany.mockResolvedValue({ count: 0 });
+    await expireInitialPayment("payment", new Date("2026-10-09T00:00:00Z"));
+    expect(mocks.tx.courseCohort.update).not.toHaveBeenCalled();
+  });
+
   it("does not cancel an unrelated active enrollment", async () => {
     mocks.tx.coursePayment.findUnique.mockResolvedValue({ ...expiredPayment, enrollment: { ...expiredPayment.enrollment, status: "ACTIVE" } });
     mocks.tx.coursePaymentSubmission.findFirst.mockResolvedValue(null);
     await expireInitialPayment("payment", new Date("2026-10-09T00:00:00Z"));
-    expect(mocks.tx.coursePayment.update).toHaveBeenCalled();
+    expect(mocks.tx.coursePayment.update).not.toHaveBeenCalled();
     expect(mocks.tx.courseEnrollment.update).not.toHaveBeenCalled();
     expect(mocks.tx.courseCohortSeat.updateMany).not.toHaveBeenCalled();
   });

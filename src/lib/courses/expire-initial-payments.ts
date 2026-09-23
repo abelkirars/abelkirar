@@ -16,11 +16,15 @@ export async function expireInitialPaymentInTransaction(
 ): Promise<InitialPaymentExpirationResult> {
   await tx.$queryRaw`SELECT id FROM "CoursePayment" WHERE id = ${paymentId} FOR UPDATE`;
   const payment = await tx.coursePayment.findUnique({ where: { id: paymentId }, include: {
-    enrollment: { include: { cohort: { include: { coursePlan: true, seats: true } } } },
+    enrollment: { include: { portalAccess: true, application: true, cohort: { include: { coursePlan: true, seats: true } } } },
   } });
   if (!payment || payment.kind !== "INITIAL_ENROLLMENT" || payment.status !== "PENDING" || payment.expiresAt > authoritativeNow) {
     return { paymentId, outcome: "SKIPPED" };
   }
+  // An inconsistent initial obligation must never disturb active/history-only
+  // enrollments or manually enabled access. Leave it for administrator review.
+  if (payment.enrollment.status !== "PENDING_PAYMENT" || payment.enrollment.archivedAt
+    || payment.enrollment.portalAccess) return { paymentId, outcome: "SKIPPED" };
   const timelyProof = await tx.coursePaymentSubmission.findFirst({ where: {
     paymentId,
     submittedAt: { lt: payment.expiresAt },
@@ -36,14 +40,23 @@ export async function expireInitialPaymentInTransaction(
       cancellationReason: "INITIAL_PAYMENT_EXPIRED",
     } });
     if (payment.enrollment.cohortId) {
-      await tx.courseCohortSeat.updateMany({
+      const released = await tx.courseCohortSeat.updateMany({
         where: { cohortId: payment.enrollment.cohortId, currentEnrollmentId: payment.enrollmentId },
         data: { currentEnrollmentId: null, assignedAt: null, reservedUntil: null },
       });
-      if (payment.enrollment.cohort?.status === "FULL" && !payment.enrollment.cohort.archivedAt) {
+      if (released.count > 0 && payment.enrollment.cohort?.status === "FULL" && !payment.enrollment.cohort.archivedAt) {
         await tx.courseCohort.update({ where: { id: payment.enrollment.cohortId }, data: { status: "OPEN" } });
       }
     }
+  }
+  if (payment.enrollment.applicationId && payment.enrollment.application) {
+    await tx.courseApplicationEvent.create({ data: {
+      applicationId: payment.enrollment.applicationId,
+      fromStatus: payment.enrollment.application.status,
+      toStatus: payment.enrollment.application.status,
+      actorAdminId: null,
+      note: `System: initial payment ${paymentId} expired; enrollment ${payment.enrollmentId} cancelled (INITIAL_PAYMENT_EXPIRED). Original deadline preserved.`,
+    } });
   }
   return { paymentId, outcome: "EXPIRED" };
 }
@@ -52,7 +65,7 @@ export async function expireInitialPayment(paymentId: string, authoritativeNow =
   return serializable(tx => expireInitialPaymentInTransaction(tx, paymentId, authoritativeNow));
 }
 
-/** Scheduler-ready domain entry point. No cron or public endpoint is installed. */
+/** Domain batch entry point; the scheduled runner adds bounded execution and notification handling. */
 export async function expireEligibleInitialPayments(authoritativeNow = new Date(), limit = 100) {
   const candidates = await prisma.coursePayment.findMany({
     where: { kind: "INITIAL_ENROLLMENT", status: "PENDING", expiresAt: { lte: authoritativeNow } },
