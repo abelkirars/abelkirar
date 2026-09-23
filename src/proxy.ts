@@ -34,7 +34,7 @@ export async function proxy(request: NextRequest) {
 }
 
 async function handleAccountRoute(request: NextRequest, pathname: string) {
-  if (pathname === "/account/login") return NextResponse.next();
+  if (["/account/login", "/account/signup", "/account/confirm"].includes(pathname)) return NextResponse.next();
 
   let response = NextResponse.next({ request });
   const supabase = createServerClient(

@@ -28,17 +28,22 @@ export function AccountLoginForm({ nextPath }: { nextPath: string }) {
       setLoading(false);
       return;
     }
-    const { error: signInError } = await createSupabaseBrowserClient().auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (signInError) {
+    try {
+      const { error: signInError } = await createSupabaseBrowserClient().auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (signInError) {
+        setError(t("invalidCredentials"));
+        setLoading(false);
+        return;
+      }
+      router.replace(nextPath);
+      router.refresh();
+    } catch {
       setError(t("invalidCredentials"));
       setLoading(false);
-      return;
     }
-    router.replace(nextPath);
-    router.refresh();
   }
 
   return (

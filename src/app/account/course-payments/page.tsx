@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { Container } from "@/components/marketing/container";
+import { AccountNavigation } from "@/components/account/account-navigation";
 import { CoursePaymentCustomerDeniedError, CustomerAuthenticationError, CustomerEmailNotVerifiedError, listCurrentCustomerCoursePayments } from "@/lib/courses/course-payment-access";
 import { formatPaymentDeadline } from "@/lib/courses/payment-deadline";
 
@@ -33,6 +34,7 @@ export default async function CoursePaymentHistoryPage() {
     return payment.dueAt <= now ? t("pastDueState") : t("upcoming");
   };
   return <Container className="max-w-4xl space-y-6 py-12"><div><h1 className="font-heading text-3xl font-semibold">{t("historyTitle")}</h1><p className="mt-2 text-muted-foreground">{t("historyDescription")}</p></div>
+    <AccountNavigation />
     {!payments.length && <p>{t("empty")}</p>}
     <div className="space-y-3">{payments.map(payment => <Link key={payment.id} href={`/account/course-payments/${payment.id}`} className="block rounded-xl border border-border bg-card p-5 hover:border-primary focus-visible:outline-2 focus-visible:outline-primary"><div className="flex flex-wrap justify-between gap-2"><strong>{payment.enrollment.student.fullName} · {payment.enrollment.planCodeSnapshot.replaceAll("_", " ")}</strong><span>{state(payment)}</span></div><p className="mt-2">{new Intl.NumberFormat(locale, { style: "currency", currency: payment.currency }).format(payment.finalAmountCents / 100)} · {payment.periodStart.toISOString().slice(0,10)} – {payment.periodEnd.toISOString().slice(0,10)}</p>{payment.dueAt && <p className="mt-1 text-sm text-muted-foreground">{t("dueLabel", { date: formatPaymentDeadline(locale, payment.dueAt) })}</p>}</Link>)}</div>
   </Container>;

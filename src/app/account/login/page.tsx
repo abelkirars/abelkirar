@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { AccountLoginForm } from "@/components/account/account-login-form";
@@ -17,9 +18,10 @@ export const metadata: Metadata = { title: "Course payment login" };
 export default async function CoursePaymentLoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string }>;
+  searchParams: Promise<{ next?: string; confirmation?: string }>;
 }) {
-  const nextPath = safeAccountNextPath((await searchParams).next);
+  const query = await searchParams;
+  const nextPath = safeAccountNextPath(query.next);
   let activeCustomer = false;
   try {
     const customer = await getCurrentAuthenticatedCustomer();
@@ -31,6 +33,7 @@ export default async function CoursePaymentLoginPage({
   }
   if (activeCustomer) redirect(nextPath);
   const t = await getTranslations("coursePaymentLogin");
+  const signupText = await getTranslations("accountSignup");
 
   return (
     <section className="py-16 sm:py-24">
@@ -40,6 +43,8 @@ export default async function CoursePaymentLoginPage({
         <p className="mt-3 text-sm leading-6 text-muted-foreground">{t("description")}</p>
         <div className="mt-8 rounded-2xl border border-border bg-card p-6 shadow-sm">
           <AccountLoginForm nextPath={nextPath} />
+          {query.confirmation === "failed" && <p role="alert" className="mt-4 text-sm text-destructive">{signupText("confirmationFailed")}</p>}
+          <Link href="/account/signup" className="mt-5 inline-block text-sm underline underline-offset-4">{signupText("title")}</Link>
         </div>
       </Container>
     </section>

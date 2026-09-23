@@ -14,6 +14,7 @@ export function SiteHeader() {
   const itemCount = cartTotalItems(items);
   const t = useTranslations("header");
   const tNav = useTranslations("nav");
+  const accountText = useTranslations("accountArea");
 
   return (
     <header className="sticky top-0 z-40 h-(--header-height) border-b border-border/60 bg-background/90 backdrop-blur">
@@ -35,6 +36,7 @@ export function SiteHeader() {
         </nav>
 
         <div className="flex items-center gap-2">
+          <Link href="/account" className="rounded-md px-2 py-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-primary">{accountText("entry")}</Link>
           <LanguageSwitcher className="hidden sm:flex" />
           <Button
             variant="ghost"

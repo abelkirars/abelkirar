@@ -1,4 +1,33 @@
 {
+  "accountSignup": {
+    "title": "Create your account", "description": "Create a payer account for yourself or a learner you manage. Confirm your email before using the account.", "email": "Email", "password": "Password (at least 8 characters)", "notice": "Accounts are optional for browsing and guest store checkout. Creating an account does not enroll a learner, link past orders, or unlock lessons.", "sent": "If registration can proceed, check your email for the confirmation link and open it in this browser. Already registered? Sign in with your existing account.", "error": "Registration could not be completed. Check your details or try again later. Contact the academy if this continues.", "busy": "Creating account…", "submit": "Create account", "signIn": "Already have an account? Sign in", "confirmationFailed": "We could not confirm this link. Use the newest confirmation email in the same browser where you registered, or contact the academy."
+  },
+  "customer360": {
+    "title": "Customer 360", "identityNotice": "Authoritative customer links only. Matching email addresses never merge people or claim historical orders.", "archived": "Archived", "previous": "Previous", "next": "Next", "learners": "Learner relationships", "ended": "Ended / archived", "current": "Current", "applications": "Linked applications", "enrollments": "Enrollment history", "payments": "Course payments and submissions", "orders": "Linked store orders", "revenue": "Verified financial summary", "verifiedCourse": "Verified course payments", "paidStore": "Confirmed paid store orders", "revenueNotice": "Totals use confirmed financial states across all linked records, separated by currency. Pending proofs and refunded store orders are excluded. This is not a net-revenue accounting report.", "limits": "Showing the latest 100 records per section and latest 10 submissions per payment. Open the payment review page for full proof history. Financial totals are not limited to these displayed records."
+  },
+  "coursePromotionAdmin": {
+    "title": "Course promotions", "plan": "Course plan", "name": "Promotion name", "type": "Discount type", "percent": "Percent", "fixed": "USD cents", "value": "Discount value (whole number)", "startsAt": "Starts at (UTC)", "endsAt": "Ends at (UTC)", "countdown": "Display public countdown", "notice": "Initial payments only. Times are UTC, not your browser timezone. Cancellation stops future use but never changes existing payment snapshots.", "saving": "Saving…", "create": "Create promotion", "cancel": "Cancel promotion", "overlap": "This plan already has an active promotion during part of this period.", "invalid": "Unable to save. Check the active plan, dates and discount; the final price must stay positive. Refresh before retrying.", "history": "Latest 100 promotions", "cancelled": "Cancelled", "disabled": "Disabled", "ended": "Ended", "enabled": "Enabled / scheduled"
+  },
+  "coursePlanChoice": {
+    "scheduleAgreed": "Schedule confirmed before enrollment",
+    "legend": "Choose your lesson format", "group": "Small Group · {min}–{max} students", "private": "1-to-1 · Private tuition", "monthly": "/ month · USD",
+    "initialOffer": "First payment offer: {amount}", "ends": "Offer ends {date} UTC", "remaining": "Offer ends in {days}d {hours}h {minutes}m",
+    "snapshotNotice": "Promotions apply to the initial payment only. Eligibility and the final amount are confirmed when your payment obligation is created after approval. Monthly tuition uses the current plan price.",
+    "continue": "Choose & apply", "unavailable": "Enrollment pricing is currently unavailable. Please contact the academy."
+  },
+  "accountArea": {
+    "signOut": "Sign out", "signOutError": "Unable to sign out. Please try again.",
+    "title": "Your academy account", "entry": "Account", "courses": "Courses", "payments": "Payments", "orders": "Store orders", "profile": "Profile", "learners": "Managed learners",
+    "emptyCourses": "No enrollments are linked to your account yet.", "emptyLearners": "No active guardian relationships.", "emptyOrders": "No store orders are linked to this account.",
+    "accessNotice": "Application approval and payment proof do not unlock lessons. Initial payment must be verified by an administrator.",
+    "guardianNotice": "You can manage tuition as the payer. This does not sign you in to a learner's practice portal.",
+    "orderNotice": "Only orders explicitly linked to your account appear here. Guest orders are not matched by email; keep using your original order confirmation.",
+    "verifiedEmail": "Verified through Supabase. Contact the academy for help with account details; learner identity is separate.",
+    "limitNotice": "Showing up to the latest 100 records in each section. Contact the academy for older records.",
+    "enrollmentStatus": { "PENDING_PAYMENT": "Payment required", "ACTIVE": "Active", "PAUSED": "Paused", "COMPLETED": "Completed", "CANCELLED": "Cancelled" },
+    "paymentStatus": { "PENDING_VERIFICATION": "Awaiting verification", "PAID": "Paid", "PAYMENT_NOT_FOUND": "Payment not found", "REFUNDED": "Refunded", "PENDING_QUOTE": "Awaiting quote" },
+    "weekday": { "SUNDAY": "Sunday", "MONDAY": "Monday", "TUESDAY": "Tuesday", "WEDNESDAY": "Wednesday", "THURSDAY": "Thursday", "FRIDAY": "Friday", "SATURDAY": "Saturday" }
+  },
   "coursePricing": {
     "nav": "Course pricing",
     "title": "Course pricing and discounts",
