@@ -6,6 +6,8 @@ import { upsertVerifiedCustomer, verifiedIdentityFromUser } from "@/lib/customer
 import { assertCohortSelectable } from "./cohorts";
 import { courseAdmin, serializable } from "./admin-service";
 import { paymentPriceSnapshot } from "./course-payment-pricing";
+import { enqueueCoursePaymentNotification } from "@/lib/notifications/course-payment-outbox";
+import { paymentRequiredEmail } from "@/lib/notifications/course-payment-content";
 import {
   assertRelationship,
   dateOnlyToUtc,
@@ -325,6 +327,21 @@ export async function createEnrollmentAndInitialPayment(applicationId: string, r
       ...pricing,
       createdAt,
     } });
+
+    await enqueueCoursePaymentNotification(tx, {
+      paymentId: payment.id,
+      kind: "PAYMENT_REQUIRED",
+      payload: paymentRequiredEmail({
+        paymentId: payment.id,
+        customerEmail: customer.email,
+        locale: application.locale || customer.locale,
+        learnerName: learner.fullName,
+        courseCode: plan.code,
+        amountCents: payment.finalAmountCents,
+        currency: payment.currency,
+        deadline: payment.expiresAt,
+      }),
+    });
 
     if (application.customerId !== customer.id || application.studentProfileId !== learner.id) {
       await tx.courseApplication.update({ where: { id: applicationId }, data: {

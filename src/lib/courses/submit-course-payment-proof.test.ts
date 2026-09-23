@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => {
     $queryRaw: vi.fn(),
     coursePayment: { findFirst: vi.fn(), update: vi.fn() },
     coursePaymentSubmission: { findFirst: vi.fn(), aggregate: vi.fn(), create: vi.fn() },
+    coursePaymentNotification: { createMany: vi.fn() },
   };
   return {
     state,
@@ -101,6 +102,7 @@ beforeEach(() => {
     mocks.state.status = "PROOF_SUBMITTED";
     return {};
   });
+  mocks.tx.coursePaymentNotification.createMany.mockResolvedValue({ count: 1 });
 });
 
 describe("course payment proof transaction", () => {
@@ -118,6 +120,13 @@ describe("course payment proof transaction", () => {
       submittedAt: now,
     }), select: { id: true, submittedAt: true } });
     expect(mocks.tx.coursePayment.update).toHaveBeenCalledWith({ where: { id: "payment-1" }, data: { status: "PROOF_SUBMITTED" } });
+    expect(mocks.tx.coursePaymentNotification.createMany).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        paymentId: "payment-1", submissionId: result.submission.id, kind: "PROOF_RECEIVED",
+        deduplicationKey: `SUBMISSION:${result.submission.id}`,
+      }),
+      skipDuplicates: true,
+    });
     expect((mocks.tx as Record<string, unknown>).courseEnrollment).toBeUndefined();
     expect((mocks.tx as Record<string, unknown>).coursePortalAccess).toBeUndefined();
   });

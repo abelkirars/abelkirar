@@ -11,6 +11,8 @@ import {
   type ValidatedCoursePaymentProof,
 } from "./course-payment-proofs";
 import { expireInitialPaymentInTransaction } from "./expire-initial-payments";
+import { enqueueCoursePaymentNotification } from "@/lib/notifications/course-payment-outbox";
+import { proofReceivedEmail } from "@/lib/notifications/course-payment-content";
 
 export type CoursePaymentSubmissionProblem =
   | "EXPIRED"
@@ -176,6 +178,19 @@ export async function submitCoursePaymentProofForCustomer(
       await tx.coursePayment.update({
         where: { id: paymentId },
         data: { status: "PROOF_SUBMITTED" },
+      });
+      await enqueueCoursePaymentNotification(tx, {
+        paymentId,
+        submissionId: submission.id,
+        kind: "PROOF_RECEIVED",
+        payload: proofReceivedEmail({
+          customerEmail: payment.enrollment.customer.email,
+          locale: payment.enrollment.application?.locale || payment.enrollment.customer.locale,
+          learnerName: payment.enrollment.student.fullName,
+          courseCode: payment.enrollment.coursePlan.code,
+          amountCents: payment.finalAmountCents,
+          currency: payment.currency,
+        }),
       });
       return { kind: "CREATED", result: resultFrom(payment, submission, false) };
     });

@@ -4,6 +4,8 @@ import { z } from "zod";
 import { courseAdmin, serializable } from "./admin-service";
 import { assertFourSeats, assertRelationship } from "./preparation-rules";
 import { expireInitialPaymentInTransaction } from "./expire-initial-payments";
+import { enqueueCoursePaymentNotification } from "@/lib/notifications/course-payment-outbox";
+import { paymentReviewedEmail } from "@/lib/notifications/course-payment-content";
 
 export class CoursePaymentReviewError extends Error {}
 
@@ -131,9 +133,28 @@ export async function reviewCoursePayment(paymentId: string, raw: unknown) {
         status: "REJECTED", reviewedAt, reviewedByAdminId: admin.id, rejectionReason: input.reason,
       } });
       await tx.coursePayment.update({ where: { id: paymentId }, data: { status: "PENDING" } });
-      const expiration = await expireInitialPaymentInTransaction(tx, paymentId, reviewedAt);
+      const expiration = await expireInitialPaymentInTransaction(tx, paymentId, reviewedAt, { enqueueNotification: false });
       resultingStatus = expiration.outcome === "EXPIRED" ? "EXPIRED" : "PENDING";
     }
+    await enqueueCoursePaymentNotification(tx, {
+      paymentId,
+      submissionId: input.action === "REJECT" ? submission.id : null,
+      kind: input.action === "VERIFY" ? "PAYMENT_VERIFIED" : "PROOF_REJECTED",
+      payload: paymentReviewedEmail({
+        paymentId,
+        customerEmail: enrollment.customer.email,
+        locale: enrollment.application?.locale || enrollment.customer.locale,
+        learnerName: enrollment.student.fullName,
+        courseCode: enrollment.planCodeSnapshot,
+        amountCents: payment.finalAmountCents,
+        currency: payment.currency,
+        deadline: payment.expiresAt,
+        result: resultingStatus,
+        reason: input.action === "REJECT" ? input.reason : null,
+        selfPayer: enrollment.student.supabaseUserId === enrollment.customer.supabaseUserId,
+        hasLearnerLogin: Boolean(enrollment.student.supabaseUserId),
+      }),
+    });
     if (enrollment.applicationId) await tx.courseApplicationEvent.create({ data: {
       applicationId: enrollment.applicationId, actorAdminId: admin.id,
       fromStatus: "APPROVED", toStatus: "APPROVED",

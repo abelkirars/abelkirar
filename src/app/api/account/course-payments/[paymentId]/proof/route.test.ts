@@ -8,7 +8,6 @@ const mocks = vi.hoisted(() => ({
   parse: vi.fn(),
   validate: vi.fn(),
   submit: vi.fn(),
-  notify: vi.fn(),
 }));
 vi.mock("@/lib/rate-limit", () => ({ checkRateLimit: mocks.rateLimit }));
 vi.mock("@/lib/customer/dal", () => ({
@@ -34,7 +33,6 @@ vi.mock("@/lib/courses/submit-course-payment-proof", () => ({
   },
   submitCoursePaymentProofForCustomer: mocks.submit,
 }));
-vi.mock("@/lib/notifications/course-payment-notifications", () => ({ notifyCoursePaymentProofReceived: mocks.notify }));
 
 import { CustomerAuthenticationError } from "@/lib/customer/dal";
 import { CoursePaymentSubmissionError } from "@/lib/courses/submit-course-payment-proof";
@@ -62,7 +60,6 @@ beforeEach(() => {
     submission: { id: "submission-1", status: "SUBMITTED", submittedAt: new Date() },
     notification: {},
   });
-  mocks.notify.mockResolvedValue({ sent: true });
 });
 
 describe("course payment proof route authorization", () => {

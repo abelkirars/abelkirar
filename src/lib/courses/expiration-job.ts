@@ -2,32 +2,23 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/db";
 import { expireInitialPayment } from "./expire-initial-payments";
-import { notifyCoursePaymentExpired } from "@/lib/notifications/course-payment-expired";
+import { generateInitialPaymentReminders } from "./payment-reminders";
+import { deliverCoursePaymentNotifications } from "@/lib/notifications/course-payment-worker";
 
 const LIMIT = 100;
-const WORK_BUDGET_MS = 30_000;
-const EMAIL_WAIT_MS = 5_000;
-
-/** One notification attempt, not a retry/outbox. Timeout means outcome unknown. */
-async function attemptNotification(paymentId: string): Promise<"sent" | "failed" | "unknown"> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  try {
-    return await Promise.race([
-      notifyCoursePaymentExpired(paymentId).then(result => result.sent ? "sent" as const : "failed" as const),
-      new Promise<"unknown">(resolve => { timer = setTimeout(() => resolve("unknown"), EMAIL_WAIT_MS); }),
-    ]);
-  } catch { return "failed"; }
-  finally { clearTimeout(timer); }
-}
+const WORK_BUDGET_MS = 20_000;
 
 /** No client-supplied clock, targets or batch size. Every candidate is revalidated
- * under the existing serializable payment lock. Only the transition winner emails. */
+ * under the existing serializable payment lock. Only the transition winner queues. */
 export async function runInitialPaymentExpirationJob() {
   const started = performance.now();
   const now = new Date();
   const summary = {
     jobId: randomUUID(), candidates: 0, processed: 0, expired: 0, skipped: 0, failed: 0,
-    emailAccepted: 0, emailFailed: 0, emailUnknown: 0, deferred: 0, hasMore: false, durationMs: 0,
+    notificationsCreated: 0, remindersCreated: 0, notificationsClaimed: 0,
+    notificationsSent: 0, notificationsRetried: 0, notificationsFailed: 0,
+    notificationsCancelled: 0, notificationsUncertain: 0,
+    deferred: 0, hasMore: false, durationMs: 0,
   };
   console.info("[course-expiration] Started", { jobId: summary.jobId });
   try {
@@ -46,18 +37,33 @@ export async function runInitialPaymentExpirationJob() {
         const result = await expireInitialPayment(candidate.id, now);
         if (result.outcome !== "EXPIRED") { summary.skipped++; continue; }
         summary.expired++;
-        // The domain promise has committed. Email can never undo expiration.
-        const delivery = await attemptNotification(candidate.id);
-        if (delivery === "sent") summary.emailAccepted++;
-        else {
-          if (delivery === "unknown") summary.emailUnknown++;
-          else summary.emailFailed++;
-          console.warn("[course-expiration] Notification not confirmed", { jobId: summary.jobId, paymentId: candidate.id, outcome: delivery });
-        }
+        // Expiration and its durable notification record committed together.
+        summary.notificationsCreated++;
       } catch {
         summary.failed++;
         console.error("[course-expiration] Record failed", { jobId: summary.jobId, paymentId: candidate.id });
       }
+    }
+    try {
+      const reminders = await generateInitialPaymentReminders(now);
+      summary.remindersCreated = reminders.created;
+      summary.notificationsCreated += reminders.created;
+      summary.hasMore ||= reminders.hasMore;
+    } catch {
+      summary.failed++;
+      console.error("[course-expiration] Reminder generation failed", { jobId: summary.jobId });
+    }
+    try {
+      const delivery = await deliverCoursePaymentNotifications(20, now);
+      summary.notificationsClaimed = delivery.claimed;
+      summary.notificationsSent = delivery.sent;
+      summary.notificationsRetried = delivery.retried;
+      summary.notificationsFailed = delivery.failed;
+      summary.notificationsCancelled = delivery.cancelled;
+      summary.notificationsUncertain = delivery.uncertain;
+    } catch {
+      summary.failed++;
+      console.error("[course-expiration] Notification worker failed", { jobId: summary.jobId });
     }
     summary.deferred = summary.candidates - summary.processed;
     summary.hasMore ||= summary.deferred > 0;

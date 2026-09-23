@@ -17,7 +17,6 @@ import {
   CoursePaymentSubmissionError,
   submitCoursePaymentProofForCustomer,
 } from "@/lib/courses/submit-course-payment-proof";
-import { notifyCoursePaymentProofReceived } from "@/lib/notifications/course-payment-notifications";
 import {
   CustomerAuthenticationError,
   CustomerEmailNotVerifiedError,
@@ -83,15 +82,6 @@ export async function POST(
     }
     const proof = await validateCoursePaymentProof(file);
     const result = await submitCoursePaymentProofForCustomer(customer.id, paymentId, fields, proof);
-
-    if (!result.idempotent) {
-      try {
-        const email = await notifyCoursePaymentProofReceived(result.notification);
-        if (!email.sent) console.error(`[course-payment-proof] Receipt email not sent for payment ${paymentId}`);
-      } catch {
-        console.error(`[course-payment-proof] Receipt email failed for payment ${paymentId}`);
-      }
-    }
 
     return NextResponse.json({
       ok: true,

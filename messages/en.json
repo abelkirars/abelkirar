@@ -823,6 +823,13 @@
     "body": "The enrollment-completion payment window for {learner} — {course} — has expired. Payment was not verified, the pending enrollment has been cancelled, and course access was not activated.",
     "next": "Please contact your teacher about next steps. This notice does not confirm a refund or a new payment deadline."
   },
+  "coursePaymentReminderEmails": {
+    "subject48": "Enrollment payment reminder — about 48 hours remaining",
+    "subject24": "Enrollment payment reminder — about 24 hours remaining",
+    "body": "Enrollment payment for {learner} — {course} — remains unpaid. Amount: {amount}. The original enrollment-completion deadline is {deadline}.",
+    "notice": "This reminder does not change the deadline. If you already submitted proof and it is awaiting review, no unpaid reminder should be sent.",
+    "action": "Open the secure payment page"
+  },
   "coursePaymentReviewEmails": {
     "verifiedSubject": "Your course payment is verified — Abel Kirar Academy",
     "rejectedSubject": "Your course payment proof needs attention — Abel Kirar Academy",

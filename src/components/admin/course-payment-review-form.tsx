@@ -24,7 +24,7 @@ export function CoursePaymentReviewForm({ paymentId, submissionId, afterDeadline
       const result = await response.json();
       if (!response.ok) { setMessage(result.error || "Review failed. Reload and check the payment."); return; }
       setDone(true);
-      setMessage(`Review saved. Payment: ${result.status}.${result.emailSent === false ? " Notification could not be delivered; the review is saved." : ""}`);
+      setMessage(`Review saved. Payment: ${result.status}. The notification is queued for delivery.`);
       router.refresh();
     } catch { setMessage("Could not confirm the result. Reload before trying again."); }
     finally { setBusy(false); }

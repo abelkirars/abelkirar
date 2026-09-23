@@ -144,6 +144,25 @@ enum CourseTuitionPaymentMethod {
   CASH_APP
 }
 
+enum CoursePaymentNotificationKind {
+  PAYMENT_REQUIRED
+  PROOF_RECEIVED
+  PAYMENT_VERIFIED
+  PROOF_REJECTED
+  INITIAL_PAYMENT_REMINDER_48H
+  INITIAL_PAYMENT_REMINDER_24H
+  INITIAL_PAYMENT_EXPIRED
+}
+
+enum CoursePaymentNotificationStatus {
+  PENDING
+  PROCESSING
+  RETRY
+  SENT
+  FAILED
+  CANCELLED
+}
+
 enum CoursePortalAccessStatus {
   ENABLED
   SUSPENDED
@@ -378,6 +397,7 @@ model CoursePayment {
   promotion         CoursePromotion?          @relation(fields: [promotionId], references: [id], onDelete: Restrict)
   verifiedByAdmin   Admin?                    @relation("CoursePaymentVerifiedBy", fields: [verifiedByAdminId], references: [id], onDelete: Restrict)
   submissions       CoursePaymentSubmission[]
+  notifications     CoursePaymentNotification[]
   supersedesPayment CoursePayment?            @relation("CoursePaymentRevision", fields: [supersedesPaymentId], references: [id], onDelete: Restrict)
   supersededBy      CoursePayment?            @relation("CoursePaymentRevision")
 
@@ -410,10 +430,47 @@ model CoursePaymentSubmission {
 
   payment         CoursePayment @relation(fields: [paymentId], references: [id], onDelete: Restrict)
   reviewedByAdmin Admin?        @relation("CoursePaymentSubmissionReviewedBy", fields: [reviewedByAdminId], references: [id], onDelete: Restrict)
+  notifications   CoursePaymentNotification[] @relation("CoursePaymentNotificationSubmission")
 
   @@unique([paymentId, attemptNumber])
+  @@unique([id, paymentId])
   @@index([status, submittedAt])
   @@index([transactionReference])
+}
+
+/// Durable, server-only course-payment email outbox. The rendered payload is
+/// intentionally snapshotted so every retry uses the exact same recipient and
+/// Resend request body. It contains no proof path, payment credential or token.
+model CoursePaymentNotification {
+  id                    String                          @id @default(cuid())
+  paymentId             String
+  submissionId          String?
+  kind                  CoursePaymentNotificationKind
+  deduplicationKey      String                          @db.VarChar(191)
+  status                CoursePaymentNotificationStatus @default(PENDING)
+  recipientEmailSnapshot String                         @db.VarChar(320)
+  subjectSnapshot       String                          @db.VarChar(300)
+  htmlSnapshot          String
+  senderEmailSnapshot   String?                         @db.VarChar(320)
+  attemptCount          Int                             @default(0)
+  nextAttemptAt         DateTime                        @default(now())
+  leaseToken            String?                         @db.Uuid
+  leaseExpiresAt        DateTime?
+  firstAttemptAt        DateTime?
+  lastAttemptAt         DateTime?
+  sentAt                DateTime?
+  providerMessageId     String?                         @db.VarChar(255)
+  lastErrorCode         String?                         @db.VarChar(64)
+  createdAt             DateTime                        @default(now())
+  updatedAt             DateTime                        @updatedAt
+
+  payment   CoursePayment            @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  submission CoursePaymentSubmission? @relation("CoursePaymentNotificationSubmission", fields: [submissionId, paymentId], references: [id, paymentId], onDelete: Restrict)
+
+  @@unique([paymentId, kind, deduplicationKey])
+  @@index([status, nextAttemptAt])
+  @@index([leaseExpiresAt])
+  @@index([paymentId, createdAt])
 }
 
 /// Billing never mutates this row automatically. PAST_DUE and EXPIRED are

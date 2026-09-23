@@ -3,6 +3,8 @@ import "server-only";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { serializable } from "./admin-service";
+import { enqueueCoursePaymentNotification } from "@/lib/notifications/course-payment-outbox";
+import { paymentExpiredEmail } from "@/lib/notifications/course-payment-content";
 
 export type InitialPaymentExpirationResult = {
   paymentId: string;
@@ -13,10 +15,14 @@ export async function expireInitialPaymentInTransaction(
   tx: Prisma.TransactionClient,
   paymentId: string,
   authoritativeNow: Date,
+  options: { enqueueNotification?: boolean } = {},
 ): Promise<InitialPaymentExpirationResult> {
   await tx.$queryRaw`SELECT id FROM "CoursePayment" WHERE id = ${paymentId} FOR UPDATE`;
   const payment = await tx.coursePayment.findUnique({ where: { id: paymentId }, include: {
-    enrollment: { include: { portalAccess: true, application: true, cohort: { include: { coursePlan: true, seats: true } } } },
+    enrollment: { include: {
+      portalAccess: true, application: true, customer: true, student: true,
+      cohort: { include: { coursePlan: true, seats: true } },
+    } },
   } });
   if (!payment || payment.kind !== "INITIAL_ENROLLMENT" || payment.status !== "PENDING" || payment.expiresAt > authoritativeNow) {
     return { paymentId, outcome: "SKIPPED" };
@@ -57,6 +63,18 @@ export async function expireInitialPaymentInTransaction(
       actorAdminId: null,
       note: `System: initial payment ${paymentId} expired; enrollment ${payment.enrollmentId} cancelled (INITIAL_PAYMENT_EXPIRED). Original deadline preserved.`,
     } });
+  }
+  if (options.enqueueNotification !== false) {
+    await enqueueCoursePaymentNotification(tx, {
+      paymentId,
+      kind: "INITIAL_PAYMENT_EXPIRED",
+      payload: paymentExpiredEmail({
+        customerEmail: payment.enrollment.customer.email,
+        locale: payment.enrollment.application?.locale || payment.enrollment.customer.locale,
+        learnerName: payment.enrollment.student.fullName,
+        courseCode: payment.enrollment.planCodeSnapshot,
+      }),
+    });
   }
   return { paymentId, outcome: "EXPIRED" };
 }

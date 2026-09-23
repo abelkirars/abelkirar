@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => {
     findMany: vi.fn(),
     findFirst: vi.fn(),
     create: vi.fn(),
+    createMany: vi.fn(),
     upsert: vi.fn(),
     update: vi.fn(),
     updateMany: vi.fn(),
@@ -14,6 +15,7 @@ const mocks = vi.hoisted(() => {
   const tx = {
     courseApplication: model(), courseApplicationEvent: model(), coursePlan: model(), courseCohort: model(),
     courseCohortSeat: model(), courseEnrollment: model(), coursePayment: model(), coursePaymentSubmission: model(),
+    coursePaymentNotification: model(),
     coursePromotion: model(), coursePortalAccess: model(), customerStudentRelation: model(), customer: model(),
     studentProfile: model(), $queryRaw: vi.fn(),
   };
@@ -74,6 +76,7 @@ beforeEach(() => {
   mocks.tx.coursePromotion.findFirst.mockResolvedValue(null);
   mocks.tx.courseEnrollment.create.mockImplementation(async ({ data }) => ({ id: "enrollment", ...data }));
   mocks.tx.coursePayment.create.mockImplementation(async ({ data }) => ({ id: "payment", promotionNameSnapshot: null, ...data }));
+  mocks.tx.coursePaymentNotification.createMany.mockResolvedValue({ count: 1 });
 });
 
 describe("final enrollment transaction", () => {
@@ -100,6 +103,10 @@ describe("final enrollment transaction", () => {
     expect(seatData.assignedAt).toEqual(paymentData.createdAt);
     expect(mocks.tx.coursePortalAccess.create).not.toHaveBeenCalled();
     expect(mocks.tx.studentProfile.update).not.toHaveBeenCalled();
+    expect(mocks.tx.coursePaymentNotification.createMany).toHaveBeenCalledWith({
+      data: expect.objectContaining({ paymentId: "payment", kind: "PAYMENT_REQUIRED", deduplicationKey: "PAYMENT" }),
+      skipDuplicates: true,
+    });
   });
 
   it("evaluates promotion eligibility at the same authoritative timestamp and snapshots it", async () => {
@@ -148,7 +155,12 @@ describe("final enrollment transaction", () => {
 describe("initial payment expiration", () => {
   const expiredPayment = {
     id: "payment", kind: "INITIAL_ENROLLMENT", status: "PENDING", expiresAt: new Date("2026-10-08T00:00:00Z"),
-    enrollmentId: "enrollment", enrollment: { id: "enrollment", status: "PENDING_PAYMENT", cohortId: "cohort", cohort: { id: "cohort", status: "FULL", archivedAt: null } },
+    enrollmentId: "enrollment", enrollment: {
+      id: "enrollment", status: "PENDING_PAYMENT", archivedAt: null, cohortId: "cohort",
+      planCodeSnapshot: "BEGINNER_GROUP", portalAccess: null, applicationId: null, application: null,
+      customer: { email: "payer@example.invalid", locale: "en" }, student: { fullName: "Learner" },
+      cohort: { id: "cohort", status: "FULL", archivedAt: null },
+    },
   };
 
   it("expires payment, cancels pending enrollment, releases the seat and reopens a full cohort", async () => {
@@ -161,6 +173,10 @@ describe("initial payment expiration", () => {
     expect(mocks.tx.courseCohortSeat.updateMany).toHaveBeenCalledWith({ where: { cohortId: "cohort", currentEnrollmentId: "enrollment" }, data: { currentEnrollmentId: null, assignedAt: null, reservedUntil: null } });
     expect(mocks.tx.courseCohort.update).toHaveBeenCalledWith({ where: { id: "cohort" }, data: { status: "OPEN" } });
     expect(mocks.tx.coursePortalAccess.update).not.toHaveBeenCalled();
+    expect(mocks.tx.coursePaymentNotification.createMany).toHaveBeenCalledWith({
+      data: expect.objectContaining({ paymentId: "payment", kind: "INITIAL_PAYMENT_EXPIRED", deduplicationKey: "PAYMENT" }),
+      skipDuplicates: true,
+    });
   });
 
   it("preserves a timely reviewable proof after the deadline", async () => {

@@ -35,12 +35,18 @@ describe("sendEmail", () => {
     expect(JSON.stringify(errorSpy.mock.calls)).not.toContain("payer@example.invalid");
     errorSpy.mockRestore();
   });
-  it("returns { sent: true } when Resend resolves without an error", async () => {
+  it("returns the provider message ID when Resend accepts the email", async () => {
     mockSend.mockResolvedValue({ data: { id: "email_123" }, error: null });
 
     const result = await sendEmail({ to: "student@example.com", subject: "Hi", html: "<p>Hi</p>" });
 
-    expect(result).toEqual({ sent: true });
+    expect(result).toEqual({ sent: true, providerMessageId: "email_123" });
+  });
+
+  it("passes a durable idempotency key through the supported Resend options argument", async () => {
+    mockSend.mockResolvedValue({ data: { id: "email_456" }, error: null });
+    await sendEmail({ to: "student@example.com", subject: "Hi", html: "<p>Hi</p>", idempotencyKey: "course-payment-notification/one" });
+    expect(mockSend).toHaveBeenCalledWith(expect.any(Object), { idempotencyKey: "course-payment-notification/one" });
   });
 
   it("returns sent:false with the real message when Resend resolves with an API-level error (never throws)", async () => {
