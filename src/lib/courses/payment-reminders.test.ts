@@ -54,6 +54,9 @@ describe("monthly payment reminder generation", () => {
       kind: "MONTHLY", status: "PENDING",
       enrollment: { status: "ACTIVE", archivedAt: null },
     });
+    expect(mocks.findMany.mock.calls[0][0].where.OR.map((window: { notifications: unknown }) => window.notifications)).toEqual([
+      { none: { kind: "MONTHLY_PAYMENT_REMINDER_72H" } }, { none: { kind: "MONTHLY_PAYMENT_REMINDER_24H" } },
+    ]);
   });
 });
 
@@ -89,6 +92,9 @@ describe("initial payment reminder generation", () => {
     });
     expect(JSON.stringify(args)).not.toContain("PROOF_SUBMITTED");
     expect(args.take).toBe(101);
+    expect(args.where.OR.map((window: { notifications: unknown }) => window.notifications)).toEqual([
+      { none: { kind: "INITIAL_PAYMENT_REMINDER_48H" } }, { none: { kind: "INITIAL_PAYMENT_REMINDER_24H" } },
+    ]);
     expect(mocks.enqueue).not.toHaveBeenCalled();
   });
 

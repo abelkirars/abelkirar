@@ -30,8 +30,8 @@ export async function generateInitialPaymentReminders(now = new Date()) {
       kind: "INITIAL_ENROLLMENT",
       status: "PENDING",
       OR: [
-        { expiresAt: { gt: plus(36), lte: plus(48) } },
-        { expiresAt: { gt: plus(12), lte: plus(24) } },
+        { expiresAt: { gt: plus(36), lte: plus(48) }, notifications: { none: { kind: "INITIAL_PAYMENT_REMINDER_48H" } } },
+        { expiresAt: { gt: plus(12), lte: plus(24) }, notifications: { none: { kind: "INITIAL_PAYMENT_REMINDER_24H" } } },
       ],
       enrollment: {
         status: "PENDING_PAYMENT", archivedAt: null, portalAccess: { is: null },
@@ -73,7 +73,10 @@ export async function generateMonthlyPaymentReminders(now = new Date()) {
   const payments = await prisma.coursePayment.findMany({ where: {
     kind: "MONTHLY", status: "PENDING",
     submissions: { none: { status: "SUBMITTED" } },
-    OR: [{ dueAt: { gt: plus(48), lte: plus(72) } }, { dueAt: { gt: plus(12), lte: plus(24) } }],
+    OR: [
+      { dueAt: { gt: plus(48), lte: plus(72) }, notifications: { none: { kind: "MONTHLY_PAYMENT_REMINDER_72H" } } },
+      { dueAt: { gt: plus(12), lte: plus(24) }, notifications: { none: { kind: "MONTHLY_PAYMENT_REMINDER_24H" } } },
+    ],
     enrollment: { status: "ACTIVE", archivedAt: null, customer: { status: "ACTIVE", archivedAt: null, deactivatedAt: null } },
   }, include: { enrollment: { include: { customer: true, student: true, application: true } } },
   orderBy: [{ dueAt: "asc" }, { id: "asc" }], take: LIMIT + 1 });

@@ -244,6 +244,27 @@ describe.runIf(Boolean(process.env.MONTHLY_BILLING_TEST_DATABASE_URL))("PostgreS
     expect(await db.coursePayment.count({ where: { enrollmentId: { in: [completed.enrollment.id, partial.enrollment.id] }, kind: "MONTHLY" } })).toBe(0);
   });
 
+  it("advances bounded reminder batches beyond an already-enqueued prefix", async () => {
+    const f = await fixture();
+    const ids = Array.from({ length: 101 }, () => randomUUID());
+    const plan = await db.coursePlan.findUniqueOrThrow({ where: { code: "BEGINNER_ONE_TO_ONE" } });
+    await db.studentProfile.createMany({ data: ids.map(id => ({ id, fullName: "Local batch learner" })) });
+    await db.courseEnrollment.createMany({ data: ids.map(id => ({ id, studentId: id, customerId: f.customer.id, coursePlanId: plan.id,
+      status: "ACTIVE" as const, levelSnapshot: plan.level, formatSnapshot: plan.format, planCodeSnapshot: plan.code, billingTimeZone: "America/New_York" })) });
+    const dueAt = new Date("2026-11-01T04:00:00Z");
+    await db.coursePayment.createMany({ data: ids.map(id => ({ id, enrollmentId: id, kind: "MONTHLY" as const, periodStart: new Date("2026-11-01T00:00:00Z"), periodEnd: new Date("2026-12-01T00:00:00Z"), dueAt,
+      expiresAt: new Date("2026-11-08T05:00:00Z"), baseAmountCents: 7000, discountAmountCents: 0, finalAmountCents: 7000, currency: "USD" })) });
+    const now = new Date(dueAt.getTime() - 72 * 60 * 60 * 1000);
+    expect(await reminders(now)).toMatchObject({ created: 100, hasMore: true });
+    expect(await reminders(now)).toMatchObject({ created: 1, hasMore: false });
+    expect(await reminders(now)).toMatchObject({ created: 0, hasMore: false });
+    expect(await db.coursePaymentNotification.count({ where: { paymentId: { in: ids }, kind: "MONTHLY_PAYMENT_REMINDER_72H" } })).toBe(101);
+    // A 72h record must not suppress the distinct later 24h reminder.
+    const nextWindow = new Date(dueAt.getTime() - 24 * 60 * 60 * 1000);
+    await reminders(nextWindow); await reminders(nextWindow);
+    expect(await db.coursePaymentNotification.count({ where: { paymentId: { in: ids }, kind: "MONTHLY_PAYMENT_REMINDER_24H" } })).toBe(101);
+  });
+
   it("enforces immutable billing timezone and payment snapshots while allowing workflow status", async () => {
     const f = await fixture();
     await expect(db.courseEnrollment.update({ where: { id: f.enrollment.id }, data: { billingTimeZone: "Europe/London" } })).rejects.toThrow();
