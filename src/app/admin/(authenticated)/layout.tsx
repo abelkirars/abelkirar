@@ -11,6 +11,8 @@ export default async function AuthenticatedAdminLayout({
 }) {
   const session = await requireAdminPage();
   const pricing = await getTranslations("coursePricing");
+  const promotions = await getTranslations("coursePromotionAdmin");
+  const customers = await getTranslations("customer360");
 
   return (
     <div>
@@ -21,6 +23,8 @@ export default async function AuthenticatedAdminLayout({
             <Link href="/admin/course-applications">Applications</Link>
             <Link href="/admin/course-cohorts">Cohorts</Link>
             <Link href="/admin/course-payments">Course payments</Link>
+            <Link href="/admin/course-promotions">{promotions("title")}</Link>
+            <Link href="/admin/customers">{customers("title")}</Link>
             <Link href="/admin/students">Students</Link>
             <Link href="/admin/milestones">Milestones</Link>
             <Link href="/admin/products">Products</Link>

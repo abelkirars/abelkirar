@@ -3,6 +3,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import {
   createCourseApplicationSchema,
   normalizeOptionalFields,
+  InvalidRequestedCoursePlanError,
 } from "@/lib/validations/course-application";
 import { createCourseApplication, markNotificationsSent } from "@/lib/course-applications";
 import { sendCourseApplicationNotifications } from "@/lib/notifications/course-application-notifications";
@@ -53,6 +54,9 @@ export async function POST(request: Request) {
     // address is already on file nor mails the real applicant a second time.
     created = await createCourseApplication(parsed.data, locale);
   } catch (err) {
+    if (err instanceof InvalidRequestedCoursePlanError) {
+      return NextResponse.json({ error: t("selectLevel") }, { status: 400 });
+    }
     // Sanitized logging only — never the error object, its .message, its
     // .meta, the applicant's email, or the request body.
     //

@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useForm, useWatch, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslations } from "next-intl";
+import type { PublicCoursePlan } from "@/lib/courses/public-plans";
+import { CoursePlanSelector } from "@/components/marketing/course-plan-selector";
 import {
   createCourseApplicationSchema,
   normalizeOptionalFields,
@@ -26,6 +28,8 @@ const SELECT_CLASSES =
 
 export function CourseApplicationForm({
   defaultRequestedLevel,
+  defaultRequestedPlanId,
+  plans = [],
 }: {
   /**
    * Pre-selects the level question. Passed by the course detail pages, which
@@ -37,6 +41,8 @@ export function CourseApplicationForm({
    * Omitted on /courses, where no level has been implied.
    */
   defaultRequestedLevel?: CreateCourseApplicationInput["requestedLevel"];
+  defaultRequestedPlanId?: string;
+  plans?: PublicCoursePlan[];
 } = {}) {
   const t = useTranslations("courseApplicationForm");
   const tValidation = useTranslations("validation");
@@ -56,6 +62,7 @@ export function CourseApplicationForm({
     register,
     handleSubmit,
     control,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<CreateCourseApplicationInput>({
     resolver,
@@ -64,7 +71,7 @@ export function CourseApplicationForm({
     // over this one at first render. With no prop, requestedLevel is undefined,
     // which matches no option, so the browser falls back to the first option in
     // source order: the empty "Choose one" placeholder.
-    defaultValues: { requestedLevel: defaultRequestedLevel },
+    defaultValues: { requestedLevel: defaultRequestedLevel, requestedPlanId: defaultRequestedPlanId },
   });
 
   // useWatch rather than watch(): watch() returns a fresh function on every
@@ -74,8 +81,13 @@ export function CourseApplicationForm({
   // Compared with === true, never truthiness: the field is undefined until the
   // applicant answers, and "unanswered" must not render as "an adult applied".
   const isUnder15 = useWatch({ control, name: "isUnder15" }) === true;
+  const requestedLevel = useWatch({ control, name: "requestedLevel" });
+  const requestedPlanId = useWatch({ control, name: "requestedPlanId" });
+  const eligiblePlans = plans.filter(plan => plan.level === requestedLevel);
+  const selectedPlanId = eligiblePlans.some(plan => plan.id === requestedPlanId) ? requestedPlanId : undefined;
 
   async function onSubmit(data: CreateCourseApplicationInput) {
+    data = { ...data, requestedPlanId: selectedPlanId };
     // The applicant's own phone is not collected for an under-15 application —
     // the field is not rendered, and any value typed before the answer changed
     // is dropped here rather than sent and discarded server-side. The server
@@ -111,6 +123,7 @@ export function CourseApplicationForm({
         </p>
       )}
       <FieldGroup>
+        {eligiblePlans.length > 0 && <CoursePlanSelector plans={eligiblePlans} value={selectedPlanId ?? ""} onChange={id => setValue("requestedPlanId", id, { shouldValidate: true })} />}
         <Field>
           <FieldLabel htmlFor="fullName">{t("fullName")}</FieldLabel>
           <Input id="fullName" autoComplete="name" {...register("fullName")} />

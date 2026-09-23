@@ -1,18 +1,21 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
+import { connection } from "next/server";
+import { getPublicCoursePlans } from "@/lib/courses/public-plans";
+import { CoursePlanSelector } from "./course-plan-selector";
 import { COURSE_LEVELS } from "@/lib/courses-data";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CoursePrice } from "@/components/marketing/course-price";
 
-export function CourseLevelCards() {
-  const t = useTranslations("courseLevels");
+export async function CourseLevelCards() {
+  await connection();
+  const [t, plans] = await Promise.all([getTranslations("courseLevels"), getPublicCoursePlans()]);
 
   return (
     <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
       {COURSE_LEVELS.map((course) => (
-        <Link key={course.slug} href={`/courses/${course.slug}`} className="group">
+        <article key={course.slug} className="group">
           <Card className="h-full transition-shadow group-hover:shadow-lg">
             <CardHeader>
               <Badge variant="secondary" className="w-fit">
@@ -25,14 +28,14 @@ export function CourseLevelCards() {
             </CardHeader>
             <CardContent className="flex h-full flex-col justify-between gap-6">
               <p className="text-muted-foreground">{t(`${course.slug}.description`)}</p>
-              <CoursePrice slug={course.slug} />
-              <span className="inline-flex items-center gap-1 text-sm font-medium text-foreground">
+              <CoursePlanSelector plans={plans.filter(plan => plan.level === course.studentLevel)} slug={course.slug} />
+              <Link href={`/courses/${course.slug}`} className="inline-flex items-center gap-1 text-sm font-medium text-foreground">
                 {t("exploreCurriculum")}
                 <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
-              </span>
+              </Link>
             </CardContent>
           </Card>
-        </Link>
+        </article>
       ))}
     </div>
   );

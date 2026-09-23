@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import {
   toRequestedLevel,
+  InvalidRequestedCoursePlanError,
   type CreateCourseApplicationInput,
 } from "@/lib/validations/course-application";
 import type { Locale } from "@/i18n/locale";
@@ -43,6 +44,12 @@ export async function createCourseApplication(
   // the wire, but the column it lands in is three-state, and every read of it
   // downstream follows the same rule — see prisma/schema.prisma.
   const isChild = input.isUnder15 === true;
+  if (input.requestedPlanId) {
+    const plan = await prisma.coursePlan.findUnique({ where: { id: input.requestedPlanId } });
+    if (!plan || !plan.active || plan.archivedAt || plan.level !== toRequestedLevel(input.requestedLevel)) {
+      throw new InvalidRequestedCoursePlanError("Select an available course plan");
+    }
+  }
 
   try {
     return await prisma.courseApplication.create({
@@ -57,6 +64,7 @@ export async function createCourseApplication(
         // UNSURE becomes null through the single shared mapper. Nothing here
         // may substitute a level the applicant did not choose.
         requestedLevel: toRequestedLevel(input.requestedLevel),
+        ...(input.requestedPlanId ? { requestedPlanId: input.requestedPlanId } : {}),
         kirarModel: input.kirarModel,
         applicantMessage: input.applicantMessage ?? null,
 

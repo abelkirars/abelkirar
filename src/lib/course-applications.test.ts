@@ -2,8 +2,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mockCreateCourseApplication = vi.fn();
 const mockUpdateCourseApplication = vi.fn();
+const mockPlan = vi.fn();
 vi.mock("@/lib/db", () => ({
   prisma: {
+    coursePlan: { findUnique: (...args: unknown[]) => mockPlan(...args) },
     courseApplication: {
       create: (...args: unknown[]) => mockCreateCourseApplication(...args),
       update: (...args: unknown[]) => mockUpdateCourseApplication(...args),
@@ -60,6 +62,18 @@ beforeEach(() => {
 });
 
 describe("createCourseApplication", () => {
+  it("persists a selected valid plan without accepting a client price or identity", async () => {
+    mockPlan.mockResolvedValue({ id: "plan-a", level: "BEGINNER", active: true, archivedAt: null });
+    await createCourseApplication({ ...adultInput, requestedPlanId: "plan-a" }, "en");
+    expect(dataOf().requestedPlanId).toBe("plan-a");
+    expect(dataOf()).not.toHaveProperty("customerId");
+    expect(dataOf()).not.toHaveProperty("finalAmountCents");
+  });
+  it.each([null, { level: "ADVANCED", active: true }, { level: "BEGINNER", active: false }, { level: "BEGINNER", active: true, archivedAt: new Date() }])("rejects unavailable or mismatched requested plans", async plan => {
+    mockPlan.mockResolvedValue(plan);
+    await expect(createCourseApplication({ ...adultInput, requestedPlanId: "plan-a" }, "en")).rejects.toThrow("Select an available");
+    expect(mockCreateCourseApplication).not.toHaveBeenCalled();
+  });
   it("lower-cases the email before the Prisma create call", async () => {
     await createCourseApplication(adultInput, "en");
     expect(dataOf().email).toBe("jane@example.com");

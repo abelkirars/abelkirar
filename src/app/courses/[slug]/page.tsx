@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { Check } from "lucide-react";
 import { COURSE_LEVELS, courseOverviewItems, coursePlanItems } from "@/lib/courses-data";
-import { CoursePrice } from "@/components/marketing/course-price";
+import { getPublicCoursePlans } from "@/lib/courses/public-plans";
+import { CoursePlanSelector } from "@/components/marketing/course-plan-selector";
 import { Container } from "@/components/marketing/container";
 import { CrossPattern } from "@/components/marketing/cross-pattern";
 import { Badge } from "@/components/ui/badge";
@@ -30,21 +32,29 @@ export async function generateMetadata({
 
 export default async function CourseDetailPage({
   params,
+  searchParams,
 }: PageProps<"/courses/[slug]">) {
   const { slug } = await params;
   const course = COURSE_LEVELS.find((c) => c.slug === slug);
   if (!course) notFound();
+  await connection();
+  const plans = await getPublicCoursePlans();
+  const selectedId = (await searchParams).plan;
+  const selectedPlan = plans.find(plan => plan.id === selectedId && plan.level === course.studentLevel);
   const t = await getTranslations("courses");
   const tForm = await getTranslations("courseApplicationForm");
   // The same namespace the cards on /courses read, so a level's name and
   // description are written once and shown identically in both places.
   const tLevels = await getTranslations("courseLevels");
   const tDetails = await getTranslations("courseDetails");
+  const tChoice = await getTranslations("coursePlanChoice");
 
   // Blank slots are dropped rather than rendered as an empty bullet: clearing
   // a topic in the editor is how you end up with a two-point course.
   const topics = courseOverviewItems((slot) => tDetails(`${course.slug}.topic${slot}`));
-  const plan = coursePlanItems((field) => tDetails(`${course.slug}.${field}`));
+  // Legacy copy assumes a universal lesson cadence. The selected cohort / an
+  // explicit private agreement is authoritative; do not promise that cadence.
+  const plan = coursePlanItems((field) => field === "schedule" ? tChoice("scheduleAgreed") : tDetails(`${course.slug}.${field}`));
 
   return (
     <>
@@ -63,7 +73,7 @@ export default async function CourseDetailPage({
           {/* The price stays visible so an applicant can self-qualify before
               applying; the apply CTA sits beneath it rather than replacing it. */}
           <div className="mt-6 text-[#d4a84b]">
-            <CoursePrice slug={course.slug} />
+            <CoursePlanSelector key={selectedPlan?.id ?? course.slug} plans={plans.filter(plan => plan.level === course.studentLevel)} slug={course.slug} defaultValue={selectedPlan?.id} />
           </div>
           <Button
             size="lg"
@@ -119,7 +129,7 @@ export default async function CourseDetailPage({
                 other levels remain selectable, which is what keeps a wrong
                 guess from being silently confirmed. */}
             <div className="mt-6">
-              <CourseApplicationForm defaultRequestedLevel={course.studentLevel} />
+              <CourseApplicationForm key={selectedPlan?.id ?? course.slug} defaultRequestedLevel={course.studentLevel} defaultRequestedPlanId={selectedPlan?.id} plans={plans} />
             </div>
           </div>
         </Container>

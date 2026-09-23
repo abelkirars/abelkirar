@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 type Translator = (key: string) => string;
+export class InvalidRequestedCoursePlanError extends Error {}
 
 /**
  * The four choices the LEVEL question offers on the wire.
@@ -76,6 +77,7 @@ export function createCourseApplicationSchema(t: Translator) {
       phone: z.string().trim().max(40, t("phoneTooLong")).optional(),
       lessonLanguage: z.enum(LESSON_LANGUAGES, t("selectLessonLanguage")),
       requestedLevel: z.enum(REQUESTED_LEVEL_CHOICES, t("selectLevel")),
+      requestedPlanId: z.string().min(1).max(100).optional(),
       kirarModel: z.enum(KIRAR_MODELS, t("selectKirarModel")),
       applicantMessage: z.string().trim().max(1000, t("applicantMessageTooLong")).optional(),
 
