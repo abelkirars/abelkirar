@@ -2,10 +2,11 @@ import { config } from "dotenv";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { hashPassword } from "../src/lib/admin/password";
+import { runtimePoolConfig } from "../src/lib/database-tls";
 
 config({ path: ".env.local" });
 
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+const adapter = new PrismaPg(runtimePoolConfig(process.env.DATABASE_URL));
 const prisma = new PrismaClient({ adapter });
 
 function arg(name: string): string | undefined {

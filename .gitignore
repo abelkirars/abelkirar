@@ -80,6 +80,7 @@ ADMIN_PASSWORD.txt
 
 # Local production database safety artifacts — never commit
 /certs/
+*.crt
 /backups/
 *.dump
 *diagnostic*.log

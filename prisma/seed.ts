@@ -2,6 +2,7 @@ import { config } from "dotenv";
 import { PrismaClient, type Prisma } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import type { ProductCustomizationOptions } from "../src/types/customization";
+import { runtimePoolConfig } from "../src/lib/database-tls";
 
 // Load environment variables
 config({ path: ".env.local" });
@@ -10,7 +11,7 @@ function asJson(value: ProductCustomizationOptions): Prisma.InputJsonValue {
   return value as unknown as Prisma.InputJsonValue;
 }
 
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+const adapter = new PrismaPg(runtimePoolConfig(process.env.DATABASE_URL));
 const prisma = new PrismaClient({ adapter });
 
 const woodFinishOptions: ProductCustomizationOptions = [

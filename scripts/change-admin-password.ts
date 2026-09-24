@@ -4,8 +4,9 @@ config({ path: ".env.local" });
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { hashPassword } from "../src/lib/admin/password";
+import { runtimePoolConfig } from "../src/lib/database-tls";
 
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+const adapter = new PrismaPg(runtimePoolConfig(process.env.DATABASE_URL));
 const prisma = new PrismaClient({ adapter });
 
 const USERNAME = process.env.ADMIN_USERNAME || "abel";
