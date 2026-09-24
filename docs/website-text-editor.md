@@ -71,10 +71,9 @@ verifies that the driver rejects and installs its 1500ms connection timer,
 without asserting how quickly a busy worker schedules it. These tests do not
 measure healthy connection latency from the deployed Vercel region.
 
-Production deployment remains a separate step: local database credentials are
-unavailable, so do not retry the password helper or run local migrations. The
-existing Vercel build runs the reviewed `prisma migrate deploy` before building
-the app. File review/approval must finish before committing or deploying.
+Production migration and application deployment are separate, explicitly
+authorized steps. Builds do not apply migrations. See
+[deployment safety](deployment-safety.md) for the required release order.
 
 ## The one guard worth knowing about
 
@@ -101,14 +100,15 @@ The Amharic `courseDetails` topics are currently seeded with the English text
 
 ```
 npx prisma generate        # required: the client needs the SiteCopy model
-npx prisma migrate deploy  # creates the SiteCopy table
 npm run typecheck
 npm run lint
 npm test
 ```
 
-On Vercel the migration runs as part of `npm run build`
-(`prisma generate && prisma migrate deploy && next build`).
+Provision a disposable local database separately if needed. The explicit
+`npm run db:migrate:deploy` command applies all pending migrations to its target;
+never run it against production without separate approval. On Vercel,
+`npm run build` runs only `prisma generate && next build`.
 
 ## Adding a language
 

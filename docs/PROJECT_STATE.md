@@ -60,7 +60,8 @@ All from [package.json:5-12](../package.json#L5-L12):
 | Script | What it does | Danger |
 |---|---|---|
 | `dev` | `next dev` — local dev server. | Safe. |
-| `build` | `prisma generate && prisma migrate deploy && next build` | **Runs `prisma migrate deploy` against whatever `DATABASE_URL` is active before building.** This applies any pending migrations to that database. Also cannot be run from this local machine — every attempt fails with Prisma error P1001 (cannot reach the Supabase pooler; network limitation of this machine, not a code error). |
+| `build` | `prisma generate && next build` | Generates the client and compiles; never deploys migrations. See [deployment safety](deployment-safety.md). |
+| `db:migrate:deploy` | `prisma migrate deploy` | Explicit, separately authorized operation using `DIRECT_URL`; never an install/build hook. |
 | `start` | `next start` — runs a production build. | Safe (assumes `build` already ran). |
 | `lint` | `eslint` | Safe. |
 | `test` | `vitest run` | Safe. |
@@ -433,7 +434,7 @@ student-dashboard pieces are real, tested, and still invisible or one-directiona
 ## 14. Known constraints
 
 - **`prisma migrate dev` must never be run against this database.** Its seed step calls `prisma.product.deleteMany()` unconditionally ([prisma/seed.ts:64](../prisma/seed.ts#L64)), which would delete every real product row. This project uses diff-and-deploy migrations (`prisma migrate deploy`, hand-written migration SQL) exclusively.
-- **`npm run build` cannot be run from this local machine.** It runs `prisma migrate deploy`, which fails with Prisma error P1001 (cannot reach the Supabase connection pooler) — a network limitation of this machine, not a code defect. Build verification happens via Vercel Preview deployments instead.
+- **Build and migration are separate.** `npm run build` does not connect through the Prisma migration engine or apply migrations. Local builds should use isolated/non-production service configuration. See [deployment safety](deployment-safety.md); a successful build does not establish live database compatibility.
 - **Admin auth and Supabase Auth are fully independent** (§6) — a change to one must never be assumed to affect the other.
 - **RLS is enabled with zero policies** on 22 tables (§4) as defense-in-depth against a hypothetical future PostgREST exposure; it does not, and is not intended to, enforce any of this application's actual authorization logic — that lives entirely in `src/lib/admin/dal.ts` and `src/lib/student/dal.ts`.
 - **Vercel rejects request bodies over roughly 4.5MB before a Route Handler even runs** — below this app's own 8MB-per-file check in [src/lib/public-image-upload.ts](../src/lib/public-image-upload.ts), so a request carrying multiple images near that size can fail with a non-JSON response before any of this app's own validation or error handling ever executes (see `docs/DECISIONS.md`'s 2026-08-11 entry). The admin product-images flow accounts for this by appending one save at a time rather than batching a full gallery into one request; any other multi-file upload path added later needs the same awareness.
@@ -443,4 +444,4 @@ student-dashboard pieces are real, tested, and still invisible or one-directiona
   independently. Its fallback (`"student-files"`) is a bucket that does not exist; the real bucket is
   `student-recordings`. A missing value in any environment produces the same generic "Failed to prepare
   upload" error on the first recording-upload attempt there, with no more specific diagnostic (§8, §13.11).
-- **`npm run lint` and `npm run test` do not type-check, so `npm run typecheck` (`tsc --noEmit`) must be run before every push.** `eslint` has no type-aware rules configured; `vitest` transpiles via esbuild and never type-checks, by design. `next build` is the only command that runs `tsc`, and it's banned on this machine (P1001) — before `typecheck` existed, that was a real blind spot, not a hypothetical one: four consecutive production builds (`9673dd6` through `bbb084f`) failed on Vercel for exactly this reason. See `docs/DECISIONS.md`'s 2026-08-11 entry ("Four failed production builds"). Caveat: `typecheck` is only accurate if `node_modules/@prisma/client` is current — run `npx prisma generate` (also offline-safe, no DB connection) after any schema change, first.
+- **`npm run lint` and `npm run test` do not type-check, so `npm run typecheck` (`tsc --noEmit`) must be run before every push.** `eslint` has no type-aware rules configured; `vitest` transpiles via esbuild without type-checking. `next build` also type-checks and is now decoupled from migrations. Historical type-check failures are recorded in `docs/DECISIONS.md` (2026-08-11). Run `npx prisma generate` (no DB connection) after schema changes so the client types are current.
