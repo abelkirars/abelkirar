@@ -38,7 +38,10 @@ import type { Locale } from "@/i18n/locale";
  */
 export async function createCourseApplication(
   input: CreateCourseApplicationInput,
-  locale: Locale
+  locale: Locale,
+  // Internal server-resolved identity only. Never read from application input
+  // or use an email match to claim an existing row on a duplicate submission.
+  customerId: string | null = null,
 ) {
   // Compared with === true, never truthiness. isUnder15 is a plain boolean on
   // the wire, but the column it lands in is three-state, and every read of it
@@ -54,6 +57,7 @@ export async function createCourseApplication(
   try {
     return await prisma.courseApplication.create({
       data: {
+        ...(customerId ? { customerId } : {}),
         fullName: input.fullName,
         email: input.email.toLowerCase(),
         country: input.country,

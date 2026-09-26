@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mockCheckRateLimit = vi.fn();
+const mockResolveCustomer = vi.fn();
+vi.mock("@/lib/customer/course-application-identity", () => ({
+  resolveCourseApplicationCustomerId: (...args: unknown[]) => mockResolveCustomer(...args),
+  CourseApplicationIdentityError: class extends Error {},
+}));
 vi.mock("@/lib/rate-limit", () => ({
   checkRateLimit: (...args: unknown[]) => mockCheckRateLimit(...args),
   clientIpFrom: (request: Request) => request.headers.get("x-forwarded-for") ?? "unknown",
@@ -38,6 +43,7 @@ import { POST } from "@/app/api/course-applications/route";
 function buildRequest(body: unknown): Request {
   return new Request("http://localhost/api/course-applications", {
     method: "POST",
+    headers: { origin: "http://localhost" },
     body: typeof body === "string" ? body : JSON.stringify(body),
   });
 }
@@ -74,6 +80,7 @@ const createdRow = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockResolveCustomer.mockResolvedValue(null);
   mockCheckRateLimit.mockResolvedValue(true);
   mockSendNotifications.mockResolvedValue({ admin: { sent: true }, applicant: { sent: true } });
   mockMarkNotificationsSent.mockResolvedValue(undefined);

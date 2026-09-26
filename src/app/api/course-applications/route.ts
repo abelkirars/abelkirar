@@ -9,8 +9,14 @@ import { createCourseApplication, markNotificationsSent } from "@/lib/course-app
 import { sendCourseApplicationNotifications } from "@/lib/notifications/course-application-notifications";
 import { checkRateLimit, clientIpFrom } from "@/lib/rate-limit";
 import type { Locale } from "@/i18n/locale";
+import { CourseApplicationIdentityError, resolveCourseApplicationCustomerId } from "@/lib/customer/course-application-identity";
 
 export async function POST(request: Request) {
+  // Same strict Origin pattern as the admin payment/promotion write routes.
+  // Browser guest submissions also supply Origin; never trust forwarded hosts.
+  if (request.headers.get("origin") !== new URL(request.url).origin) {
+    return NextResponse.json({ error: "Invalid request origin" }, { status: 403 });
+  }
   // Obtained before it's needed by either the rate-limit response or Zod
   // validation, so the 429 message is localized too — not just the 400s.
   const t = await getTranslations("validation");
@@ -47,13 +53,17 @@ export async function POST(request: Request) {
   let created: Awaited<ReturnType<typeof createCourseApplication>> = null;
   try {
     const locale = (await getLocale()) as Locale;
+    const customerId = await resolveCourseApplicationCustomerId(request);
     // A caught duplicate returns null. The response below is identical either
     // way — this endpoint must never reveal which one happened — but the null
     // is load-bearing for notifications: only a genuinely new row is
     // announced, so a duplicate submission neither tells an enumerator that an
     // address is already on file nor mails the real applicant a second time.
-    created = await createCourseApplication(parsed.data, locale);
+    created = await createCourseApplication(parsed.data, locale, customerId);
   } catch (err) {
+    if (err instanceof CourseApplicationIdentityError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     if (err instanceof InvalidRequestedCoursePlanError) {
       return NextResponse.json({ error: t("selectLevel") }, { status: 400 });
     }
