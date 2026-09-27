@@ -1,0 +1,22 @@
+[
+  {
+    "file": "string-1",
+    "balanceDb": -1.92
+  },
+  {
+    "file": "string-2",
+    "balanceDb": -1.53
+  },
+  {
+    "file": "string-3",
+    "balanceDb": 1.44
+  },
+  {
+    "file": "string-4",
+    "balanceDb": 0.36
+  },
+  {
+    "file": "string-5",
+    "balanceDb": 1.65
+  }
+]

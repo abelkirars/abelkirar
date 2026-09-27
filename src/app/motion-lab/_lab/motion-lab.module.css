@@ -410,6 +410,114 @@
   pointer-events: none;
 }
 
+/* Sound toggle: three hairlines stand for the strings. */
+.soundToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 2.75rem;
+  padding: 0 0.95rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(250, 247, 239, 0.62);
+  box-shadow: inset 0 0 0 1px rgba(250, 247, 239, 0.18);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition:
+    color var(--dur-state) var(--ease-settle),
+    box-shadow var(--dur-state) var(--ease-settle),
+    background-color var(--dur-state) var(--ease-settle);
+}
+
+.soundToggle:hover {
+  color: var(--ak-ivory);
+  box-shadow: inset 0 0 0 1px rgba(215, 183, 110, 0.55);
+}
+
+.soundToggle[aria-pressed="true"] {
+  color: var(--ak-ivory);
+  background: rgba(215, 183, 110, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(215, 183, 110, 0.6);
+}
+
+.soundStatus {
+  min-width: 2.2em;
+  color: var(--ak-gold-400);
+  letter-spacing: 0.12em;
+}
+
+.soundToggle[data-state="off"] .soundStatus {
+  color: rgba(250, 247, 239, 0.45);
+}
+
+.soundBars {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 14px;
+}
+
+.soundBars > span {
+  width: 1.5px;
+  height: 100%;
+  border-radius: 1px;
+  background: currentColor;
+  opacity: 0.45;
+  scale: 1 0.55;
+  transition:
+    scale var(--dur-state) var(--ease-pluck),
+    opacity var(--dur-state) var(--ease-settle),
+    background-color var(--dur-state) var(--ease-settle);
+}
+
+.soundToggle[data-state="on"] .soundBars > span {
+  opacity: 1;
+  scale: 1 1;
+  background: var(--ak-gold-400);
+  animation: tickRing 700ms linear;
+}
+
+.soundToggle[data-state="on"] .soundBars > span:nth-child(2) {
+  animation-delay: 60ms;
+}
+
+.soundToggle[data-state="on"] .soundBars > span:nth-child(3) {
+  animation-delay: 120ms;
+}
+
+.soundToggle[data-state="loading"] .soundBars > span {
+  opacity: 0.8;
+  scale: 1 0.8;
+  animation: soundTuning 900ms var(--ease-resonate) infinite alternate;
+}
+
+.soundToggle[data-state="loading"] .soundBars > span:nth-child(2) {
+  animation-delay: 150ms;
+}
+
+.soundToggle[data-state="loading"] .soundBars > span:nth-child(3) {
+  animation-delay: 300ms;
+}
+
+@keyframes soundTuning {
+  to {
+    opacity: 0.35;
+  }
+}
+
+.roomToggle {
+  padding: 0 0.85rem;
+}
+
+.instrumentFocus:focus-visible {
+  outline: 1px solid rgba(215, 183, 110, 0.7);
+  outline-offset: 6px;
+  border-radius: 16px;
+}
+
 /* --------------------------------------------------------------------------
    CTA — the "string" button
    -------------------------------------------------------------------------- */
@@ -1283,6 +1391,7 @@
   transition: none;
 }
 
+.lab[data-motion="reduced"] .soundBars > span,
 .lab[data-motion="reduced"] .scrollCueBead,
 .lab[data-motion="reduced"] .bigWordInner,
 .lab[data-motion="reduced"] .swap,

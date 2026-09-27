@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BrandReveal } from "./brand-reveal";
 import { CourseSection } from "./course-section";
 import { HeroDemo } from "./hero-demo";
+import { getKirarAudio } from "./kirar-audio";
 import { InstrumentSection, type InstrumentCopy } from "./instrument-section";
 import { MicroBoard } from "./micro-board";
 import { MotionPrefsProvider, useMotionPrefs } from "./motion-prefs";
@@ -111,6 +112,9 @@ function LabBody({ copy, instruments }: { copy: LabCopy; instruments: Instrument
   const [runs, setRuns] = useState<Record<string, number>>({});
   const replay = (id: SectionId) => () => setRuns((current) => ({ ...current, [id]: (current[id] ?? 0) + 1 }));
   const run = (id: SectionId) => `${id}-${runs[id] ?? 0}-${reduced ? "r" : "f"}`;
+
+  // Leaving the lab silences the instrument and lets the audio device sleep.
+  useEffect(() => () => getKirarAudio().disable(), []);
 
   return (
     <div className={styles.lab} data-motion={reduced ? "reduced" : "full"}>

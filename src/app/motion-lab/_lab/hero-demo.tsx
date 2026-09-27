@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { cn } from "@/lib/utils";
 import { useInView } from "./hooks";
+import { getKirarAudio, type KirarAudio } from "./kirar-audio";
 import { KirarStrings, type KirarStringsHandle, type StringSpec } from "./kirar-strings";
 import { Eyebrow, Fade, RevealText } from "./reveal";
 import { SoundField, type SoundFieldHandle } from "./sound-field";
+import { SoundToggle, type SoundState } from "./sound-toggle";
 import { StringButton } from "./string-button";
 import { pentatonicVoices } from "./string-physics";
 import type { LabCopy } from "./copy";
@@ -29,11 +32,56 @@ export function HeroDemo({ copy, reduced }: { copy: LabCopy["hero"]; reduced: bo
   const [sectionRef, inView] = useInView<HTMLElement>(0.3);
   const stringsRef = useRef<KirarStringsHandle>(null);
   const fieldRef = useRef<SoundFieldHandle>(null);
+  const hintId = useId();
+  // The engine outlives this component (Replay remounts it), so start from its state.
+  const [sound, setSound] = useState<SoundState>(() => (getKirarAudio().enabled ? "on" : "off"));
+  const [room, setRoom] = useState(true);
 
   useEffect(() => {
     // The strum sweeps across the strings as the headline's lines land.
+    // Source "auto": it is silent — only the visitor's own plucks make sound.
     if (inView) stringsRef.current?.strum({ delay: 420, interval: 95, amplitude: 10 });
   }, [inView]);
+
+  useEffect(() => {
+    // Development-only handle for the lab's own browser tests.
+    (window as Window & { __kirarAudio?: KirarAudio }).__kirarAudio = getKirarAudio();
+  }, []);
+
+  function toggleSound() {
+    const audio = getKirarAudio();
+    if (sound === "on" || sound === "loading") {
+      audio.disable();
+      setSound("off");
+      return;
+    }
+    setSound("loading");
+    // enable() creates/resumes the AudioContext synchronously, inside this click.
+    audio.enable().then(
+      () => setSound((current) => (current === "loading" ? "on" : current)),
+      () => {
+        audio.disable();
+        setSound("error");
+      },
+    );
+  }
+
+  function toggleRoom() {
+    const next = !room;
+    setRoom(next);
+    getKirarAudio().setRoom(next);
+  }
+
+  function onInstrumentKey(event: React.KeyboardEvent) {
+    const digit = Number(event.key);
+    if (digit >= 1 && digit <= HERO_STRINGS.length) {
+      event.preventDefault();
+      stringsRef.current?.pluck(digit - 1, { position: 0.5, amplitude: 12, source: "user" });
+    } else if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      stringsRef.current?.strum({ amplitude: 11, source: "user" });
+    }
+  }
 
   return (
     <section ref={sectionRef} className={styles.hero} aria-label="Hero">
@@ -61,22 +109,40 @@ export function HeroDemo({ copy, reduced }: { copy: LabCopy["hero"]; reduced: bo
           </Fade>
         </div>
 
-        <Fade active={inView} delay={200} className={styles.heroInstrument}>
-          <KirarStrings
-            ref={stringsRef}
-            strings={HERO_STRINGS}
-            width={420}
-            height={620}
-            reduced={reduced}
-            pegs
-            bridge
-            onPluck={(event) => fieldRef.current?.ripple(event.clientX, event.clientY, event.strength)}
-          />
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center">
+        <Fade active={inView} delay={200} className="flex flex-col items-center gap-3">
+          <div
+            tabIndex={0}
+            role="group"
+            aria-label="Kirar, five strings"
+            aria-describedby={hintId}
+            aria-keyshortcuts="1 2 3 4 5 Enter"
+            onKeyDown={onInstrumentKey}
+            className={cn(styles.heroInstrument, styles.instrumentFocus, "w-full")}
+          >
+            <KirarStrings
+              ref={stringsRef}
+              strings={HERO_STRINGS}
+              width={420}
+              height={620}
+              reduced={reduced}
+              pegs
+              bridge
+              onPluck={(event) => fieldRef.current?.ripple(event.clientX, event.clientY, event.strength)}
+              onStrike={(event) => {
+                if (event.source === "user") getKirarAudio().strike(event.index, event.strength, event.delayMs);
+              }}
+              onDamp={(index) => getKirarAudio().damp(index)}
+            />
+          </div>
+          <p id={hintId} className="sr-only">
+            Press 1 to 5 to pluck a string, lowest to highest, or Enter to strum. Turn sound on to hear the recordings.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2">
+            <SoundToggle state={sound} room={room} onToggle={toggleSound} onRoomToggle={toggleRoom} />
             <button
               type="button"
-              onClick={() => stringsRef.current?.strum({ amplitude: 11 })}
-              className="pointer-events-auto min-h-11 rounded-full px-4 text-[0.68rem] font-medium tracking-[0.22em] text-[#faf7ef]/55 uppercase transition-colors hover:text-[#faf7ef]"
+              onClick={() => stringsRef.current?.strum({ amplitude: 11, source: "user" })}
+              className="min-h-11 rounded-full px-3 text-[0.68rem] font-medium tracking-[0.22em] text-[#faf7ef]/55 uppercase transition-colors hover:text-[#faf7ef]"
             >
               Pull a string · or sweep across
             </button>

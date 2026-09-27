@@ -32,6 +32,8 @@ export interface PluckOptions {
   /** Anticipation in ms: the string is drawn back before it is released. */
   pull?: number;
   delay?: number;
+  /** Who plucked: only a visitor's own plucks should make sound. */
+  source?: PluckSource;
 }
 
 export interface StrumOptions {
@@ -40,6 +42,21 @@ export interface StrumOptions {
   amplitude?: number;
   position?: number;
   delay?: number;
+  source?: PluckSource;
+}
+
+export type PluckSource = "user" | "auto";
+
+/**
+ * Fired synchronously when a pluck is requested. `delayMs` is when the
+ * string is actually released (after any anticipation), so sound can be
+ * scheduled on the audio clock to meet the visible release exactly.
+ */
+export interface StrikeEvent {
+  index: number;
+  strength: number;
+  delayMs: number;
+  source: PluckSource;
 }
 
 export interface KirarStringsHandle {
@@ -59,6 +76,12 @@ const SAMPLES = 32;
 const MAX_PULL = 26;
 const HIT_PX = 20;
 const RETRIGGER_MS = 70;
+/** Displacement that counts as a full-strength pluck. */
+const FULL_STRENGTH = 16;
+
+function strengthOf(amplitude: number) {
+  return clamp(Math.abs(amplitude) / FULL_STRENGTH, 0.12, 1);
+}
 
 const TONES = {
   onDark: ["#d7b76e", "#e6cf94", "#f0e3bd"],
@@ -88,6 +111,8 @@ export function KirarStrings({
   bridge = false,
   tone = "onDark",
   onPluck,
+  onStrike,
+  onDamp,
   className,
 }: {
   ref?: Ref<KirarStringsHandle>;
@@ -101,6 +126,9 @@ export function KirarStrings({
   /** Gold reads pale on forest, deep on ivory. */
   tone?: "onDark" | "onLight";
   onPluck?: (event: PluckEvent) => void;
+  onStrike?: (event: StrikeEvent) => void;
+  /** A finger landed on string `index` (stops its sound). */
+  onDamp?: (index: number) => void;
   className?: string;
 }) {
   const id = useId();
@@ -117,9 +145,9 @@ export function KirarStrings({
   const timers = useRef(new Set<number>());
 
   // Latest props for callbacks that outlive a render (rAF, timers).
-  const live = useRef({ strings, reduced, onPluck });
+  const live = useRef({ strings, reduced, onPluck, onStrike, onDamp });
   useEffect(() => {
-    live.current = { strings, reduced, onPluck };
+    live.current = { strings, reduced, onPluck, onStrike, onDamp };
   });
 
   useEffect(() => {
@@ -209,9 +237,13 @@ export function KirarStrings({
     });
   }
 
-  function pluck(index: number, { position = 0.5, amplitude = 10, pull = 0, delay = 0 }: PluckOptions = {}) {
+  function pluck(
+    index: number,
+    { position = 0.5, amplitude = 10, pull = 0, delay = 0, source = "auto" }: PluckOptions = {},
+  ) {
     const specs = live.current.strings;
     if (!specs[index]) return;
+    live.current.onStrike?.({ index, strength: strengthOf(amplitude), delayMs: delay + pull, source });
     if (live.current.reduced) {
       later(() => glow(index), delay);
       notify(index, position, amplitude, delay);
@@ -232,7 +264,14 @@ export function KirarStrings({
     notify(index, position, amplitude, delay + pull);
   }
 
-  function strum({ from = "low", interval = 70, amplitude = 9, position = 0.55, delay = 0 }: StrumOptions = {}) {
+  function strum({
+    from = "low",
+    interval = 70,
+    amplitude = 9,
+    position = 0.55,
+    delay = 0,
+    source = "auto",
+  }: StrumOptions = {}) {
     const count = live.current.strings.length;
     for (let k = 0; k < count; k++) {
       const index = from === "low" ? k : count - 1 - k;
@@ -240,6 +279,7 @@ export function KirarStrings({
         position: position + (k % 2 ? 0.03 : -0.03),
         amplitude: amplitude * (1 - k * 0.06),
         delay: delay + k * interval,
+        source,
       });
     }
   }
@@ -253,11 +293,15 @@ export function KirarStrings({
     return { x: p.x, y: p.y, scale: ctm.a || 1 };
   }
 
-  function release(pointerId: number) {
+  /** `silent`: the gesture was taken over (e.g. page scroll) — no sound. */
+  function release(pointerId: number, silent = false) {
     const held = grab.current;
     if (!held || held.pointerId !== pointerId) return;
     grab.current = null;
     svgRef.current?.removeAttribute("data-grabbing");
+    if (!silent) {
+      live.current.onStrike?.({ index: held.index, strength: strengthOf(held.amplitude), delayMs: 0, source: "user" });
+    }
     const start = performance.now();
     excitations.current[held.index].push(
       createExcitation({ start, position: held.position, amplitude: held.amplitude, pull: 0 }),
@@ -286,9 +330,11 @@ export function KirarStrings({
     });
     if (index < 0) return;
     if (live.current.reduced) {
-      pluck(index, { position: u });
+      pluck(index, { position: u, source: "user" });
       return;
     }
+    // The finger lands on the string: whatever it was ringing stops.
+    live.current.onDamp?.(index);
     event.currentTarget.setPointerCapture(event.pointerId);
     event.currentTarget.setAttribute("data-grabbing", "");
     const position = clamp(u, 0.08, 0.92);
@@ -330,22 +376,38 @@ export function KirarStrings({
     const dt = Math.max(8, event.timeStamp - previous.time);
     const speed = Math.hypot(p.x - previous.x, p.y - previous.y) / dt;
     const isMouse = event.pointerType === "mouse";
+    const magnitude = clamp(speed * (isMouse ? 9 : 12), 2.5, isMouse ? 8 : 12);
+    // A fast sweep can cross several strings between two pointer events.
+    // Interpolate where in that interval each string was crossed, so plucks
+    // (and their sounds) keep their true spacing rather than firing at once.
+    const crossings: { index: number; u: number; at: number; sign: number }[] = [];
     live.current.strings.forEach((spec, index) => {
       const a = locateOnString(spec, previous.x, previous.y);
       const b = locateOnString(spec, p.x, p.y);
       if (a.distance === 0 || Math.sign(a.distance) === Math.sign(b.distance)) return;
-      const u = (a.u + b.u) / 2;
+      const at = a.distance / (a.distance - b.distance);
+      const u = a.u + (b.u - a.u) * at;
       if (u < 0.05 || u > 0.95) return;
-      const now = performance.now();
-      if (now - lastPluck.current[index] < RETRIGGER_MS) return;
-      lastPluck.current[index] = now;
-      const magnitude = clamp(speed * (isMouse ? 9 : 12), 2.5, isMouse ? 8 : 12);
-      pluck(index, { position: u, amplitude: Math.sign(b.distance) * magnitude });
+      crossings.push({ index, u, at, sign: Math.sign(b.distance) });
     });
+    if (!crossings.length) return;
+    const first = Math.min(...crossings.map((c) => c.at));
+    const now = performance.now();
+    for (const crossing of crossings) {
+      if (now - lastPluck.current[crossing.index] < RETRIGGER_MS) continue;
+      lastPluck.current[crossing.index] = now;
+      pluck(crossing.index, {
+        position: crossing.u,
+        amplitude: crossing.sign * magnitude,
+        delay: (crossing.at - first) * dt,
+        source: "user",
+      });
+    }
   }
 
   function onPointerEnd(event: React.PointerEvent<SVGSVGElement>) {
-    release(event.pointerId);
+    // pointercancel means the browser took the gesture (usually to scroll).
+    release(event.pointerId, event.type === "pointercancel");
     if (event.type !== "pointerup") last.current = null;
   }
 
