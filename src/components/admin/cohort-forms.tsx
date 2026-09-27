@@ -28,7 +28,7 @@ export function CohortCreateForm({ plans }: { plans: Plan[] }) {
     <label className="block space-y-1">Cohort name<Input name="name" required maxLength={150} placeholder="Beginner Group A" /></label>
     <p className="text-sm text-muted-foreground">Creates four empty seats. No applicant is enrolled or reserved.</p>
     {error && <p role="alert" className="text-destructive">{error}</p>}
-    <Button disabled={busy || plans.length === 0}>{busy ? "Creating…" : "Create draft"}</Button>
+    <Button type="submit" disabled={busy || plans.length === 0}>{busy ? "Creating…" : "Create draft"}</Button>
   </form>;
 }
 export type ScheduleView = { weeklyDay: string; localStartTime: string; durationMinutes: number | null; timeZone: string; courseStartDate: string; courseEndDate: string };
