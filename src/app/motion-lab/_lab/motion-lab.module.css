@@ -1,0 +1,1328 @@
+/* ==========================================================================
+   Abelkirar motion lab — tokens and state-driven motion.
+
+   Palette values are taken from the live site: plan selector forest/gold/
+   ivory (course-plan-selector.tsx), dark-mode gold (#d4a84b), footer forest
+   (#1f4b3f), parchment canvas (#fbf6ec). Timing tokens mirror tokens.ts.
+
+   Rule of the system: components only toggle data-attributes; every
+   transition lives here, so each has an explicit reduced-motion variant.
+   ========================================================================== */
+
+@property --ak-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.lab {
+  --ak-forest-950: #06120d;
+  --ak-forest-900: #0b1d16;
+  --ak-forest-800: #123b2d;
+  --ak-forest-700: #1f4b3f;
+  --ak-gold-200: #f0e3bd;
+  --ak-gold-300: #e6cf94;
+  --ak-gold-400: #d7b76e;
+  --ak-gold-500: #d4a84b;
+  --ak-gold-600: #b89b5e;
+  --ak-gold-800: #8a5f10;
+  --ak-ivory: #faf7ef;
+  --ak-parchment: #fbf6ec;
+  --ak-card: #fffdf8;
+  --ak-line: #ddd6c6;
+  --ak-ink: #182d24;
+  --ak-ink-soft: #52615a;
+
+  --ease-pluck: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-resonate: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-settle: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-release: cubic-bezier(0.5, 0, 0.75, 0);
+  --beat: 720ms;
+  --dur-micro: 180ms;
+  --dur-state: 420ms;
+  --dur-enter: 1000ms;
+  --dur-draw: 1400ms;
+  --stagger-word: 55ms;
+  --stagger-line: 110ms;
+
+  background: var(--ak-parchment);
+  color: var(--ak-ink);
+}
+
+.lab :focus-visible {
+  outline: 2px solid var(--ak-gold-500);
+  outline-offset: 3px;
+}
+
+/* --------------------------------------------------------------------------
+   Typography reveals
+   -------------------------------------------------------------------------- */
+
+/* Masked word: the padding/negative-margin pair gives Fraunces' ascenders and
+   descenders room inside the clip without changing line height. */
+.word {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: top;
+  padding: 0.1em 0.05em 0.18em;
+  margin: -0.1em -0.05em -0.18em;
+}
+
+.wordInner {
+  display: inline-block;
+  translate: 0 112%;
+  transition: translate var(--dur-enter) var(--ease-pluck);
+  transition-delay: var(--d, 0ms);
+}
+
+.reveal[data-reveal="in"] .wordInner {
+  translate: 0 0;
+}
+
+/* Secondary text: no mask, a short rise. Hierarchy through restraint. */
+.fade {
+  opacity: 0;
+  translate: 0 10px;
+  transition:
+    opacity 700ms var(--ease-settle) var(--d, 0ms),
+    translate 900ms var(--ease-pluck) var(--d, 0ms);
+}
+
+.fade[data-reveal="in"] {
+  opacity: 1;
+  translate: 0 0;
+}
+
+/* Eyebrows: tracking settles inward, like a string coming into tune. */
+.track {
+  opacity: 0;
+  letter-spacing: 0.55em;
+  transition:
+    letter-spacing 1500ms var(--ease-pluck) var(--d, 0ms),
+    opacity 900ms linear var(--d, 0ms);
+}
+
+.track[data-reveal="in"] {
+  opacity: 1;
+  letter-spacing: var(--track-to, 0.25em);
+}
+
+/* Ge'ez script loses legibility under wide tracking: settle tighter. */
+:global(html[lang="am"]) .track {
+  letter-spacing: 0.2em;
+}
+
+:global(html[lang="am"]) .track[data-reveal="in"] {
+  letter-spacing: 0.06em;
+}
+
+/* --------------------------------------------------------------------------
+   Lab chrome
+   -------------------------------------------------------------------------- */
+
+.labBar {
+  background: var(--ak-forest-950);
+  color: var(--ak-ivory);
+  border-bottom: 1px solid rgba(215, 183, 110, 0.18);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.25rem;
+  padding: 0 0.85rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  color: rgba(250, 247, 239, 0.78);
+  box-shadow: inset 0 0 0 1px rgba(250, 247, 239, 0.16);
+  transition:
+    color var(--dur-micro) var(--ease-settle),
+    box-shadow var(--dur-state) var(--ease-settle),
+    background-color var(--dur-state) var(--ease-settle);
+}
+
+.chip:hover {
+  color: var(--ak-ivory);
+  box-shadow: inset 0 0 0 1px rgba(215, 183, 110, 0.6);
+}
+
+.chip[aria-pressed="true"] {
+  background: var(--ak-gold-500);
+  color: var(--ak-forest-950);
+  box-shadow: none;
+}
+
+.sectionLabel {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.replay {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.75rem;
+  padding: 0 0.9rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  box-shadow: inset 0 0 0 1px currentColor;
+  opacity: 0.72;
+  transition: opacity var(--dur-micro) var(--ease-settle);
+}
+
+.replay:hover {
+  opacity: 1;
+}
+
+.replay svg {
+  transition: rotate 700ms var(--ease-pluck);
+}
+
+.replay:hover svg {
+  rotate: -200deg;
+}
+
+/* --------------------------------------------------------------------------
+   Kirar strings (SVG)
+   -------------------------------------------------------------------------- */
+
+.strings {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: pan-y;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.strings[data-grabbing] {
+  cursor: grabbing;
+}
+
+.strings[data-static] {
+  cursor: default;
+}
+
+.stringCore {
+  fill: none;
+  stroke-linecap: round;
+  stroke-opacity: calc(0.62 + var(--e, 0) * 0.38);
+}
+
+.stringEnvelope {
+  opacity: calc(var(--e, 0) * 0.1);
+}
+
+/* --------------------------------------------------------------------------
+   01 — Brand title sequence
+   -------------------------------------------------------------------------- */
+
+.brand {
+  position: relative;
+  display: grid;
+  min-height: calc(100svh - var(--header-height, 65px));
+  place-items: center;
+  overflow: hidden;
+  color: var(--ak-ivory);
+  background:
+    radial-gradient(90% 60% at 50% 52%, rgba(31, 75, 63, 0.55) 0%, rgba(11, 29, 22, 0) 70%),
+    linear-gradient(180deg, var(--ak-forest-950) 0%, var(--ak-forest-900) 55%, var(--ak-forest-950) 100%);
+}
+
+.brandGlow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(120vw, 1100px);
+  aspect-ratio: 3 / 1;
+  translate: -50% -50%;
+  background: radial-gradient(closest-side, rgba(212, 168, 75, 0.2), rgba(212, 168, 75, 0));
+  opacity: 0;
+  scale: 0.6 0.4;
+  pointer-events: none;
+  transition:
+    opacity 1600ms var(--ease-pluck),
+    scale 2200ms var(--ease-pluck);
+}
+
+.brand[data-revealed] .brandGlow {
+  opacity: 1;
+  scale: 1 1;
+}
+
+.brandStage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  padding: 0 1rem;
+  will-change: transform, opacity;
+}
+
+.wordmarkMask {
+  overflow: hidden;
+  padding: 0.14em 0.4em 0.12em;
+}
+
+.wordmark {
+  display: block;
+  font-family: var(--font-heading);
+  font-weight: 400;
+  font-size: clamp(2.2rem, 8.4vw, 7rem);
+  line-height: 1;
+  white-space: nowrap;
+  letter-spacing: 0.34em;
+  margin-right: -0.34em;
+  transition:
+    letter-spacing 2000ms var(--ease-pluck),
+    margin-right 2000ms var(--ease-pluck);
+}
+
+.brand[data-revealed] .wordmark {
+  letter-spacing: 0.16em;
+  margin-right: -0.16em;
+}
+
+.letter {
+  display: inline-block;
+  opacity: 0;
+  translate: 0 108%;
+  filter: blur(6px);
+  transition:
+    translate 1150ms var(--ease-pluck) var(--d, 0ms),
+    filter 900ms var(--ease-settle) var(--d, 0ms),
+    opacity 500ms linear var(--d, 0ms);
+}
+
+.brand[data-revealed] .letter {
+  opacity: 1;
+  translate: 0 0;
+  filter: blur(0);
+}
+
+.brandString {
+  width: min(86vw, 880px);
+  /* The string's rest line sits exactly on the mask edge above it. */
+  margin-top: calc(min(86vw, 880px) / -30);
+  scale: 0 1;
+  transition: scale 1000ms var(--ease-resonate);
+}
+
+.brand[data-drawn] .brandString {
+  scale: 1 1;
+}
+
+.scrollCue {
+  position: absolute;
+  left: 50%;
+  bottom: clamp(1.25rem, 4vh, 2.5rem);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  translate: -50% 0;
+  font-size: 0.62rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgba(250, 247, 239, 0.55);
+}
+
+.scrollCueLine {
+  position: relative;
+  width: 1px;
+  height: 52px;
+  overflow: hidden;
+  background: linear-gradient(to bottom, rgba(215, 183, 110, 0), rgba(215, 183, 110, 0.45));
+}
+
+.scrollCueBead {
+  position: absolute;
+  left: -1px;
+  top: 0;
+  width: 3px;
+  height: 14px;
+  border-radius: 2px;
+  background: var(--ak-gold-300);
+  animation: bead 2.6s var(--ease-resonate) infinite;
+}
+
+@keyframes bead {
+  0% {
+    translate: 0 -16px;
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    translate: 0 56px;
+    opacity: 0;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   02 — Hero
+   -------------------------------------------------------------------------- */
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  color: var(--ak-ivory);
+  background: linear-gradient(180deg, var(--ak-forest-950) 0%, var(--ak-forest-900) 100%);
+}
+
+.soundField {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.heroInstrument {
+  position: relative;
+  height: clamp(280px, 62vw, 380px);
+}
+
+@media (min-width: 1024px) {
+  .heroInstrument {
+    height: min(620px, 72vh);
+  }
+}
+
+.heroInstrument::before {
+  /* A faint warm light behind the strings, the only "surface" they need. */
+  content: "";
+  position: absolute;
+  inset: 12% 18%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(212, 168, 75, 0.1), rgba(212, 168, 75, 0));
+  pointer-events: none;
+}
+
+/* --------------------------------------------------------------------------
+   CTA — the "string" button
+   -------------------------------------------------------------------------- */
+
+.cta {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  min-height: 3.25rem;
+  padding: 0 1.6rem;
+  border-radius: 0.65rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  isolation: isolate;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition:
+    scale 260ms var(--ease-settle),
+    background-color var(--dur-state) var(--ease-settle),
+    box-shadow var(--dur-state) var(--ease-settle),
+    color var(--dur-state) var(--ease-settle);
+}
+
+.ctaPrimary {
+  background: var(--ak-gold-500);
+  color: var(--ak-forest-950);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 10px 26px -16px rgba(212, 168, 75, 0.8);
+}
+
+.ctaForest {
+  background: var(--ak-forest-800);
+  color: var(--ak-ivory);
+  box-shadow: 0 10px 26px -18px rgba(18, 59, 45, 0.9);
+}
+
+.ctaGhost {
+  background: transparent;
+  color: var(--ak-ivory);
+  box-shadow: inset 0 0 0 1px rgba(250, 247, 239, 0.26);
+}
+
+.ctaGhostLight {
+  background: transparent;
+  color: var(--ak-ink);
+  box-shadow: inset 0 0 0 1px rgba(24, 45, 36, 0.22);
+}
+
+.ctaArrow {
+  transition: translate 460ms var(--ease-pluck);
+}
+
+.ctaString {
+  position: absolute;
+  left: 1.6rem;
+  right: 1.6rem;
+  bottom: 0.72rem;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.5;
+  scale: 0 1;
+  transform-origin: right center;
+  transition: scale 560ms var(--ease-pluck);
+  pointer-events: none;
+}
+
+.ctaForest .ctaString,
+.ctaGhost .ctaString {
+  background: var(--ak-gold-400);
+  opacity: 0.9;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cta:hover .ctaString {
+    scale: 1 1;
+    transform-origin: left center;
+  }
+  .cta:hover .ctaArrow {
+    translate: 3px 0;
+  }
+  .ctaPrimary:hover {
+    background: #ddb660;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.32),
+      0 14px 32px -16px rgba(212, 168, 75, 0.95);
+  }
+  .ctaForest:hover {
+    background: #15453a;
+  }
+}
+
+.cta:focus-visible .ctaString {
+  scale: 1 1;
+  transform-origin: left center;
+}
+
+.cta:active {
+  scale: 0.985;
+  transition-duration: 90ms;
+}
+
+/* Release: the inner string rings once — tactile confirmation on touch too. */
+.cta[data-plucked] .ctaString {
+  scale: 1 1;
+  transform-origin: left center;
+  animation: stringRing 620ms linear;
+}
+
+@keyframes stringRing {
+  0% { translate: 0 0; }
+  10% { translate: 0 -2.2px; }
+  24% { translate: 0 1.7px; }
+  38% { translate: 0 -1.2px; }
+  53% { translate: 0 0.75px; }
+  70% { translate: 0 -0.35px; }
+  100% { translate: 0 0; }
+}
+
+/* Border illumination: a gold highlight travels the edge once, then rests. */
+.travel {
+  position: relative;
+  isolation: isolate;
+}
+
+.travel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  padding: 1.5px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from var(--ak-angle),
+    rgba(230, 207, 148, 0) 0deg,
+    rgba(230, 207, 148, 0) 170deg,
+    var(--ak-gold-400) 290deg,
+    #fff6dc 342deg,
+    rgba(230, 207, 148, 0) 360deg
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ctaGhost.travel:hover::before,
+  .ctaGhostLight.travel:hover::before {
+    animation: travel 1100ms var(--ease-resonate) forwards;
+  }
+}
+
+.travel[data-travel]::before {
+  animation: travel 1200ms var(--ease-resonate) forwards;
+}
+
+@keyframes travel {
+  0% {
+    --ak-angle: 0deg;
+    opacity: 0;
+  }
+  18% {
+    opacity: 1;
+  }
+  82% {
+    opacity: 1;
+  }
+  100% {
+    --ak-angle: 360deg;
+    opacity: 0;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   03 — Section transition: the panel opens, the divider string is struck
+   -------------------------------------------------------------------------- */
+
+.transitionWrap {
+  background: var(--ak-forest-900);
+}
+
+.panel {
+  background: var(--ak-parchment);
+  clip-path: inset(5% 4% 0 4% round 28px);
+  transition: clip-path 1300ms var(--ease-resonate);
+}
+
+@media (max-width: 639px) {
+  .panel {
+    clip-path: inset(3% 3% 0 3% round 20px);
+  }
+}
+
+.panel[data-reveal="in"] {
+  clip-path: inset(0 0 0 0 round 0px);
+}
+
+.divider {
+  width: min(100%, 760px);
+  margin-inline: auto;
+  scale: 0 1;
+  transition: scale 1200ms var(--ease-resonate) var(--d, 0ms);
+}
+
+.divider[data-reveal="in"] {
+  scale: 1 1;
+}
+
+.pillarRule {
+  width: 1px;
+  height: 56px;
+  background: linear-gradient(to bottom, var(--ak-gold-600), rgba(184, 155, 94, 0));
+  scale: 1 0;
+  transform-origin: top center;
+  transition: scale 1100ms var(--ease-pluck) var(--d, 0ms);
+}
+
+.pillarRule[data-reveal="in"] {
+  scale: 1 1;
+}
+
+/* --------------------------------------------------------------------------
+   04 — Course cards and plan selection
+   -------------------------------------------------------------------------- */
+
+.courseCard {
+  position: relative;
+  border-radius: 20px;
+  background: var(--ak-card);
+  box-shadow:
+    inset 0 0 0 1px var(--ak-line),
+    0 24px 48px -36px rgba(24, 45, 36, 0.4);
+  opacity: 0;
+  translate: 0 28px;
+  transition:
+    opacity 700ms var(--ease-settle) var(--d, 0ms),
+    translate 1000ms var(--ease-pluck) var(--d, 0ms),
+    box-shadow var(--dur-state) var(--ease-settle);
+}
+
+.courseCard[data-reveal="in"] {
+  opacity: 1;
+  translate: 0 0;
+}
+
+.courseCard:focus-within {
+  box-shadow:
+    inset 0 0 0 1px var(--ak-gold-600),
+    0 24px 48px -32px rgba(24, 45, 36, 0.45);
+}
+
+.levelGlyph {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 5px;
+  height: 22px;
+}
+
+.levelTick {
+  width: 1.5px;
+  height: 100%;
+  border-radius: 1px;
+  background: var(--ak-line);
+  scale: 1 0;
+  transform-origin: bottom center;
+  transition: scale 900ms var(--ease-pluck) var(--d, 0ms);
+}
+
+.levelTick[data-lit] {
+  background: var(--ak-gold-600);
+}
+
+.courseCard[data-reveal="in"] .levelTick {
+  scale: 1 1;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .courseCard:hover .levelTick[data-lit] {
+    animation: tickRing 700ms linear;
+    animation-delay: var(--ring, 0ms);
+  }
+}
+
+@keyframes tickRing {
+  0% { translate: 0 0; }
+  12% { translate: 1.6px 0; }
+  28% { translate: -1.2px 0; }
+  45% { translate: 0.7px 0; }
+  65% { translate: -0.3px 0; }
+  100% { translate: 0 0; }
+}
+
+.plan {
+  position: relative;
+  display: block;
+  cursor: pointer;
+  border-radius: 14px;
+  padding: 0.95rem 1rem;
+  background: var(--ak-ivory);
+  color: var(--ak-ink);
+  box-shadow: inset 0 0 0 1px var(--ak-line);
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color var(--dur-state) var(--ease-settle),
+    color var(--dur-state) var(--ease-settle),
+    box-shadow var(--dur-state) var(--ease-settle),
+    scale var(--dur-state) var(--ease-settle);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .plan:not([data-selected]):hover {
+    box-shadow:
+      inset 0 0 0 1px var(--ak-gold-600),
+      0 8px 20px -16px rgba(24, 45, 36, 0.4);
+  }
+}
+
+.plan[data-selected] {
+  background: var(--ak-forest-800);
+  color: var(--ak-ivory);
+  box-shadow:
+    inset 0 0 0 1px var(--ak-gold-600),
+    0 16px 32px -18px rgba(18, 59, 45, 0.7);
+  scale: 1.02;
+}
+
+.plan:active {
+  scale: 0.99;
+  transition-duration: 120ms;
+}
+
+.plan:has(input:focus-visible) {
+  outline: 2px solid var(--ak-gold-600);
+  outline-offset: 3px;
+}
+
+.planMark {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  flex: none;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(24, 45, 36, 0.28);
+  transition: box-shadow var(--dur-state) var(--ease-settle), background-color var(--dur-state) var(--ease-settle);
+}
+
+.plan[data-selected] .planMark {
+  background: var(--ak-gold-400);
+  box-shadow: none;
+}
+
+.planCheck {
+  fill: none;
+  stroke: var(--ak-forest-950);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset 360ms var(--ease-settle) 120ms;
+}
+
+.plan[data-selected] .planCheck {
+  stroke-dashoffset: 0;
+}
+
+.roll {
+  display: inline-grid;
+  overflow: hidden;
+  vertical-align: bottom;
+  padding: 0.08em 0 0.12em;
+  margin: -0.08em 0 -0.12em;
+}
+
+.roll > span {
+  grid-area: 1 / 1;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.rollIn {
+  animation: rollInUp 720ms var(--ease-pluck) 110ms both;
+}
+
+.rollOut {
+  animation: rollOutUp 360ms var(--ease-release) both;
+}
+
+.roll[data-dir="down"] .rollIn {
+  animation-name: rollInDown;
+}
+
+.roll[data-dir="down"] .rollOut {
+  animation-name: rollOutDown;
+}
+
+@keyframes rollInUp {
+  from { translate: 0 100%; }
+  to { translate: 0 0; }
+}
+
+@keyframes rollOutUp {
+  from { translate: 0 0; opacity: 1; }
+  to { translate: 0 -100%; opacity: 0; }
+}
+
+@keyframes rollInDown {
+  from { translate: 0 -100%; }
+  to { translate: 0 0; }
+}
+
+@keyframes rollOutDown {
+  from { translate: 0 0; opacity: 1; }
+  to { translate: 0 100%; opacity: 0; }
+}
+
+/* --------------------------------------------------------------------------
+   05 — Instruments
+   -------------------------------------------------------------------------- */
+
+.instruments {
+  position: relative;
+  overflow: hidden;
+  color: var(--ak-ivory);
+  background:
+    radial-gradient(70% 55% at 70% 45%, rgba(31, 75, 63, 0.5), rgba(6, 18, 13, 0) 70%),
+    var(--ak-forest-950);
+}
+
+.bigWord {
+  font-family: var(--font-heading);
+  font-size: clamp(4.5rem, 16vw, 13rem);
+  font-weight: 500;
+  line-height: 0.82;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(215, 183, 110, 0.26);
+  translate: var(--px, 0px) 0;
+}
+
+.bigWordMask {
+  display: block;
+  overflow: hidden;
+  padding: 0.06em 0 0.1em;
+}
+
+.bigWordInner {
+  display: block;
+  animation: bigWordIn 1100ms var(--ease-pluck) both;
+}
+
+@keyframes bigWordIn {
+  from { translate: 0 105%; }
+  to { translate: 0 0; }
+}
+
+.art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.artPath {
+  fill: none;
+  stroke: var(--ak-gold-400);
+  stroke-width: 1.3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset var(--dur-draw) var(--ease-resonate) var(--d, 0ms);
+}
+
+.artString {
+  stroke: var(--ak-gold-200);
+  stroke-width: 0.7;
+  opacity: 0.85;
+  transform-box: fill-box;
+}
+
+.art[data-drawn] .artPath {
+  stroke-dashoffset: 0;
+}
+
+.art[data-leaving] {
+  opacity: 0;
+  scale: 0.985;
+  transition:
+    opacity 380ms var(--ease-release),
+    scale 380ms var(--ease-release);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .artStage:hover .art:not([data-leaving]) .artString {
+    animation: tickRing 760ms linear;
+    animation-delay: var(--ring, 0ms);
+  }
+}
+
+.tab {
+  position: relative;
+  min-height: 2.75rem;
+  text-align: left;
+  font-family: var(--font-heading);
+  color: rgba(250, 247, 239, 0.42);
+  transition: color var(--dur-state) var(--ease-settle);
+}
+
+.tab:hover {
+  color: rgba(250, 247, 239, 0.75);
+}
+
+.tab[aria-selected="true"] {
+  color: var(--ak-ivory);
+}
+
+.tabMarker {
+  position: absolute;
+  left: -1.1rem;
+  top: 50%;
+  width: 0.55rem;
+  height: 1px;
+  background: var(--ak-gold-400);
+  scale: 0 1;
+  transform-origin: left center;
+  transition: scale var(--dur-state) var(--ease-pluck);
+}
+
+.tab[aria-selected="true"] .tabMarker {
+  scale: 1 1;
+}
+
+.swap {
+  animation: swapIn 700ms var(--ease-pluck) both;
+}
+
+@keyframes swapIn {
+  from {
+    opacity: 0;
+    translate: 0 10px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+.photo {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  clip-path: inset(9% 7% 9% 7% round 18px);
+  transition: clip-path 1500ms var(--ease-pluck) var(--d, 0ms);
+}
+
+.photo[data-reveal="in"] {
+  clip-path: inset(0 0 0 0 round 18px);
+}
+
+.photoInner {
+  position: absolute;
+  inset: -6% 0;
+  translate: 0 var(--py, 0px);
+}
+
+.photoImg {
+  scale: 1.16;
+  transition: scale 2400ms var(--ease-pluck) var(--d, 0ms);
+}
+
+.photo[data-reveal="in"] .photoImg {
+  scale: 1.02;
+}
+
+/* --------------------------------------------------------------------------
+   06 — Microinteractions
+   -------------------------------------------------------------------------- */
+
+.tile {
+  border-radius: 18px;
+  background: var(--ak-card);
+  box-shadow: inset 0 0 0 1px var(--ak-line);
+}
+
+.tileDark {
+  background: var(--ak-forest-900);
+  color: var(--ak-ivory);
+  box-shadow: none;
+}
+
+.navDemo {
+  position: relative;
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.navItem {
+  position: relative;
+  flex: none;
+  min-height: 2.75rem;
+  padding: 0 0.8rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgba(24, 45, 36, 0.6);
+  transition: color 260ms var(--ease-settle);
+}
+
+.navItem:hover,
+.navItem[aria-current="page"] {
+  color: var(--ak-ink);
+}
+
+.navIndicator {
+  position: absolute;
+  left: 0;
+  bottom: 6px;
+  width: 1px;
+  height: 1px;
+  background: var(--ak-gold-800);
+  transform-origin: left center;
+  translate: var(--x, 0px) 0;
+  scale: var(--w, 0) 1;
+  transition:
+    translate 480ms var(--ease-settle),
+    scale 480ms var(--ease-settle);
+}
+
+.segmented {
+  position: relative;
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  padding: 4px;
+  border-radius: 999px;
+  background: #efe9da;
+}
+
+.segPill {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc((100% - 8px) / var(--n, 2));
+  border-radius: 999px;
+  background: var(--ak-forest-800);
+  box-shadow: 0 6px 16px -10px rgba(18, 59, 45, 0.8);
+  translate: calc(100% * var(--i, 0)) 0;
+  transition: translate 460ms var(--ease-settle);
+}
+
+.segButton {
+  position: relative;
+  min-height: 2.75rem;
+  padding: 0 1.1rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ak-ink);
+  transition: color 300ms var(--ease-settle);
+}
+
+.segButton[aria-pressed="true"] {
+  color: var(--ak-ivory);
+}
+
+.textLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.75rem;
+  font-weight: 600;
+}
+
+.textLinkLabel {
+  background:
+    linear-gradient(var(--ak-gold-800), var(--ak-gold-800)) 0 100% / 0% 1px no-repeat,
+    linear-gradient(rgba(24, 45, 36, 0.18), rgba(24, 45, 36, 0.18)) 0 100% / 100% 1px no-repeat;
+  padding-bottom: 3px;
+  transition: background-size 560ms var(--ease-pluck);
+}
+
+.textLink:hover .textLinkLabel,
+.textLink:focus-visible .textLinkLabel {
+  background-size: 100% 1px, 100% 1px;
+}
+
+.textLink:hover .ctaArrow,
+.textLink:focus-visible .ctaArrow {
+  translate: 3px 0;
+}
+
+.productCard {
+  display: block;
+  border-radius: 18px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.productMedia {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+  aspect-ratio: 4 / 5;
+}
+
+.productMediaInner {
+  position: absolute;
+  inset: 0;
+  transition: scale 1100ms var(--ease-pluck);
+}
+
+.productRule {
+  position: absolute;
+  left: 1rem;
+  right: 1rem;
+  top: 1rem;
+  height: 1px;
+  background: var(--ak-gold-300);
+  scale: 0 1;
+  transform-origin: left center;
+  transition: scale 700ms var(--ease-pluck);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .productCard:hover .productMediaInner {
+    scale: 1.035;
+  }
+  .productCard:hover .productRule {
+    scale: 1 1;
+  }
+  .productCard:hover .ctaArrow {
+    translate: 3px 0;
+  }
+}
+
+.productCard:focus-visible .productRule {
+  scale: 1 1;
+}
+
+/* --------------------------------------------------------------------------
+   07 — Social stage
+   -------------------------------------------------------------------------- */
+
+.stageViewport {
+  position: relative;
+  overflow: hidden;
+  border-radius: 22px;
+  background: #000;
+  box-shadow:
+    0 40px 80px -40px rgba(0, 0, 0, 0.85),
+    0 0 0 1px rgba(215, 183, 110, 0.14);
+}
+
+.stage {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+  overflow: hidden;
+  color: var(--ak-ivory);
+}
+
+.scrubber {
+  width: 100%;
+  accent-color: var(--ak-gold-500);
+  min-height: 2.75rem;
+}
+
+.sceneItem {
+  position: relative;
+  display: flex;
+  width: 100%;
+  align-items: baseline;
+  gap: 0.75rem;
+  min-height: 2.75rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 10px;
+  text-align: left;
+  color: rgba(250, 247, 239, 0.55);
+  transition:
+    color 260ms var(--ease-settle),
+    background-color 260ms var(--ease-settle);
+}
+
+.sceneItem[data-active] {
+  color: var(--ak-ivory);
+  background: rgba(215, 183, 110, 0.1);
+}
+
+/* --------------------------------------------------------------------------
+   Reduced motion: keep hierarchy and feedback, drop travel.
+   Opacity and colour still change (they are not motion); nothing moves.
+   -------------------------------------------------------------------------- */
+
+.lab[data-motion="reduced"] .wordInner,
+.lab[data-motion="reduced"] .letter {
+  translate: none;
+  filter: none;
+  transition: none;
+}
+
+.lab[data-motion="reduced"] .reveal {
+  opacity: 0;
+  transition: opacity 260ms linear;
+}
+
+.lab[data-motion="reduced"] .reveal[data-reveal="in"] {
+  opacity: 1;
+}
+
+.lab[data-motion="reduced"] .letter {
+  transition: opacity 400ms linear;
+}
+
+.lab[data-motion="reduced"] .fade,
+.lab[data-motion="reduced"] .courseCard {
+  translate: none;
+  transition: opacity 260ms linear;
+}
+
+.lab[data-motion="reduced"] .track {
+  letter-spacing: var(--track-to, 0.25em);
+  transition: opacity 260ms linear;
+}
+
+.lab[data-motion="reduced"] .wordmark {
+  letter-spacing: 0.16em;
+  margin-right: -0.16em;
+  transition: none;
+}
+
+.lab[data-motion="reduced"] .brandString,
+.lab[data-motion="reduced"] .divider,
+.lab[data-motion="reduced"] .pillarRule,
+.lab[data-motion="reduced"] .levelTick {
+  scale: 1 1;
+  transition: none;
+}
+
+.lab[data-motion="reduced"] .brandGlow {
+  scale: 1 1;
+  transition: opacity 400ms linear;
+}
+
+.lab[data-motion="reduced"] .panel,
+.lab[data-motion="reduced"] .photo {
+  clip-path: none;
+  transition: none;
+}
+
+.lab[data-motion="reduced"] .photoImg {
+  scale: 1.02;
+  transition: none;
+}
+
+.lab[data-motion="reduced"] .artPath {
+  stroke-dashoffset: 0;
+  transition: none;
+}
+
+.lab[data-motion="reduced"] .scrollCueBead,
+.lab[data-motion="reduced"] .bigWordInner,
+.lab[data-motion="reduced"] .swap,
+.lab[data-motion="reduced"] .rollIn,
+.lab[data-motion="reduced"] .rollOut,
+.lab[data-motion="reduced"] .cta[data-plucked] .ctaString,
+.lab[data-motion="reduced"] .artString,
+.lab[data-motion="reduced"] .levelTick {
+  animation: none !important;
+}
+
+.lab[data-motion="reduced"] .rollOut {
+  display: none;
+}
+
+.lab[data-motion="reduced"] .cta,
+.lab[data-motion="reduced"] .plan,
+.lab[data-motion="reduced"] .ctaArrow,
+.lab[data-motion="reduced"] .productMediaInner,
+.lab[data-motion="reduced"] .navIndicator,
+.lab[data-motion="reduced"] .segPill {
+  scale: none;
+  transition-property: background-color, color, box-shadow, opacity;
+}
+
+.lab[data-motion="reduced"] .cta:hover .ctaArrow,
+.lab[data-motion="reduced"] .textLink:hover .ctaArrow,
+.lab[data-motion="reduced"] .productCard:hover .ctaArrow {
+  translate: none;
+}
+
+.lab[data-motion="reduced"] .productCard:hover .productMediaInner {
+  scale: none;
+}
+
+.lab[data-motion="reduced"] .navIndicator {
+  scale: var(--w, 0) 1;
+}
+
+.lab[data-motion="reduced"] .bigWord,
+.lab[data-motion="reduced"] .photoInner {
+  translate: none;
+}
