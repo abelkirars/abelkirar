@@ -1,0 +1,441 @@
+/* ==========================================================================
+   Abelkirar motion foundation — shared by marketing sections only.
+
+   Everything is scoped: class names are module-hashed, and the palette and
+   timing tokens live on `.scope`, which a marketing section opts into. The
+   store, account, admin and form UIs never see these variables.
+
+   Rules:
+   - Components only toggle data-attributes; transitions live here.
+   - Content is never hidden unless scripting is available, so a failed or
+     slow script cannot leave text invisible.
+   - prefers-reduced-motion keeps hierarchy and feedback, removes travel.
+   ========================================================================== */
+
+@property --ak-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.scope {
+  --ak-forest-950: #06120d;
+  --ak-forest-900: #0b1d16;
+  --ak-forest-800: #123b2d;
+  --ak-forest-700: #1f4b3f;
+  --ak-gold-200: #f0e3bd;
+  --ak-gold-300: #e6cf94;
+  --ak-gold-400: #d7b76e;
+  --ak-gold-500: #d4a84b;
+  --ak-gold-600: #b89b5e;
+  --ak-gold-800: #8a5f10;
+  --ak-ivory: #faf7ef;
+  --ak-parchment: #fbf6ec;
+  --ak-line: #ddd6c6;
+  --ak-ink: #182d24;
+  --ak-ink-soft: #52615a;
+
+  --ease-pluck: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-resonate: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-settle: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-release: cubic-bezier(0.5, 0, 0.75, 0);
+  --dur-micro: 180ms;
+  --dur-state: 420ms;
+  --dur-enter: 1000ms;
+}
+
+.scope :focus-visible {
+  outline: 2px solid var(--ak-gold-500);
+  outline-offset: 3px;
+}
+
+/* --------------------------------------------------------------------------
+   First-paint entrances (above the fold)
+   Pure CSS: they start with the first frame, need no JavaScript, and keep
+   the text in the document and readable by crawlers and screen readers.
+   -------------------------------------------------------------------------- */
+
+.maskWord {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: top;
+  padding: 0.1em 0.05em 0.18em;
+  margin: -0.1em -0.05em -0.18em;
+}
+
+.maskWordInner {
+  display: inline-block;
+  animation: riseIn var(--dur-enter) var(--ease-pluck) both;
+  animation-delay: var(--d, 0ms);
+}
+
+.enterFade {
+  animation: fadeUp 800ms var(--ease-settle) both;
+  animation-delay: var(--d, 0ms);
+}
+
+.enterTrack {
+  white-space: nowrap;
+  animation: trackIn 1400ms var(--ease-pluck) both;
+  animation-delay: var(--d, 0ms);
+}
+
+@keyframes riseIn {
+  from {
+    translate: 0 112%;
+  }
+  to {
+    translate: 0 0;
+  }
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    translate: 0 10px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+/* Tracking only settles inward, from a width the line already fits at, so
+   it never wraps mid-animation (no layout shift). */
+@keyframes trackIn {
+  from {
+    opacity: 0;
+    letter-spacing: 0.38em;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Scroll-triggered reveals (below the fold) — see reveal.tsx
+   -------------------------------------------------------------------------- */
+
+.word {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: top;
+  padding: 0.1em 0.05em 0.18em;
+  margin: -0.1em -0.05em -0.18em;
+}
+
+.wordInner {
+  display: inline-block;
+  transition: translate var(--dur-enter) var(--ease-pluck);
+  transition-delay: var(--d, 0ms);
+}
+
+.fade {
+  transition:
+    opacity 700ms var(--ease-settle) var(--d, 0ms),
+    translate 900ms var(--ease-pluck) var(--d, 0ms);
+}
+
+.track {
+  white-space: nowrap;
+  transition:
+    letter-spacing 1500ms var(--ease-pluck) var(--d, 0ms),
+    opacity 900ms linear var(--d, 0ms);
+}
+
+@media (scripting: enabled) {
+  .reveal[data-reveal="idle"] .wordInner {
+    translate: 0 112%;
+  }
+  .fade[data-reveal="idle"] {
+    opacity: 0;
+    translate: 0 10px;
+  }
+  .track[data-reveal="idle"] {
+    opacity: 0;
+    letter-spacing: 0.38em;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Kirar strings (SVG) and the air lines behind them
+   -------------------------------------------------------------------------- */
+
+.strings {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: pan-y;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.strings[data-grabbing] {
+  cursor: grabbing;
+}
+
+.strings[data-static] {
+  cursor: default;
+}
+
+.stringCore {
+  fill: none;
+  stroke-linecap: round;
+  stroke-opacity: calc(0.62 + var(--e, 0) * 0.38);
+}
+
+.stringEnvelope {
+  opacity: calc(var(--e, 0) * 0.1);
+}
+
+.soundField {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.instrumentFocus:focus-visible {
+  outline: 1px solid rgba(215, 183, 110, 0.7);
+  outline-offset: 6px;
+  border-radius: 16px;
+}
+
+/* --------------------------------------------------------------------------
+   Marketing CTA — the "string" button (motion-cta.tsx)
+   -------------------------------------------------------------------------- */
+
+.cta {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  min-height: 3.25rem;
+  padding: 0 1.6rem;
+  border-radius: 0.65rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  isolation: isolate;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition:
+    scale 260ms var(--ease-settle),
+    background-color var(--dur-state) var(--ease-settle),
+    box-shadow var(--dur-state) var(--ease-settle),
+    color var(--dur-state) var(--ease-settle);
+}
+
+.ctaPrimary {
+  background: var(--ak-gold-500);
+  color: var(--ak-forest-950);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 10px 26px -16px rgba(212, 168, 75, 0.8);
+}
+
+.ctaForest {
+  background: var(--ak-forest-800);
+  color: var(--ak-ivory);
+  box-shadow: 0 10px 26px -18px rgba(18, 59, 45, 0.9);
+}
+
+.ctaGhost {
+  background: transparent;
+  color: var(--ak-ivory);
+  box-shadow: inset 0 0 0 1px rgba(250, 247, 239, 0.26);
+}
+
+.ctaGhostLight {
+  background: transparent;
+  color: var(--ak-ink);
+  box-shadow: inset 0 0 0 1px rgba(24, 45, 36, 0.22);
+}
+
+.ctaArrow {
+  transition: translate 460ms var(--ease-pluck);
+}
+
+.ctaString {
+  position: absolute;
+  left: 1.6rem;
+  right: 1.6rem;
+  bottom: 0.72rem;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.5;
+  scale: 0 1;
+  transform-origin: right center;
+  transition: scale 560ms var(--ease-pluck);
+  pointer-events: none;
+}
+
+.ctaForest .ctaString,
+.ctaGhost .ctaString {
+  background: var(--ak-gold-400);
+  opacity: 0.9;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cta:hover .ctaString {
+    scale: 1 1;
+    transform-origin: left center;
+  }
+  .cta:hover .ctaArrow {
+    translate: 3px 0;
+  }
+  .ctaPrimary:hover {
+    background: #ddb660;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.32),
+      0 14px 32px -16px rgba(212, 168, 75, 0.95);
+  }
+  .ctaForest:hover {
+    background: #15453a;
+  }
+  .ctaGhost.travel:hover::before,
+  .ctaGhostLight.travel:hover::before {
+    animation: travel 1100ms var(--ease-resonate) forwards;
+  }
+}
+
+.cta:focus-visible .ctaString {
+  scale: 1 1;
+  transform-origin: left center;
+}
+
+.cta:active {
+  scale: 0.985;
+  transition-duration: 90ms;
+}
+
+.cta[data-plucked] .ctaString {
+  scale: 1 1;
+  transform-origin: left center;
+  animation: stringRing 620ms linear;
+}
+
+@keyframes stringRing {
+  0% { translate: 0 0; }
+  10% { translate: 0 -2.2px; }
+  24% { translate: 0 1.7px; }
+  38% { translate: 0 -1.2px; }
+  53% { translate: 0 0.75px; }
+  70% { translate: 0 -0.35px; }
+  100% { translate: 0 0; }
+}
+
+/* Border illumination: a gold highlight travels the edge once, then rests. */
+.travel {
+  position: relative;
+  isolation: isolate;
+}
+
+.travel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  padding: 1.5px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from var(--ak-angle),
+    rgba(230, 207, 148, 0) 0deg,
+    rgba(230, 207, 148, 0) 170deg,
+    var(--ak-gold-400) 290deg,
+    #fff6dc 342deg,
+    rgba(230, 207, 148, 0) 360deg
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.travel[data-travel]::before {
+  animation: travel 1200ms var(--ease-resonate) forwards;
+}
+
+@keyframes travel {
+  0% {
+    --ak-angle: 0deg;
+    opacity: 0;
+  }
+  18% {
+    opacity: 1;
+  }
+  82% {
+    opacity: 1;
+  }
+  100% {
+    --ak-angle: 360deg;
+    opacity: 0;
+  }
+}
+
+@keyframes tickRing {
+  0% { translate: 0 0; }
+  12% { translate: 1.6px 0; }
+  28% { translate: -1.2px 0; }
+  45% { translate: 0.7px 0; }
+  65% { translate: -0.3px 0; }
+  100% { translate: 0 0; }
+}
+
+/* Ge'ez script loses legibility under wide tracking. */
+:global(html[lang="am"]) .enterTrack,
+:global(html[lang="am"]) .track {
+  animation-name: fadeUp;
+  letter-spacing: 0.06em;
+}
+
+/* --------------------------------------------------------------------------
+   Reduced motion: keep hierarchy and feedback, drop travel.
+   -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .maskWordInner,
+  .enterFade,
+  .enterTrack {
+    animation: none;
+  }
+
+  .wordInner,
+  .fade {
+    translate: none !important;
+  }
+
+  .fade,
+  .track,
+  .reveal {
+    transition: opacity 260ms linear;
+  }
+
+  .cta,
+  .ctaArrow,
+  .ctaString {
+    transition-property: background-color, color, box-shadow, opacity;
+  }
+
+  .cta:active {
+    scale: none;
+  }
+
+  .cta:hover .ctaArrow {
+    translate: none;
+  }
+
+  .cta[data-plucked] .ctaString,
+  .travel::before {
+    animation: none !important;
+  }
+}
