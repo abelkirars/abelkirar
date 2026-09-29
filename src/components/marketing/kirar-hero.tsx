@@ -53,6 +53,18 @@ export async function KirarHero() {
           label={t("instrumentLabel")}
           hint={t("instrumentHint")}
           keysHint={t("instrumentKeys")}
+          soundLabels={{
+            sound: t("sound"),
+            on: t("soundOn"),
+            off: t("soundOff"),
+            loading: t("soundLoading"),
+            unavailable: t("soundUnavailable"),
+            room: t("soundRoom"),
+            announceOn: t("soundAnnounceOn"),
+            announceOff: t("soundAnnounceOff"),
+            announceLoading: t("soundAnnounceLoading"),
+            announceError: t("soundAnnounceError"),
+          }}
         />
       </div>
     </section>

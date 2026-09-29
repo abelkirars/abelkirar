@@ -131,6 +131,15 @@
   pointer-events: none;
 }
 
+/* Sound controls on their own line, hint below: Room appearing next to
+   Sound never re-wraps anything. */
+.controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
 .hint {
   min-height: 2.75rem;
   padding: 0 0.75rem;

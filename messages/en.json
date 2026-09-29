@@ -95,7 +95,17 @@
     "joinCommunity": "Join Community",
     "instrumentLabel": "Kirar, five strings",
     "instrumentHint": "Pull a string · or sweep across",
-    "instrumentKeys": "Press 1 to 5 to pluck a string, lowest to highest, or Enter to strum."
+    "instrumentKeys": "Press 1 to 5 to pluck a string, lowest to highest, or Enter to strum.",
+    "sound": "Sound",
+    "soundOn": "On",
+    "soundOff": "Off",
+    "soundLoading": "Tuning…",
+    "soundUnavailable": "Unavailable",
+    "soundRoom": "Room",
+    "soundAnnounceOn": "Kirar sound on",
+    "soundAnnounceOff": "Kirar sound off",
+    "soundAnnounceLoading": "Loading Kirar sound",
+    "soundAnnounceError": "Kirar sound could not be loaded"
   },
   "mission": {
     "eyebrow": "Why Abelkirar",

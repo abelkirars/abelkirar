@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect, useId, useRef, type CSSProperties } from "react";
+import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
 import { cn } from "@/lib/utils";
 import { useInView, usePrefersReducedMotion } from "@/components/motion/hooks";
 import { KirarStrings, type KirarStringsHandle, type StringSpec } from "@/components/motion/kirar-strings";
 import { SoundField, type SoundFieldHandle } from "@/components/motion/sound-field";
 import { pentatonicVoices } from "@/components/motion/string-physics";
+import { unlockAudioContext } from "@/components/motion/audio-unlock";
+import { SoundToggle, type SoundState, type SoundToggleLabels } from "@/components/motion/sound-toggle";
+import type { KirarAudio } from "@/components/motion/kirar-audio";
 import motion from "@/components/motion/motion.module.css";
 import styles from "./kirar-hero.module.css";
 
@@ -27,12 +30,95 @@ const STRINGS: StringSpec[] = [0, 1, 2, 3, 4].map((i) => ({
 /** A welcome strum only right after the page loads, never on a later scroll. */
 const WELCOME_WINDOW_MS = 6000;
 
-export function KirarHeroInstrument({ label, hint, keysHint }: { label: string; hint: string; keysHint: string }) {
+export function KirarHeroInstrument({
+  label,
+  hint,
+  keysHint,
+  soundLabels,
+}: {
+  label: string;
+  hint: string;
+  keysHint: string;
+  soundLabels: SoundToggleLabels;
+}) {
   const reduced = usePrefersReducedMotion();
   const [ref, inView] = useInView<HTMLDivElement>(0.3);
   const stringsRef = useRef<KirarStringsHandle>(null);
   const fieldRef = useRef<SoundFieldHandle>(null);
   const hintId = useId();
+
+  // Sound is off on every visit. The engine (and the recordings) are only
+  // loaded after the visitor turns it on.
+  const engine = useRef<KirarAudio | null>(null);
+  const request = useRef(0);
+  const [sound, setSound] = useState<SoundState>("off");
+  const [touched, setTouched] = useState(false);
+  const [room, setRoom] = useState(true);
+
+  useEffect(
+    () => () => {
+      // Leaving the page releases the audio device.
+      request.current += 1;
+      engine.current?.dispose();
+      engine.current = null;
+    },
+    [],
+  );
+
+  function toggleSound() {
+    setTouched(true);
+    const id = ++request.current;
+    if (sound === "on" || sound === "loading") {
+      engine.current?.disable();
+      setSound("off");
+      return;
+    }
+    setSound("loading");
+
+    let ready: Promise<KirarAudio>;
+    let unlocked: AudioContext | null = null;
+    if (engine.current) {
+      ready = Promise.resolve(engine.current);
+    } else {
+      try {
+        // Must happen synchronously inside this click (autoplay rules).
+        unlocked = unlockAudioContext();
+      } catch {
+        setSound("error");
+        return;
+      }
+      const context = unlocked;
+      ready = import("@/components/motion/kirar-audio").then(({ KirarAudio }) => {
+        const created = new KirarAudio(context);
+        created.setRoom(room);
+        engine.current = created;
+        if (process.env.NODE_ENV !== "production") {
+          (window as Window & { __kirarAudio?: KirarAudio }).__kirarAudio = created;
+        }
+        return created;
+      });
+    }
+
+    ready
+      .then((audio) => audio.enable().then(() => audio))
+      .then(
+        (audio) => {
+          if (request.current === id) setSound("on");
+          else audio.disable(); // turned off again while loading
+        },
+        () => {
+          if (engine.current) engine.current.disable();
+          else void unlocked?.close(); // engine code never arrived: release the device
+          if (request.current === id) setSound("error");
+        },
+      );
+  }
+
+  function toggleRoom() {
+    const next = !room;
+    setRoom(next);
+    engine.current?.setRoom(next);
+  }
 
   useEffect(() => {
     // The strum sweeps across as the headline settles. Silent by design.
@@ -74,18 +160,33 @@ export function KirarHeroInstrument({ label, hint, keysHint }: { label: string; 
             pegs
             bridge
             onPluck={(event) => fieldRef.current?.ripple(event.clientX, event.clientY, event.strength)}
+            onStrike={(event) => {
+              // Only the visitor's own plucks sound; the welcome strum is "auto".
+              if (event.source === "user") engine.current?.strike(event.index, event.strength, event.delayMs);
+            }}
+            onDamp={(index) => engine.current?.damp(index)}
           />
         </div>
         <p id={hintId} className="sr-only">
           {keysHint}
         </p>
-        <button
-          type="button"
-          onClick={() => stringsRef.current?.strum({ amplitude: 11, source: "user" })}
-          className={styles.hint}
-        >
-          {hint}
-        </button>
+        <div className={styles.controls}>
+          <SoundToggle
+            state={sound}
+            touched={touched}
+            room={room}
+            labels={soundLabels}
+            onToggle={toggleSound}
+            onRoomToggle={toggleRoom}
+          />
+          <button
+            type="button"
+            onClick={() => stringsRef.current?.strum({ amplitude: 11, source: "user" })}
+            className={styles.hint}
+          >
+            {hint}
+          </button>
+        </div>
       </div>
     </>
   );

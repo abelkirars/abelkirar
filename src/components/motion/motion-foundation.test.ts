@@ -78,3 +78,51 @@ describe("plucked string", () => {
     expect(d.endsWith("L10 200")).toBe(true);
   });
 });
+
+describe("kirar audio", async () => {
+  const { existsSync, statSync } = await import("node:fs");
+  const path = await import("node:path");
+  const { findAttack, velocityCutoff, velocityGain } = await import("./kirar-audio");
+  const manifest = (await import("./kirar-audio-manifest.json")).default;
+
+  it("maps visual strings 1–5 to recordings 1–5 in order", () => {
+    expect(manifest.map((entry) => entry.file)).toEqual(["string-1", "string-2", "string-3", "string-4", "string-5"]);
+  });
+
+  it("ships an Opus and an MP3 web copy for every string, and no WAV", () => {
+    for (const entry of manifest) {
+      for (const format of ["webm", "mp3"]) {
+        const file = path.join(process.cwd(), "public", "audio", "kirar", `${entry.file}.${format}`);
+        expect(existsSync(file)).toBe(true);
+        expect(statSync(file).size).toBeLessThan(100_000);
+      }
+      expect(existsSync(path.join(process.cwd(), "public", "audio", "kirar", `${entry.file}.wav`))).toBe(false);
+    }
+  });
+
+  it("balances strings gently, keeping natural differences", () => {
+    for (const entry of manifest) expect(Math.abs(entry.balanceDb)).toBeLessThanOrEqual(3);
+  });
+
+  it("gets louder and brighter with pluck strength, never above unity", () => {
+    let previousGain = 0;
+    let previousCutoff = 0;
+    for (let s = 0; s <= 1.0001; s += 0.1) {
+      expect(velocityGain(s)).toBeGreaterThan(previousGain);
+      expect(velocityCutoff(s)).toBeGreaterThanOrEqual(previousCutoff);
+      previousGain = velocityGain(s);
+      previousCutoff = velocityCutoff(s);
+    }
+    expect(velocityGain(5)).toBeCloseTo(1);
+  });
+
+  it("starts playback just before the attack, skipping codec padding", () => {
+    const rate = 48000;
+    const channel = new Float32Array(rate);
+    const attack = 312;
+    for (let i = attack; i < rate; i++) channel[i] = Math.sin(i / 7) * Math.exp(-(i - attack) / 8000) * 0.4;
+    const offset = findAttack(channel, rate);
+    expect(offset * rate).toBeLessThanOrEqual(attack);
+    expect(attack - offset * rate).toBeLessThanOrEqual(0.004 * rate);
+  });
+});

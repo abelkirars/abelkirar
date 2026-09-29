@@ -95,7 +95,17 @@
     "joinCommunity": "ማህበረሰቡን ይቀላቀሉ",
     "instrumentLabel": "[AM] Kirar, five strings",
     "instrumentHint": "[AM] Pull a string · or sweep across",
-    "instrumentKeys": "[AM] Press 1 to 5 to pluck a string, lowest to highest, or Enter to strum."
+    "instrumentKeys": "[AM] Press 1 to 5 to pluck a string, lowest to highest, or Enter to strum.",
+    "sound": "[AM] Sound",
+    "soundOn": "[AM] On",
+    "soundOff": "[AM] Off",
+    "soundLoading": "[AM] Tuning…",
+    "soundUnavailable": "[AM] Unavailable",
+    "soundRoom": "[AM] Room",
+    "soundAnnounceOn": "[AM] Kirar sound on",
+    "soundAnnounceOff": "[AM] Kirar sound off",
+    "soundAnnounceLoading": "[AM] Loading Kirar sound",
+    "soundAnnounceError": "[AM] Kirar sound could not be loaded"
   },
   "mission": {
     "eyebrow": "ለምን አቤል ክራር?",
