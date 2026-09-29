@@ -1,0 +1,122 @@
+/* ==========================================================================
+   Plan selector — presentation only, and only where an ancestor opts in with
+   `data-plan-motion` (the homepage course cards). /courses, the course pages
+   and the Academy application form render the selector exactly as before.
+
+   Everything here reacts to the native radio's state through :has(), so the
+   component's props, state, submitted values and prices are untouched.
+   ========================================================================== */
+
+@property --plan-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+[data-plan-motion] .option {
+  isolation: isolate;
+  transition-property: color, background-color, border-color, box-shadow, scale;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Selected: lifted slightly and carried by a soft forest shadow. The
+   shadow yields to the existing focus-within ring while focused. */
+[data-plan-motion] .option:has(input:checked) {
+  scale: 1.02;
+}
+
+[data-plan-motion] .option:has(input:checked):not(:focus-within) {
+  box-shadow: 0 14px 30px -18px rgba(6, 18, 13, 0.75);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  [data-plan-motion] .option:not(:has(input:checked)):hover {
+    border-color: #b89b5e;
+  }
+  [data-plan-motion] .option:not(:has(input:checked)):not(:focus-within):hover {
+    box-shadow: 0 8px 22px -18px rgba(18, 59, 45, 0.6);
+  }
+}
+
+[data-plan-motion] .option:active {
+  scale: 0.99;
+  transition-duration: 90ms;
+}
+
+/* On selection a gold highlight travels the edge once, then rests. */
+[data-plan-motion] .option::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: 1;
+  padding: 1.5px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from var(--plan-angle),
+    rgba(230, 207, 148, 0) 0deg,
+    rgba(230, 207, 148, 0) 170deg,
+    #d7b76e 290deg,
+    #fff6dc 342deg,
+    rgba(230, 207, 148, 0) 360deg
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  pointer-events: none;
+}
+
+[data-plan-motion] .option:has(input:checked)::before {
+  animation: planTravel 1200ms cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+[data-plan-motion] .check {
+  animation: checkPop 420ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes planTravel {
+  0% {
+    --plan-angle: 0deg;
+    opacity: 0;
+  }
+  18%,
+  82% {
+    opacity: 1;
+  }
+  100% {
+    --plan-angle: 360deg;
+    opacity: 0;
+  }
+}
+
+@keyframes checkPop {
+  0% {
+    scale: 0.4;
+    opacity: 0;
+  }
+  60% {
+    scale: 1.12;
+    opacity: 1;
+  }
+  100% {
+    scale: 1;
+  }
+}
+
+/* Reduced motion: the colour change and shadow still mark the selection;
+   nothing scales, travels or pops. */
+@media (prefers-reduced-motion: reduce) {
+  [data-plan-motion] .option {
+    transition: none;
+  }
+  [data-plan-motion] .option:has(input:checked),
+  [data-plan-motion] .option:active {
+    scale: none;
+  }
+  [data-plan-motion] .option::before,
+  [data-plan-motion] .check {
+    animation: none !important;
+  }
+}

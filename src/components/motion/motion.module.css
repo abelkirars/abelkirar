@@ -158,6 +158,78 @@
 }
 
 /* --------------------------------------------------------------------------
+   Group reveals (reveal-on-view.tsx) — an ancestor carries data-reveal and
+   its server-rendered descendants animate from it.
+   -------------------------------------------------------------------------- */
+
+.groupWordInner {
+  display: inline-block;
+  transition: translate var(--dur-enter) var(--ease-pluck) var(--d, 0ms);
+}
+
+.groupTrack {
+  clip-path: inset(0 0 0 0);
+  transition:
+    clip-path 1300ms var(--ease-pluck) var(--d, 0ms),
+    opacity 900ms linear var(--d, 0ms);
+}
+
+.revealItem {
+  transition:
+    opacity 700ms var(--ease-settle) var(--d, 0ms),
+    translate 1000ms var(--ease-pluck) var(--d, 0ms);
+}
+
+/* Photography: a cinematic crop opens while the image settles. */
+.revealPhoto {
+  clip-path: inset(0 0 0 0 round 1rem);
+  transition: clip-path 1500ms var(--ease-pluck) var(--d, 0ms);
+}
+
+.revealPhoto img {
+  transition: scale 2200ms var(--ease-pluck) var(--d, 0ms);
+}
+
+@media (scripting: enabled) {
+  [data-reveal="idle"] .groupWordInner {
+    translate: 0 112%;
+  }
+  /* Opens from the centre outward — clip-path, not letter-spacing, so
+     the line never changes size. */
+  [data-reveal="idle"] .groupTrack {
+    opacity: 0;
+    clip-path: inset(0 50% 0 50%);
+  }
+  [data-reveal="idle"] .revealItem {
+    opacity: 0;
+    translate: 0 18px;
+  }
+  [data-reveal="idle"] .revealPhoto {
+    clip-path: inset(7% 6% 7% 6% round 1rem);
+  }
+  [data-reveal="idle"] .revealPhoto img {
+    scale: 1.12;
+  }
+}
+
+/* Divider string (string-divider.tsx): draws out from the centre. */
+.divider {
+  width: min(100%, 560px);
+  margin-inline: auto;
+}
+
+.dividerString {
+  aspect-ratio: 19 / 1;
+  transition: scale 1200ms var(--ease-resonate) var(--d, 0ms);
+}
+
+@media (scripting: enabled) {
+  .divider[data-reveal="idle"] .dividerString {
+    scale: 0 1;
+  }
+}
+
+/* --------------------------------------------------------------------------
    Kirar strings (SVG) and the air lines behind them
    -------------------------------------------------------------------------- */
 
@@ -521,8 +593,28 @@
   }
 
   .wordInner,
-  .fade {
+  .fade,
+  .groupWordInner,
+  .revealItem {
     translate: none !important;
+  }
+
+  .groupWordInner,
+  .dividerString,
+  .revealPhoto,
+  .revealPhoto img {
+    transition: none !important;
+    scale: none !important;
+    clip-path: none !important;
+  }
+
+  .revealItem,
+  .groupTrack {
+    transition: opacity 260ms linear;
+  }
+
+  .groupTrack {
+    clip-path: none !important;
   }
 
   .fade,

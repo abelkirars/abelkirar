@@ -9,7 +9,8 @@ import { CourseLevelCards } from "@/components/marketing/course-level-cards";
 import { InstrumentCategoryCards } from "@/components/marketing/instrument-category-cards";
 import { CommunityCta } from "@/components/marketing/community-cta";
 import { Container } from "@/components/marketing/container";
-import { SectionHeading } from "@/components/marketing/section-heading";
+import { HomeSectionHeading } from "@/components/marketing/home-section-heading";
+import motion from "@/components/motion/motion.module.css";
 import type { ProductCategory } from "@prisma/client";
 
 // Flat ceiling across all three categories combined, not per category —
@@ -51,31 +52,27 @@ export default async function Home() {
       <KirarHero />
       <Suspense fallback={null}><PublishedMedia slot="home-performance" /></Suspense>
 
-      <section className="bg-muted/40 py-14 sm:py-24">
+      <section className={`${motion.scope} bg-muted/40 py-14 sm:py-24`}>
         <Container>
-          <SectionHeading
+          <HomeSectionHeading
             eyebrow={t("coursesEyebrow")}
             title={t("coursesTitle")}
             description={t("coursesDescription")}
-            align="center"
-            className="mx-auto"
           />
-          <div className="mt-12">
-            <CourseLevelCards />
+          <div className="mt-10">
+            <CourseLevelCards motion />
           </div>
         </Container>
       </section>
 
       <section className="py-14 sm:py-24">
         <Container>
-          <SectionHeading
+          <HomeSectionHeading
             eyebrow={t("instrumentsEyebrow")}
             title={t("instrumentsTitle")}
             description={t("instrumentsDescription")}
-            align="center"
-            className="mx-auto"
           />
-          <div className="mt-12">
+          <div className="mt-10">
             <Suspense fallback={<InstrumentCategoryCards imagesByCategory={{}} />}>
               <HomeInstrumentCategories />
             </Suspense>
