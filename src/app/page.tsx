@@ -6,7 +6,7 @@ import { PublishedMedia } from "@/components/marketing/site-media";
 import { KirarHero } from "@/components/marketing/kirar-hero";
 import { MissionSection } from "@/components/marketing/mission-section";
 import { CourseLevelCards } from "@/components/marketing/course-level-cards";
-import { InstrumentCategoryCards } from "@/components/marketing/instrument-category-cards";
+import { InstrumentShowcase, type ShowcaseInstrument } from "@/components/marketing/instrument-showcase";
 import { CommunityCta } from "@/components/marketing/community-cta";
 import { Container } from "@/components/marketing/container";
 import { HomeSectionHeading } from "@/components/marketing/home-section-heading";
@@ -32,7 +32,10 @@ async function getInstrumentCategoryImages(): Promise<Record<string, string[]>> 
   const imagesByCategory: Record<string, string[]> = {};
   for (const product of candidates.slice(0, CANDIDATE_LIMIT)) {
     if (imagesByCategory[product.category]) continue; // already found this category's photo
-    const images = productImages(product.images);
+    // Hosted photos only: `/products-to-upload/` files are upload staging,
+    // not production imagery. An instrument without one gets the showcase's
+    // line drawing instead.
+    const images = productImages(product.images).filter((src) => src.startsWith("https://"));
     if (images.length > 0) {
       imagesByCategory[product.category] = images;
     }
@@ -40,8 +43,21 @@ async function getInstrumentCategoryImages(): Promise<Record<string, string[]>> 
   return imagesByCategory;
 }
 
-async function HomeInstrumentCategories() {
-  return <InstrumentCategoryCards imagesByCategory={await getInstrumentCategoryImages()} />;
+async function HomeInstrumentShowcase({ withImages = true }: { withImages?: boolean }) {
+  const [t, imagesByCategory] = await Promise.all([
+    getTranslations("instrumentCategories"),
+    withImages ? getInstrumentCategoryImages() : Promise.resolve<Record<string, string[]>>({}),
+  ]);
+  const instruments: ShowcaseInstrument[] = INSTRUMENT_CATEGORIES.map((category) => ({
+    id: category.id,
+    name: category.name,
+    description: category.description,
+    href: `/store?category=${category.id}`,
+    shopLabel: t("shopCategory", { category: category.name }),
+    image: imagesByCategory[category.id]?.[0],
+    imageAlt: t("imageAlt", { category: category.name }),
+  }));
+  return <InstrumentShowcase instruments={instruments} tabsLabel={t("tabsLabel")} />;
 }
 
 export default async function Home() {
@@ -73,8 +89,8 @@ export default async function Home() {
             description={t("instrumentsDescription")}
           />
           <div className="mt-10">
-            <Suspense fallback={<InstrumentCategoryCards imagesByCategory={{}} />}>
-              <HomeInstrumentCategories />
+            <Suspense fallback={<HomeInstrumentShowcase withImages={false} />}>
+              <HomeInstrumentShowcase />
             </Suspense>
           </div>
         </Container>

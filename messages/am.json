@@ -312,7 +312,9 @@
     }
   },
   "instrumentCategories": {
-    "shopCategory": "የ{category} መሣሪያዎችን ይግዙ"
+    "shopCategory": "የ{category} መሣሪያዎችን ይግዙ",
+    "tabsLabel": "[AM] Instruments",
+    "imageAlt": "[AM] A handmade {category} from the Abelkirar store"
   },
   "community": {
     "title": "ከየት መጀመር እንዳለብዎ አልወሰኑም?",

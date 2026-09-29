@@ -312,7 +312,9 @@
     }
   },
   "instrumentCategories": {
-    "shopCategory": "Shop {category}"
+    "shopCategory": "Shop {category}",
+    "tabsLabel": "Instruments",
+    "imageAlt": "A handmade {category} from the Abelkirar store"
   },
   "community": {
     "title": "Not sure where to begin?",

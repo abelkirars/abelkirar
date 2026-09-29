@@ -1,0 +1,469 @@
+/* ==========================================================================
+   Homepage instrument showcase (instrument-showcase.tsx).
+
+   - With scripting: a tablist over one stage. Every panel sits in the same
+     grid area (subgrid), so the showcase is always as tall as its tallest
+     instrument and switching never shifts the page.
+   - Without scripting: the three instruments are simply listed, each with
+     its photo or drawing, description and Store link.
+   - Only transform, opacity and clip-path animate.
+   ========================================================================== */
+
+.showcase {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  border-radius: 1.75rem;
+  padding: clamp(1.25rem, 4vw, 3.5rem);
+  color: var(--ak-ivory);
+  background:
+    radial-gradient(70% 60% at 72% 42%, rgba(31, 75, 63, 0.55), rgba(6, 18, 13, 0) 70%),
+    var(--ak-forest-950);
+}
+
+.layout {
+  display: grid;
+  gap: 1.75rem;
+}
+
+/* --- Tabs ---------------------------------------------------------------- */
+
+.tabs {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 1px solid rgba(215, 183, 110, 0.2);
+}
+
+.tab {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 3rem;
+  padding: 0.5rem 0.25rem 0.75rem;
+  font-family: var(--font-heading);
+  font-size: 1.3rem;
+  line-height: 1.1;
+  color: rgba(250, 247, 239, 0.5);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition: color var(--dur-state) var(--ease-settle);
+}
+
+.tab[data-selected] {
+  color: var(--ak-ivory);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tab:not([data-selected]):hover {
+    color: rgba(250, 247, 239, 0.8);
+  }
+}
+
+/* The selected tab's gold string: under the name on phones, beside it on
+   desktop. */
+.tabMarker {
+  position: absolute;
+  left: 0.5rem;
+  right: 0.5rem;
+  bottom: -1px;
+  height: 1.5px;
+  background: var(--ak-gold-400);
+  scale: 0 1;
+  transition: scale var(--dur-state) var(--ease-pluck);
+}
+
+.tab[data-selected] .tabMarker {
+  scale: 1 1;
+}
+
+/* --- Panels ---------------------------------------------------------------- */
+
+.panel {
+  display: grid;
+  gap: 1.75rem;
+}
+
+.frame {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 34rem;
+  margin-inline: auto;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  border-radius: 1.25rem;
+  clip-path: inset(0 0 0 0 round 1.25rem);
+  background:
+    radial-gradient(60% 55% at 50% 45%, rgba(31, 75, 63, 0.7), rgba(11, 29, 22, 0) 75%),
+    var(--ak-forest-900);
+}
+
+.frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px rgba(215, 183, 110, 0.28);
+  pointer-events: none;
+}
+
+.photo {
+  z-index: 1;
+  object-fit: cover;
+}
+
+.art {
+  position: absolute;
+  inset: 9% 12%;
+  width: 76%;
+  height: 82%;
+}
+
+.artPath {
+  fill: none;
+  stroke: var(--ak-gold-400);
+  stroke-width: 1.3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+
+.artString {
+  stroke: var(--ak-gold-200);
+  stroke-width: 0.7;
+  opacity: 0.85;
+}
+
+.copy {
+  position: relative;
+  z-index: 1;
+}
+
+.panelTitle {
+  font-family: var(--font-heading);
+  font-size: 1.9rem;
+  font-weight: 600;
+  line-height: 1.15;
+  margin-bottom: 0.75rem;
+}
+
+.description {
+  max-width: 26rem;
+  font-size: 1.125rem;
+  line-height: 1.65;
+  text-wrap: pretty;
+  color: rgba(250, 247, 239, 0.78);
+}
+
+.cta {
+  margin-top: 1.5rem;
+}
+
+/* Phones and tablets: room under the Store link for the outlined name. */
+@media (scripting: enabled) and (max-width: 1023.98px) {
+  .copy {
+    padding-bottom: clamp(3rem, 14vw, 4.5rem);
+  }
+}
+
+/* Oversized outlined name behind the copy. */
+.bigWord {
+  position: absolute;
+  z-index: 0;
+  left: clamp(0.75rem, 3vw, 3rem);
+  bottom: -0.16em;
+  display: block;
+  overflow: hidden;
+  padding-top: 0.06em;
+  font-family: var(--font-heading);
+  font-size: clamp(4.5rem, 15vw, 12rem);
+  font-weight: 500;
+  line-height: 0.9;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(215, 183, 110, 0.24);
+  pointer-events: none;
+  user-select: none;
+}
+
+.bigWordInner {
+  display: block;
+}
+
+@media (min-width: 1024px) {
+  .tabs {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+    border-bottom: 0;
+    padding-left: 1.4rem;
+  }
+
+  .tab {
+    flex: none;
+    min-height: 3.5rem;
+    padding: 0.25rem 0;
+    font-size: clamp(2.5rem, 3.6vw, 3.25rem);
+    text-align: left;
+  }
+
+  .tabMarker {
+    left: -1.4rem;
+    right: auto;
+    top: 50%;
+    bottom: auto;
+    width: 0.8rem;
+    transform-origin: left center;
+  }
+
+  .frame {
+    max-width: none;
+  }
+
+  .copy {
+    padding-left: 1.4rem;
+  }
+}
+
+/* --- Tab mode (scripting available) ---------------------------------------- */
+
+@media (scripting: enabled) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+  }
+
+  .tabs {
+    grid-row: 1;
+    grid-column: 1;
+  }
+
+  .panel {
+    grid-row: 2 / 4;
+    grid-column: 1;
+    grid-template-rows: subgrid;
+    grid-template-columns: subgrid;
+    gap: normal;
+    z-index: 0;
+    visibility: hidden;
+    transition: visibility 0s linear 700ms;
+  }
+
+  .panel[data-selected] {
+    z-index: 1;
+    visibility: visible;
+    transition-delay: 0s;
+  }
+
+  .frame {
+    grid-row: 1;
+  }
+
+  .copy {
+    grid-row: 2;
+  }
+
+  .panelTitle {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* Leaving: hold the photo under the incoming one, then reset silently. */
+  .frame {
+    clip-path: inset(100% 0 0 0 round 1.25rem);
+    transition: clip-path 0s linear 700ms;
+  }
+
+  .frame .photo {
+    scale: 1.08;
+    transition: scale 0s linear 700ms;
+  }
+
+  .copy {
+    opacity: 0;
+    translate: 0 10px;
+    transition:
+      opacity 180ms linear,
+      translate 0s linear 200ms;
+  }
+
+  .bigWordInner {
+    translate: 0 105%;
+    opacity: 0;
+    transition:
+      opacity 220ms linear,
+      translate 0s linear 240ms;
+  }
+
+  .artPath {
+    stroke-dashoffset: 1;
+    transition: stroke-dashoffset 0s linear 700ms;
+  }
+
+  /* Arriving: the photo rises into its frame and settles; the name and
+     copy follow; a drawing is strung line by line. */
+  .panel[data-selected] .frame {
+    clip-path: inset(0 0 0 0 round 1.25rem);
+    transition: clip-path 900ms var(--ease-pluck);
+  }
+
+  .panel[data-selected] .frame .photo {
+    scale: 1;
+    transition: scale 1400ms var(--ease-pluck);
+  }
+
+  .panel[data-selected] .copy {
+    opacity: 1;
+    translate: 0 0;
+    transition:
+      opacity 600ms var(--ease-settle) 160ms,
+      translate 800ms var(--ease-pluck) 160ms;
+  }
+
+  .panel[data-selected] .bigWordInner {
+    translate: 0 0;
+    opacity: 1;
+    transition:
+      translate 1100ms var(--ease-pluck) 80ms,
+      opacity 400ms linear 80ms;
+  }
+
+  .panel[data-selected] .artPath {
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset 1100ms var(--ease-resonate) calc(var(--d, 0ms) + 200ms);
+  }
+
+  /* Before the showcase scrolls into view, the first instrument waits. */
+  .showcase[data-reveal="idle"] .panel[data-selected] .frame {
+    clip-path: inset(100% 0 0 0 round 1.25rem);
+  }
+
+  .showcase[data-reveal="idle"] .panel[data-selected] .frame .photo {
+    scale: 1.08;
+  }
+
+  .showcase[data-reveal="idle"] .panel[data-selected] .bigWordInner {
+    translate: 0 105%;
+    opacity: 0;
+  }
+
+  .showcase[data-reveal="idle"] .panel[data-selected] .artPath {
+    stroke-dashoffset: 1;
+  }
+
+  @media (min-width: 1024px) {
+    .layout {
+      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+      grid-template-rows: auto 1fr;
+      column-gap: clamp(2.5rem, 5vw, 4.5rem);
+      row-gap: 2.25rem;
+    }
+
+    .panel {
+      grid-row: 1 / 3;
+      grid-column: 1 / 3;
+    }
+
+    .frame {
+      grid-row: 1 / 3;
+      grid-column: 2;
+    }
+
+    .copy {
+      grid-row: 2;
+      grid-column: 1;
+      align-self: start;
+    }
+  }
+}
+
+/* --- List mode (no scripting) ---------------------------------------------- */
+
+@media (scripting: none) {
+  .tabs,
+  .bigWord {
+    display: none;
+  }
+
+  .layout {
+    gap: 3.5rem;
+  }
+
+  @media (min-width: 1024px) {
+    .panel {
+      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+      align-items: center;
+      column-gap: 4rem;
+    }
+
+    .frame {
+      grid-column: 2;
+      grid-row: 1;
+    }
+
+    .copy {
+      grid-column: 1;
+      grid-row: 1;
+    }
+  }
+}
+
+/* --- Reduced motion: switch at once, keep a brief fade on the copy. -------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .tab,
+  .tabMarker {
+    transition: none;
+  }
+
+  .panel,
+  .panel[data-selected],
+  .frame,
+  .panel[data-selected] .frame,
+  .frame .photo,
+  .panel[data-selected] .frame .photo,
+  .bigWordInner,
+  .panel[data-selected] .bigWordInner,
+  .artPath,
+  .panel[data-selected] .artPath {
+    transition: none !important;
+  }
+
+  .frame,
+  .showcase[data-reveal="idle"] .panel[data-selected] .frame {
+    clip-path: inset(0 0 0 0 round 1.25rem) !important;
+  }
+
+  .frame .photo,
+  .showcase[data-reveal="idle"] .panel[data-selected] .frame .photo {
+    scale: none !important;
+  }
+
+  .bigWordInner,
+  .showcase[data-reveal="idle"] .panel[data-selected] .bigWordInner {
+    translate: none !important;
+  }
+
+  .artPath,
+  .showcase[data-reveal="idle"] .panel[data-selected] .artPath {
+    stroke-dashoffset: 0 !important;
+  }
+
+  .copy {
+    translate: none !important;
+  }
+
+  .panel[data-selected] .copy {
+    transition: opacity 150ms linear !important;
+  }
+}
