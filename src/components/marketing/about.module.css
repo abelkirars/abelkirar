@@ -1,0 +1,273 @@
+/* ==========================================================================
+   About page motion — title sequence, story and the Learn / Accompany /
+   Serve path. About page only; tokens come from motion.module.css `.scope`.
+
+   The title sequence is CSS-only and starts with the first frame: nothing
+   waits for JavaScript, nothing blocks scrolling, and the whole sequence is
+   over in about 1.5 s:
+
+     0 ms     eyebrow fades in; the gold string draws out from the centre
+     ~450 ms  the string is drawn back and released (a silent pluck, JS)
+     600 ms   ABEL KIRAR rises from the string, centre letters first
+     900 ms   the page title settles in beneath
+     ~1500 ms done
+   ========================================================================== */
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  color: var(--ak-ivory);
+  background: var(--ak-forest-950);
+  padding-block: clamp(4rem, 11vw, 8rem) clamp(3.5rem, 9vw, 6.5rem);
+}
+
+.heroGlow {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(55% 60% at 50% 55%, rgba(31, 75, 63, 0.65), rgba(6, 18, 13, 0) 70%),
+    radial-gradient(30% 20% at 50% 58%, rgba(212, 168, 75, 0.1), rgba(212, 168, 75, 0) 70%);
+  pointer-events: none;
+}
+
+.heroInner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.eyebrow {
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--ak-gold-400);
+  animation: aboutFade 500ms linear 100ms backwards;
+}
+
+/* The wordmark's own box is the mask: letters rise out of the string that
+   sits directly under it. */
+.wordmark {
+  display: flex;
+  justify-content: center;
+  margin-top: clamp(1.25rem, 3vw, 2rem);
+  overflow: hidden;
+  padding-block: 0.08em 0.1em;
+  font-family: var(--font-heading);
+  font-size: clamp(2.25rem, 11vw, 7rem);
+  font-weight: 500;
+  line-height: 0.9;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  /* Optical centring: tracking also trails the last letter. */
+  margin-right: -0.08em;
+  color: var(--ak-ivory);
+}
+
+.letter {
+  display: inline-block;
+  animation: letterRise 700ms var(--ease-pluck) calc(600ms + var(--d, 0ms)) backwards;
+}
+
+.space {
+  display: inline-block;
+  width: 0.34em;
+}
+
+/* Pulled up by half its own height (width / 45) so the drawn line sits
+   exactly on the wordmark's mask edge: the letters rise out of the string. */
+.titleString {
+  width: min(100%, 44rem);
+  aspect-ratio: 45 / 2;
+  margin-top: calc(min(100vw - 2rem, 44rem) / -45);
+  animation: stringDraw 520ms var(--ease-resonate) backwards;
+}
+
+.title {
+  margin-top: clamp(1rem, 2.5vw, 1.6rem);
+  max-width: 34rem;
+  font-family: var(--font-heading);
+  font-size: clamp(1.5rem, 3.4vw, 2.25rem);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+  color: var(--ak-ivory);
+  animation: titleSettle 600ms var(--ease-settle) 900ms backwards;
+}
+
+@keyframes aboutFade {
+  from { opacity: 0; }
+}
+
+@keyframes stringDraw {
+  from { scale: 0 1; }
+}
+
+@keyframes letterRise {
+  from { translate: 0 110%; }
+}
+
+@keyframes titleSettle {
+  from {
+    opacity: 0;
+    translate: 0 8px;
+  }
+}
+
+/* --- Story -------------------------------------------------------------- */
+
+.lead {
+  font-family: var(--font-heading);
+  font-size: clamp(1.6rem, 3vw, 2.1rem);
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+  color: var(--foreground);
+}
+
+/* --- Learn / Accompany / Serve ------------------------------------------ */
+
+.path {
+  position: relative;
+  margin-top: clamp(3rem, 6vw, 4.5rem);
+}
+
+.steps {
+  position: relative;
+  display: grid;
+  gap: 2.75rem;
+  padding-left: 2.25rem;
+}
+
+/* Phones and tablets: a vertical string that the steps hang from. */
+.steps::before {
+  content: "";
+  position: absolute;
+  left: 0.5rem;
+  top: 0.6rem;
+  bottom: 0.6rem;
+  width: 1px;
+  background: linear-gradient(to bottom, var(--ak-gold-600), rgba(184, 155, 94, 0.25));
+  transform-origin: top center;
+  transition: scale 1200ms var(--ease-resonate) 150ms;
+}
+
+.step {
+  position: relative;
+}
+
+.node {
+  position: absolute;
+  left: calc(-2.25rem + 0.5rem - 4.5px);
+  top: 0.55rem;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--ak-gold-500);
+  box-shadow: 0 0 0 4px rgba(212, 168, 75, 0.16);
+  transition: scale 500ms var(--ease-pluck) var(--d, 0ms);
+}
+
+.index {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ak-gold-600);
+}
+
+.stepTitle {
+  margin-top: 0.4rem;
+  font-family: var(--font-heading);
+  font-size: clamp(2rem, 7vw, 2.6rem);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--foreground);
+}
+
+.stepText {
+  margin-top: 0.75rem;
+  max-width: 22rem;
+  font-size: 1.05rem;
+  line-height: 1.6;
+  text-wrap: pretty;
+  color: var(--muted-foreground);
+}
+
+/* Desktop: one horizontal string runs through all three steps, left to
+   right, and each step lights as the string reaches it. */
+.pathString {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .pathString {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 40px;
+    transform-origin: left center;
+    transition: scale 1300ms var(--ease-resonate) 150ms;
+  }
+
+  .steps {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 3rem;
+    padding-left: 0;
+    padding-top: 3.75rem;
+  }
+
+  .steps::before {
+    display: none;
+  }
+
+  .node {
+    left: 0;
+    top: calc(20px - 3.75rem - 4.5px);
+  }
+
+  .stepTitle {
+    font-size: clamp(2rem, 2.8vw, 2.6rem);
+  }
+}
+
+@media (scripting: enabled) {
+  [data-reveal="idle"] .steps::before {
+    scale: 1 0;
+  }
+
+  [data-reveal="idle"] .node {
+    scale: 0;
+  }
+
+  .pathString[data-reveal="idle"] {
+    scale: 0 1;
+  }
+}
+
+/* --- Reduced motion: final state at once, no drawing or travel. --------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .eyebrow,
+  .letter,
+  .titleString,
+  .title {
+    animation: none;
+  }
+
+  .steps::before,
+  .node,
+  .pathString {
+    transition: none !important;
+    scale: none !important;
+  }
+}
