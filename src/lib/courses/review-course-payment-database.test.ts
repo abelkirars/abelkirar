@@ -3,11 +3,21 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { randomUUID } from "node:crypto";
+import { realpathSync } from "node:fs";
+import path from "node:path";
 
 vi.mock("server-only", () => ({}));
-const state = vi.hoisted(() => ({ adminId: "", authorized: true, advanceAtUpload: null as Date | null }));
+const state = vi.hoisted(() => ({
+  adminId: "", authorized: true, advanceAtUpload: null as Date | null,
+  studentAuth: null as { supabaseUserId: string; email: string } | null,
+  signOut: vi.fn(),
+  sendEmail: vi.fn(() => { throw new Error("Real notification delivery is forbidden in disposable review tests"); }),
+}));
 vi.mock("@/lib/admin/dal", () => ({ verifyAdminSession: async () => state.authorized ? { adminId: state.adminId } : null }));
-vi.mock("@/lib/supabase-server", () => ({ createSupabaseServerClient: vi.fn() }));
+vi.mock("@/lib/student/session", () => ({ readStudentAuthUser: async () => state.studentAuth }));
+vi.mock("@/lib/supabase-server", () => ({ createSupabaseServerClient: async () => ({ auth: { signOut: state.signOut } }) }));
+vi.mock("next/navigation", () => ({ redirect: (url: string) => { throw new Error(`REDIRECT:${url}`); } }));
+vi.mock("@/lib/notifications/email", () => ({ sendEmail: state.sendEmail }));
 vi.mock("./course-payment-proofs", () => ({
   uploadCoursePaymentProof: async (paymentId: string, submissionId: string) => {
     if (state.advanceAtUpload) vi.setSystemTime(state.advanceAtUpload);
@@ -17,7 +27,7 @@ vi.mock("./course-payment-proofs", () => ({
 }));
 vi.mock("@/lib/db", () => {
   const url = new URL(process.env.COURSE_REVIEW_TEST_DATABASE_URL!);
-  if (url.hostname !== "127.0.0.1" || url.port !== "55439" || url.pathname !== "/course_review") throw new Error("Refusing non-disposable DB");
+  if (url.hostname !== "127.0.0.1" || url.port !== "55439" || url.pathname !== "/course_review" || url.search || url.hash) throw new Error("Refusing non-disposable DB");
   return { prisma: new PrismaClient({ adapter: new PrismaPg({ connectionString: url.toString(), max: 8 }) }) };
 });
 
@@ -27,23 +37,41 @@ describe.runIf(Boolean(process.env.COURSE_REVIEW_TEST_DATABASE_URL))("PostgreSQL
   let submit: typeof import("./submit-course-payment-proof").submitCoursePaymentProofForCustomer;
   let expire: typeof import("./expire-initial-payments").expireInitialPayment;
   let portalGuard: typeof import("@/lib/student/dal").hasStudentPortalAccess;
+  let requireStudentPage: typeof import("@/lib/student/dal").requireStudentPage;
+  let requireStudentApi: typeof import("@/lib/student/dal").requireStudentApi;
   let runJob: typeof import("./expiration-job").runInitialPaymentExpirationJob;
   const day = 86400000;
   beforeAll(async () => {
     db = (await import("@/lib/db")).prisma;
-    expect((await db.$queryRaw<{ host: string }[]>`SELECT host(inet_server_addr()) AS host`)[0].host).toBe("127.0.0.1");
+    const expectedDirectory = process.env.COURSE_REVIEW_TEST_DATA_DIRECTORY;
+    if (!expectedDirectory) throw new Error("Explicit disposable data directory required before fixture writes");
+    const [target] = await db.$queryRaw<{ host: string; port: number; database: string; directory: string; version: number; listen: string }[]>`
+      SELECT host(inet_server_addr()) AS host, inet_server_port() AS port, current_database() AS database,
+        current_setting('data_directory') AS directory, current_setting('server_version_num')::int AS version,
+        current_setting('listen_addresses') AS listen`;
+    expect(target).toMatchObject({ host: "127.0.0.1", port: 55439, database: "course_review", listen: "127.0.0.1" });
+    expect(target.version).toBeGreaterThanOrEqual(170000);
+    expect(target.version).toBeLessThan(180000);
+    expect(realpathSync(target.directory)).toBe(realpathSync(expectedDirectory));
+    expect(path.basename(path.dirname(realpathSync(expectedDirectory)))).toMatch(/^academy-review-acceptance-/);
     review = (await import("./review-course-payment")).reviewCoursePayment;
     submit = (await import("./submit-course-payment-proof")).submitCoursePaymentProofForCustomer;
     expire = (await import("./expire-initial-payments")).expireInitialPayment;
     portalGuard = (await import("@/lib/student/dal")).hasStudentPortalAccess;
+    ({ requireStudentPage, requireStudentApi } = await import("@/lib/student/dal"));
     runJob = (await import("./expiration-job")).runInitialPaymentExpirationJob;
     state.adminId = (await db.admin.create({ data: { username: randomUUID(), displayName: "Disposable reviewer", passwordHash: "local-test-only" } })).id;
   });
-  afterEach(() => { state.authorized = true; state.advanceAtUpload = null; vi.useRealTimers(); vi.restoreAllMocks(); });
+  afterEach(() => {
+    state.authorized = true; state.advanceAtUpload = null; state.studentAuth = null;
+    state.signOut.mockClear();
+    expect(state.sendEmail).not.toHaveBeenCalled();
+    vi.useRealTimers(); vi.restoreAllMocks();
+  });
   afterAll(async () => { await db?.$disconnect(); });
 
-  async function fixture({ self = false, group = true, expired = false, pending = false, deadline }: {
-    self?: boolean; group?: boolean; expired?: boolean; pending?: boolean; deadline?: Date;
+  async function fixture({ self = false, group = true, expired = false, pending = false, deadline, acceptance = false }: {
+    self?: boolean; group?: boolean; expired?: boolean; pending?: boolean; deadline?: Date; acceptance?: boolean;
   } = {}) {
     const id = randomUUID();
     const customer = await db.customer.create({ data: { supabaseUserId: id, email: `${id}@example.invalid`, emailNormalized: `${id}@example.invalid`, emailVerifiedAt: new Date(), emailSyncedAt: new Date() } });
@@ -52,20 +80,23 @@ describe.runIf(Boolean(process.env.COURSE_REVIEW_TEST_DATABASE_URL))("PostgreSQL
     const plan = await db.coursePlan.findUniqueOrThrow({ where: { code: group ? "BEGINNER_GROUP" : "BEGINNER_ONE_TO_ONE" } });
     const cohort = group ? await db.courseCohort.create({ data: {
       coursePlanId: plan.id, code: id, name: "Disposable group", status: "OPEN", weeklyDay: "SATURDAY",
-      localStartTime: new Date("1970-01-01T18:00:00Z"), durationMinutes: 60, timeZone: "America/New_York",
-      courseStartDate: new Date("2026-10-10T00:00:00Z"), seats: { create: [1, 2, 3, 4].map(position => ({ position })) },
+      localStartTime: new Date(acceptance ? "1970-01-01T10:00:00Z" : "1970-01-01T18:00:00Z"), durationMinutes: 60,
+      timeZone: acceptance ? "America/Chicago" : "America/New_York",
+      courseStartDate: new Date(acceptance ? "2026-10-03T00:00:00Z" : "2026-10-10T00:00:00Z"), seats: { create: [1, 2, 3, 4].map(position => ({ position })) },
     }, include: { seats: { orderBy: { position: "asc" } } } }) : null;
     const application = await db.courseApplication.create({ data: { fullName: learner.fullName, email: customer.email,
       customerId: customer.id, studentProfileId: learner.id, requestedPlanId: plan.id, status: "APPROVED" } });
     const enrollment = await db.courseEnrollment.create({ data: {
       studentId: learner.id, customerId: customer.id, applicationId: application.id, coursePlanId: plan.id,
       cohortId: cohort?.id, status: "PENDING_PAYMENT", levelSnapshot: plan.level, formatSnapshot: plan.format, planCodeSnapshot: plan.code,
+      ...(acceptance ? { startsAt: cohort!.courseStartDate, billingTimeZone: "America/Chicago" } : {}),
     } });
     const expiresAt = deadline ?? new Date(Date.now() + (expired ? -day : day));
     const createdAt = new Date(expiresAt.getTime() - 7 * day);
     const payment = await db.coursePayment.create({ data: {
       enrollmentId: enrollment.id, kind: "INITIAL_ENROLLMENT", status: pending ? "PENDING" : "PROOF_SUBMITTED",
-      periodStart: new Date("2026-10-10T00:00:00Z"), periodEnd: new Date("2026-11-10T00:00:00Z"),
+      periodStart: new Date(acceptance ? "2026-10-03T00:00:00Z" : "2026-10-10T00:00:00Z"),
+      periodEnd: new Date(acceptance ? "2026-11-03T00:00:00Z" : "2026-11-10T00:00:00Z"),
       baseAmountCents: plan.monthlyPriceCents, finalAmountCents: plan.monthlyPriceCents, currency: "USD", createdAt, expiresAt,
     } });
     const proof = pending ? null : await db.coursePaymentSubmission.create({ data: {
@@ -97,6 +128,91 @@ describe.runIf(Boolean(process.env.COURSE_REVIEW_TEST_DATABASE_URL))("PostgreSQL
     vi.spyOn(console, "info").mockImplementation(() => {});
     vi.spyOn(console, "warn").mockImplementation(() => {});
   }
+
+  it("isolated SELF $50 acceptance verifies atomically, authorizes real page/API guards, and replays without duplicates", async () => {
+    const f = await fixture({ self: true, acceptance: true });
+    state.studentAuth = { supabaseUserId: f.customer.supabaseUserId, email: f.customer.email };
+    const snapshot = async () => ({
+      customer: await db.customer.findUniqueOrThrow({ where: { id: f.customer.id } }),
+      learner: await db.studentProfile.findUniqueOrThrow({ where: { id: f.learner.id } }),
+      application: await db.courseApplication.findUniqueOrThrow({ where: { id: f.application.id } }),
+      relations: await db.customerStudentRelation.findMany({ where: { studentId: f.learner.id }, orderBy: { id: "asc" } }),
+      enrollments: await db.courseEnrollment.findMany({ where: { studentId: f.learner.id }, include: { portalAccess: true }, orderBy: { id: "asc" } }),
+      payments: await db.coursePayment.findMany({ where: { enrollment: { studentId: f.learner.id } }, orderBy: { id: "asc" } }),
+      proofs: await db.coursePaymentSubmission.findMany({ where: { paymentId: f.payment.id }, orderBy: { attemptNumber: "asc" } }),
+      seats: await db.courseCohortSeat.findMany({ where: { cohortId: f.cohort!.id }, orderBy: { position: "asc" } }),
+      assignedSeats: await db.courseCohortSeat.count({ where: { currentEnrollmentId: f.enrollment.id } }),
+      access: await db.coursePortalAccess.findMany({ where: { enrollmentId: f.enrollment.id } }),
+      events: await db.courseApplicationEvent.findMany({ where: { applicationId: f.application.id }, orderBy: { id: "asc" } }),
+      outbox: await db.coursePaymentNotification.findMany({ where: { paymentId: f.payment.id }, orderBy: { id: "asc" } }),
+    });
+    const before = await snapshot();
+    expect(before.customer).toMatchObject({ status: "ACTIVE", emailVerifiedAt: expect.any(Date) });
+    expect(before.learner).toMatchObject({ supabaseUserId: f.customer.supabaseUserId, portalAccess: false });
+    expect(before.application).toMatchObject({ status: "APPROVED", customerId: f.customer.id, studentProfileId: f.learner.id });
+    expect(before.relations).toHaveLength(1);
+    expect(before.relations[0]).toMatchObject({ type: "SELF", customerId: f.customer.id, endedAt: null, archivedAt: null });
+    expect(before.enrollments).toHaveLength(1);
+    expect(before.enrollments[0]).toMatchObject({ id: f.enrollment.id, applicationId: f.application.id, cohortId: f.cohort!.id,
+      status: "PENDING_PAYMENT", billingTimeZone: "America/Chicago", planCodeSnapshot: "BEGINNER_GROUP", portalAccess: null });
+    expect(before.payments).toHaveLength(1);
+    expect(before.payments[0]).toMatchObject({ id: f.payment.id, kind: "INITIAL_ENROLLMENT", status: "PROOF_SUBMITTED",
+      baseAmountCents: 5000, discountAmountCents: 0, finalAmountCents: 5000, currency: "USD",
+      periodStart: new Date("2026-10-03T00:00:00Z"), periodEnd: new Date("2026-11-03T00:00:00Z"),
+      verifiedAt: null, verifiedByAdminId: null });
+    expect(before.proofs).toHaveLength(1);
+    expect(before.proofs[0]).toMatchObject({ status: "SUBMITTED", reviewedAt: null, reviewedByAdminId: null });
+    expect(before.seats).toHaveLength(4);
+    expect(before.assignedSeats).toBe(1);
+    expect(before.seats[0]).toMatchObject({ currentEnrollmentId: f.enrollment.id, assignedAt: f.payment.createdAt, reservedUntil: f.payment.expiresAt });
+    expect(before.seats.filter(s => !s.currentEnrollmentId)).toHaveLength(3);
+    expect(before.access).toEqual([]); expect(before.events).toEqual([]); expect(before.outbox).toEqual([]);
+    expect(portalGuard(before.learner.portalAccess, before.enrollments)).toBe(false);
+    const denied = await requireStudentApi();
+    expect("response" in denied).toBe(true);
+    if (!("response" in denied)) throw new Error("Pending learner incorrectly authorized");
+    expect(denied.response.status).toBe(403);
+    expect(await denied.response.json()).toEqual({ error: "Portal access denied" });
+    await expect(requireStudentPage()).rejects.toThrow("REDIRECT:/student/login?error=account-inactive");
+    expect(state.signOut).toHaveBeenCalledTimes(1);
+    state.signOut.mockClear(); // Subsequent checks model a fresh authenticated request.
+
+    const started = Date.now();
+    expect(await review(f.payment.id, verifyInput(f))).toMatchObject({ idempotent: false, status: "VERIFIED" });
+    const finished = Date.now();
+    const after = await snapshot();
+    expect(after.customer).toEqual(before.customer); expect(after.learner).toEqual(before.learner);
+    expect(after.application).toEqual(before.application); expect(after.relations).toEqual(before.relations);
+    expect(after.enrollments).toHaveLength(1); expect(after.payments).toHaveLength(1); expect(after.proofs).toHaveLength(1);
+    const reviewedAt = after.payments[0].verifiedAt!;
+    expect(reviewedAt).toBeInstanceOf(Date);
+    expect(reviewedAt.getTime()).toBeGreaterThanOrEqual(started);
+    expect(reviewedAt.getTime()).toBeLessThanOrEqual(finished);
+    expect(after.payments[0]).toEqual({ ...before.payments[0], status: "VERIFIED", verifiedAt: reviewedAt,
+      verifiedByAdminId: state.adminId, updatedAt: expect.any(Date) });
+    expect(after.proofs[0]).toEqual({ ...before.proofs[0], status: "ACCEPTED", reviewedAt,
+      reviewedByAdminId: state.adminId, updatedAt: expect.any(Date) });
+    expect(after.access).toHaveLength(1);
+    expect(after.access[0]).toMatchObject({ enrollmentId: f.enrollment.id, status: "ENABLED", archivedAt: null,
+      reason: "INITIAL_PAYMENT_VERIFIED", changedByAdminId: state.adminId, changedAt: reviewedAt });
+    expect(after.enrollments[0]).toEqual({ ...before.enrollments[0], status: "ACTIVE", updatedAt: expect.any(Date), portalAccess: after.access[0] });
+    expect(after.seats).toHaveLength(4); expect(after.assignedSeats).toBe(1);
+    expect(after.seats[0]).toEqual({ ...before.seats[0], reservedUntil: null, updatedAt: expect.any(Date) });
+    expect(after.seats.slice(1)).toEqual(before.seats.slice(1));
+    expect(after.events).toHaveLength(1);
+    expect(after.events[0]).toMatchObject({ actorAdminId: state.adminId, fromStatus: "APPROVED", toStatus: "APPROVED",
+      note: `Payment ${f.payment.id}; submission ${f.proof!.id}; review VERIFY; PROOF_SUBMITTED -> VERIFIED. Original deadline preserved.` });
+    expect(after.outbox).toHaveLength(1);
+    expect(after.outbox[0]).toMatchObject({ kind: "PAYMENT_VERIFIED", status: "PENDING", paymentId: f.payment.id,
+      attemptCount: 0, sentAt: null, providerMessageId: null });
+    expect(portalGuard(after.learner.portalAccess, after.enrollments)).toBe(true);
+    expect(await requireStudentPage()).toMatchObject({ studentId: f.learner.id, supabaseUserId: f.customer.supabaseUserId });
+    expect(await requireStudentApi()).toMatchObject({ session: { studentId: f.learner.id, supabaseUserId: f.customer.supabaseUserId } });
+    expect(state.signOut).not.toHaveBeenCalled();
+    expect(await review(f.payment.id, verifyInput(f))).toMatchObject({ idempotent: true, status: "VERIFIED" });
+    expect(await snapshot()).toEqual(after);
+    expect(state.sendEmail).not.toHaveBeenCalled();
+  });
 
   it("requires an authorized, still-active admin", async () => {
     const f = await fixture();
@@ -255,6 +371,10 @@ describe.runIf(Boolean(process.env.COURSE_REVIEW_TEST_DATABASE_URL))("PostgreSQL
     expect(await db.coursePaymentSubmission.findUnique({ where: { id: f.proof!.id } })).toMatchObject({ status: "SUBMITTED", reviewedAt: null });
     expect(await db.courseEnrollment.findUnique({ where: { id: f.enrollment.id } })).toMatchObject({ status: "PENDING_PAYMENT" });
     expect(await db.courseCohortSeat.findUnique({ where: { id: f.cohort!.seats[0].id } })).toMatchObject({ reservedUntil: f.payment.expiresAt });
+    expect(await db.courseApplicationEvent.count({ where: { applicationId: f.application.id } })).toBe(0);
+    expect(await db.coursePaymentNotification.count({ where: { paymentId: f.payment.id } })).toBe(0);
+    expect(await db.coursePayment.findUnique({ where: { id: f.payment.id } })).toMatchObject({ verifiedByAdminId: null });
+    expect(await db.coursePaymentSubmission.findUnique({ where: { id: f.proof!.id } })).toMatchObject({ reviewedByAdminId: null });
   });
 
   it("scheduler vs scheduler and restart produce one transition, audit and durable notification", async () => {
