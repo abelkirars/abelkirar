@@ -93,19 +93,19 @@
     "startLearning": "መማር ይጀምሩ",
     "contactAbel": "ዲያቆን አቤልን ያነጋግሩ",
     "joinCommunity": "ማህበረሰቡን ይቀላቀሉ",
-    "instrumentLabel": "[AM] Kirar, five strings",
-    "instrumentHint": "[AM] Pull a string · or sweep across",
-    "instrumentKeys": "[AM] Press 1 to 5 to pluck a string, lowest to highest, or Enter to strum.",
-    "sound": "[AM] Sound",
-    "soundOn": "[AM] On",
-    "soundOff": "[AM] Off",
-    "soundLoading": "[AM] Tuning…",
-    "soundUnavailable": "[AM] Unavailable",
-    "soundRoom": "[AM] Room",
-    "soundAnnounceOn": "[AM] Kirar sound on",
-    "soundAnnounceOff": "[AM] Kirar sound off",
-    "soundAnnounceLoading": "[AM] Loading Kirar sound",
-    "soundAnnounceError": "[AM] Kirar sound could not be loaded"
+    "instrumentLabel": "ክራር፣ አምስት ገመዶች",
+    "instrumentHint": "ገመድ ይጎትቱ · ወይም በገመዶቹ ላይ ያንሸራትቱ",
+    "instrumentKeys": "ገመድ ለመምታት ከ1 እስከ 5 ይጫኑ፣ ከዝቅተኛው ድምፅ ወደ ከፍተኛው፤ ሁሉንም ገመዶች ለመምታት Enter ይጫኑ።",
+    "sound": "ድምፅ",
+    "soundOn": "በርቷል",
+    "soundOff": "ጠፍቷል",
+    "soundLoading": "በመቃኘት ላይ…",
+    "soundUnavailable": "አይገኝም",
+    "soundRoom": "አዳራሽ",
+    "soundAnnounceOn": "የክራር ድምፅ በርቷል",
+    "soundAnnounceOff": "የክራር ድምፅ ጠፍቷል",
+    "soundAnnounceLoading": "የክራር ድምፅ በመጫን ላይ ነው",
+    "soundAnnounceError": "የክራር ድምፅ መጫን አልተቻለም"
   },
   "mission": {
     "eyebrow": "ለምን አቤል ክራር?",
@@ -313,8 +313,8 @@
   },
   "instrumentCategories": {
     "shopCategory": "የ{category} መሣሪያዎችን ይግዙ",
-    "tabsLabel": "[AM] Instruments",
-    "imageAlt": "[AM] A handmade {category} from the Abelkirar store"
+    "tabsLabel": "የሙዚቃ መሣሪያዎች",
+    "imageAlt": "ከAbelkirar መደብር በእጅ የተሠራ {category}"
   },
   "community": {
     "title": "ከየት መጀመር እንዳለብዎ አልወሰኑም?",

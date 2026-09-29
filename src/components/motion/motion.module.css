@@ -113,7 +113,7 @@
 }
 
 /* --------------------------------------------------------------------------
-   Scroll-triggered reveals (below the fold) — see reveal.tsx
+   Masked words (below the fold) — see masked-words.tsx
    -------------------------------------------------------------------------- */
 
 .word {
@@ -122,39 +122,6 @@
   vertical-align: top;
   padding: 0.1em 0.05em 0.18em;
   margin: -0.1em -0.05em -0.18em;
-}
-
-.wordInner {
-  display: inline-block;
-  transition: translate var(--dur-enter) var(--ease-pluck);
-  transition-delay: var(--d, 0ms);
-}
-
-.fade {
-  transition:
-    opacity 700ms var(--ease-settle) var(--d, 0ms),
-    translate 900ms var(--ease-pluck) var(--d, 0ms);
-}
-
-.track {
-  white-space: nowrap;
-  transition:
-    letter-spacing 1500ms var(--ease-pluck) var(--d, 0ms),
-    opacity 900ms linear var(--d, 0ms);
-}
-
-@media (scripting: enabled) {
-  .reveal[data-reveal="idle"] .wordInner {
-    translate: 0 112%;
-  }
-  .fade[data-reveal="idle"] {
-    opacity: 0;
-    translate: 0 10px;
-  }
-  .track[data-reveal="idle"] {
-    opacity: 0;
-    letter-spacing: 0.38em;
-  }
 }
 
 /* --------------------------------------------------------------------------
@@ -575,8 +542,7 @@
 }
 
 /* Ge'ez script loses legibility under wide tracking. */
-:global(html[lang="am"]) .enterTrack,
-:global(html[lang="am"]) .track {
+:global(html[lang="am"]) .enterTrack {
   animation-name: fadeUp;
   letter-spacing: 0.06em;
 }
@@ -592,8 +558,6 @@
     animation: none;
   }
 
-  .wordInner,
-  .fade,
   .groupWordInner,
   .revealItem {
     translate: none !important;
@@ -615,12 +579,6 @@
 
   .groupTrack {
     clip-path: none !important;
-  }
-
-  .fade,
-  .track,
-  .reveal {
-    transition: opacity 260ms linear;
   }
 
   .cta,

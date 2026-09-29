@@ -59,6 +59,15 @@
   text-wrap: balance;
 }
 
+/* Amharic: `ch` is measured from the current font, so while Noto Sans
+   Ethiopic loads, 14ch is ~70px narrower and the title wraps to an extra
+   line — and the vertically centred copy jumps when the font arrives. The
+   same width in em (14ch of Noto Sans Ethiopic = 8.008em) is font-independent,
+   so the title keeps its final line breaks from the first paint. */
+:global(html[lang="am"]) .title {
+  max-width: 8.008em;
+}
+
 .description {
   margin-top: 1.5rem;
   max-width: 36rem;

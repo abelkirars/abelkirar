@@ -2,16 +2,11 @@
  * Abelkirar motion tokens.
  *
  * The motion language is built on one physical idea — a plucked string:
- * a short attack, a long decelerating sustain, then rest. Every timing below
- * is expressed against a slow musical beat so sequences land in rhythm
- * instead of on arbitrary millisecond values.
+ * a short attack, a long decelerating sustain, then rest.
  *
  * Mirrored as CSS custom properties in motion.module.css (`.scope`).
  * Keep both in sync.
  */
-
-/** ~83 BPM. Sequencing unit for section-level choreography. */
-export const BEAT_MS = 720;
 
 export type Bezier = readonly [number, number, number, number];
 
@@ -25,25 +20,6 @@ export const EASE = {
   /** Quiet, quick departure. Exits are always shorter than entrances. */
   release: [0.5, 0, 0.75, 0],
 } as const satisfies Record<string, Bezier>;
-
-export const DURATION_MS = {
-  micro: 180,
-  state: 420,
-  enter: 1000,
-  draw: 1400,
-  cinematic: 2400,
-} as const;
-
-export const STAGGER_MS = {
-  letter: 40,
-  word: 55,
-  line: 110,
-  card: 120,
-} as const;
-
-export function cssEase(bezier: Bezier): string {
-  return `cubic-bezier(${bezier.join(", ")})`;
-}
 
 /**
  * Evaluates a CSS-style cubic-bezier timing function in JS, so time-driven
@@ -95,8 +71,4 @@ export const ease = {
 
 export function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
-}
-
-export function lerp(from: number, to: number, amount: number): number {
-  return from + (to - from) * amount;
 }

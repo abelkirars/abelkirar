@@ -65,27 +65,6 @@ export function useVisible<T extends Element>(ref: RefObject<T | null>): boolean
   return visible;
 }
 
-/**
- * Steps through named phases on a schedule once `active` becomes true.
- * With `instant`, jumps straight to the final phase (reduced motion).
- */
-export function usePhases<P extends string>(
-  active: boolean,
-  schedule: readonly (readonly [P, number])[],
-  initial: P,
-  instant: boolean,
-): P {
-  const [phase, setPhase] = useState<P>(initial);
-  useEffect(() => {
-    if (!active) return;
-    const timers = instant
-      ? [window.setTimeout(() => setPhase(schedule[schedule.length - 1][0]), 0)]
-      : schedule.map(([name, at]) => window.setTimeout(() => setPhase(name), at));
-    return () => timers.forEach((timer) => window.clearTimeout(timer));
-  }, [active, instant, schedule]);
-  return phase;
-}
-
 /** Calls `callback` with the current timestamp every animation frame while `running`. */
 export function useFrameLoop(running: boolean, callback: (now: number) => void) {
   const callbackRef = useRef(callback);

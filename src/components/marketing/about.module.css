@@ -77,6 +77,25 @@
   width: 0.34em;
 }
 
+/* Amharic renders the Latin wordmark in Noto Sans Ethiopic, whose fallback
+   is wider (760px vs 713px at desktop), so the centred letters slid sideways
+   when the font arrived. Each letter's box is fixed to its Noto Sans Ethiopic
+   advance in em (tracking included): the final look is unchanged and the
+   layout no longer depends on which font has loaded. Order follows
+   WORDMARK "ABEL KIRAR" in about-sections.tsx; child 5 is the space. */
+:global(html[lang="am"]) .letter {
+  text-align: left;
+}
+:global(html[lang="am"]) .letter:nth-child(1),
+:global(html[lang="am"]) .letter:nth-child(9) { width: 0.734em; }
+:global(html[lang="am"]) .letter:nth-child(2) { width: 0.736em; }
+:global(html[lang="am"]) .letter:nth-child(3) { width: 0.637em; }
+:global(html[lang="am"]) .letter:nth-child(4) { width: 0.616em; }
+:global(html[lang="am"]) .letter:nth-child(6) { width: 0.712em; }
+:global(html[lang="am"]) .letter:nth-child(7) { width: 0.434em; }
+:global(html[lang="am"]) .letter:nth-child(8),
+:global(html[lang="am"]) .letter:nth-child(10) { width: 0.713em; }
+
 /* Pulled up by half its own height (width / 45) so the drawn line sits
    exactly on the wordmark's mask edge: the letters rise out of the string. */
 .titleString {
