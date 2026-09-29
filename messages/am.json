@@ -92,7 +92,10 @@
     "description": "ከዲያቆን አቤል (አቤል ክራር) ጋር በኦንላይን ይማሩ። መዝሙርን ለማጀብና በቤተ ክርስቲያን ለማገልገል ችሎታዎንና በራስ መተማመንዎን ያሳድጉ።",
     "startLearning": "መማር ይጀምሩ",
     "contactAbel": "ዲያቆን አቤልን ያነጋግሩ",
-    "joinCommunity": "ማህበረሰቡን ይቀላቀሉ"
+    "joinCommunity": "ማህበረሰቡን ይቀላቀሉ",
+    "instrumentLabel": "[AM] Kirar, five strings",
+    "instrumentHint": "[AM] Pull a string · or sweep across",
+    "instrumentKeys": "[AM] Press 1 to 5 to pluck a string, lowest to highest, or Enter to strum."
   },
   "mission": {
     "eyebrow": "ለምን አቤል ክራር?",

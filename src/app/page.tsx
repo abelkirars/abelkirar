@@ -3,7 +3,7 @@ import { readCatalog, productImages } from "@/lib/catalog";
 import { INSTRUMENT_CATEGORIES } from "@/lib/instrument-categories";
 import { Suspense } from "react";
 import { PublishedMedia } from "@/components/marketing/site-media";
-import { Hero } from "@/components/marketing/hero";
+import { KirarHero } from "@/components/marketing/kirar-hero";
 import { MissionSection } from "@/components/marketing/mission-section";
 import { CourseLevelCards } from "@/components/marketing/course-level-cards";
 import { InstrumentCategoryCards } from "@/components/marketing/instrument-category-cards";
@@ -48,7 +48,7 @@ export default async function Home() {
 
   return (
     <>
-      <Hero />
+      <KirarHero />
       <Suspense fallback={null}><PublishedMedia slot="home-performance" /></Suspense>
 
       <section className="bg-muted/40 py-14 sm:py-24">

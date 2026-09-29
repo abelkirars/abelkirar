@@ -92,7 +92,10 @@
     "description": "Learn online with Deacon Abel (Abelkirar). Build the skill and confidence to accompany mezmur and prepare to serve in church.",
     "startLearning": "Start Learning",
     "contactAbel": "Contact Deacon Abel",
-    "joinCommunity": "Join Community"
+    "joinCommunity": "Join Community",
+    "instrumentLabel": "Kirar, five strings",
+    "instrumentHint": "Pull a string · or sweep across",
+    "instrumentKeys": "Press 1 to 5 to pluck a string, lowest to highest, or Enter to strum."
   },
   "mission": {
     "eyebrow": "Why Abelkirar",

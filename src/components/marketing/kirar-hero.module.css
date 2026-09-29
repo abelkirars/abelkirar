@@ -1,0 +1,148 @@
+/* Homepage hero layout. Motion and palette come from
+   src/components/motion/motion.module.css (.scope). All sizes below are
+   fixed or clamped so nothing moves the layout as the hero animates in. */
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  color: var(--ak-ivory);
+  background: linear-gradient(180deg, var(--ak-forest-950) 0%, var(--ak-forest-900) 100%);
+}
+
+.inner {
+  display: grid;
+  gap: 2rem;
+  max-width: 72rem;
+  margin-inline: auto;
+  padding: 4rem 1rem 2.5rem;
+}
+
+@media (min-width: 640px) {
+  .inner {
+    padding: 6rem 1.5rem 3rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .inner {
+    grid-template-columns: 1.15fr 0.85fr;
+    align-items: center;
+    gap: 1rem;
+    min-height: min(82vh, 860px);
+    padding: 5rem 2rem;
+  }
+}
+
+/* Above the air lines. */
+.copy,
+.instrumentColumn {
+  position: relative;
+  z-index: 1;
+}
+
+.eyebrow {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--ak-gold-400);
+}
+
+.title {
+  margin-top: 1.25rem;
+  max-width: 14ch;
+  font-family: var(--font-heading);
+  font-size: 2.65rem;
+  font-weight: 600;
+  line-height: 1.04;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+
+.description {
+  margin-top: 1.5rem;
+  max-width: 36rem;
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+  color: rgba(250, 247, 239, 0.76);
+  text-wrap: pretty;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 2.25rem;
+}
+
+.action {
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .eyebrow {
+    font-size: 0.875rem;
+  }
+  .title {
+    font-size: 3.75rem;
+  }
+  .actions {
+    flex-direction: row;
+    align-items: center;
+  }
+  .action {
+    width: auto;
+  }
+}
+
+@media (min-width: 1024px) {
+  .title {
+    font-size: 4.5rem;
+  }
+}
+
+.instrumentColumn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.instrument {
+  position: relative;
+  width: 100%;
+  /* Taller on phones so the five strings are far enough apart to pick. */
+  height: clamp(300px, 96vw, 430px);
+}
+
+@media (min-width: 1024px) {
+  .instrument {
+    height: min(620px, 70vh);
+  }
+}
+
+.instrument::before {
+  /* A faint warm light behind the strings. */
+  content: "";
+  position: absolute;
+  inset: 12% 18%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(212, 168, 75, 0.1), rgba(212, 168, 75, 0));
+  pointer-events: none;
+}
+
+.hint {
+  min-height: 2.75rem;
+  padding: 0 0.75rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(250, 247, 239, 0.55);
+  transition: color var(--dur-micro) var(--ease-settle);
+}
+
+.hint:hover {
+  color: var(--ak-ivory);
+}
