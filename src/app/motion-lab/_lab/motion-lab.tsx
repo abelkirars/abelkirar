@@ -6,7 +6,6 @@ import { cn } from "@/lib/utils";
 import { BrandReveal } from "./brand-reveal";
 import { CourseSection } from "./course-section";
 import { HeroDemo } from "./hero-demo";
-import { LogoSection } from "./logo-section";
 import { getKirarAudio } from "./kirar-audio";
 import { InstrumentSection, type InstrumentCopy } from "./instrument-section";
 import { MicroBoard } from "./micro-board";
@@ -19,7 +18,6 @@ import styles from "./motion-lab.module.css";
 
 const SECTIONS = [
   { id: "title", label: "Title" },
-  { id: "logo", label: "Logo" },
   { id: "hero", label: "Hero" },
   { id: "transition", label: "Transition" },
   { id: "courses", label: "Courses" },
@@ -126,23 +124,19 @@ function LabBody({ copy, instruments }: { copy: LabCopy; instruments: Instrument
         <BrandReveal key={run("title")} subline={`${copy.hero.eyebrow} · ${copy.home.instrumentsEyebrow}`} reduced={reduced} />
       </LabSection>
 
-      <LabSection id="logo" index={2} title="Logo (proposal)" dark onReplay={replay("logo")}>
-        <LogoSection key={run("logo")} />
-      </LabSection>
-
-      <LabSection id="hero" index={3} title="Hero · strings · headline" dark onReplay={replay("hero")}>
+      <LabSection id="hero" index={2} title="Hero · strings · headline" dark onReplay={replay("hero")}>
         <HeroDemo key={run("hero")} copy={copy.hero} reduced={reduced} />
       </LabSection>
 
-      <LabSection id="transition" index={4} title="Section transition" onReplay={replay("transition")}>
+      <LabSection id="transition" index={3} title="Section transition" onReplay={replay("transition")}>
         <PurposeSection key={run("transition")} copy={copy.purpose} reduced={reduced} />
       </LabSection>
 
-      <LabSection id="courses" index={5} title="Courses · plans · CTA" onReplay={replay("courses")}>
+      <LabSection id="courses" index={4} title="Courses · plans · CTA" onReplay={replay("courses")}>
         <CourseSection key={run("courses")} home={copy.home} courses={copy.courses} planCopy={copy.plan} />
       </LabSection>
 
-      <LabSection id="instruments" index={6} title="Instruments" dark onReplay={replay("instruments")}>
+      <LabSection id="instruments" index={5} title="Instruments" dark onReplay={replay("instruments")}>
         <InstrumentSection
           key={run("instruments")}
           home={copy.home}
@@ -152,11 +146,11 @@ function LabBody({ copy, instruments }: { copy: LabCopy; instruments: Instrument
         />
       </LabSection>
 
-      <LabSection id="micro" index={7} title="Microinteractions" onReplay={replay("micro")}>
+      <LabSection id="micro" index={6} title="Microinteractions" onReplay={replay("micro")}>
         <MicroBoard key={run("micro")} copy={copy} />
       </LabSection>
 
-      <LabSection id="social" index={8} title="Social · 1080 × 1920" dark>
+      <LabSection id="social" index={7} title="Social · 1080 × 1920" dark>
         <section className="bg-[#06120d] py-16 text-[#faf7ef] sm:py-24" aria-label="Social motion">
           <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
             <div className="max-w-2xl">
@@ -179,7 +173,7 @@ function LabBody({ copy, instruments }: { copy: LabCopy; instruments: Instrument
         </section>
       </LabSection>
 
-      <LabSection id="tokens" index={9} title="Tokens">
+      <LabSection id="tokens" index={8} title="Tokens">
         <MotionSpec />
       </LabSection>
     </div>

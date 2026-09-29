@@ -519,102 +519,6 @@
 }
 
 /* --------------------------------------------------------------------------
-   Logo — the mark is drawn in construction order, then strung
-   -------------------------------------------------------------------------- */
-
-.logoStage {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 6rem 1rem 4rem;
-  text-align: center;
-}
-
-.logoMarkButton {
-  border-radius: 18px;
-  padding: 0.5rem;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-}
-
-.logoMark {
-  display: block;
-  width: clamp(84px, 16vw, 124px);
-  height: auto;
-  overflow: visible;
-}
-
-.logoPath {
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-  transition: stroke-dashoffset 1100ms var(--ease-resonate) var(--d, 0ms);
-}
-
-.logoStage[data-drawn] .logoPath {
-  stroke-dashoffset: 0;
-}
-
-.logoString {
-  transform-box: fill-box;
-}
-
-.logoStage[data-drawn] .logoString {
-  animation: tickRing 800ms linear var(--ring-at, 0ms);
-}
-
-.logoWordmark {
-  font-size: clamp(1.9rem, 6.4vw, 4.4rem);
-}
-
-.logoStage .wordmarkMask {
-  margin-top: 0.9rem;
-}
-
-.logoStage[data-drawn] .wordmark {
-  letter-spacing: 0.16em;
-  margin-right: -0.16em;
-}
-
-.logoStage[data-drawn] .letter {
-  opacity: 1;
-  translate: 0 0;
-  filter: blur(0);
-}
-
-.logoAcademy {
-  margin-top: 1.1rem;
-  font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 0.42em;
-  margin-right: -0.42em;
-  text-transform: uppercase;
-  color: var(--ak-gold-400);
-  opacity: 0;
-  transition: opacity 900ms var(--ease-settle) 2300ms;
-}
-
-.logoStage[data-drawn] .logoAcademy {
-  opacity: 1;
-}
-
-.logoAsset {
-  display: flex;
-  min-height: 9rem;
-  align-items: center;
-  justify-content: center;
-  border-radius: 16px;
-  padding: 1.5rem;
-  box-shadow: inset 0 0 0 1px rgba(250, 247, 239, 0.08);
-  transition: box-shadow var(--dur-state) var(--ease-settle);
-}
-
-.logoAsset:hover,
-.logoAsset:focus-visible {
-  box-shadow: inset 0 0 0 1px rgba(215, 183, 110, 0.6);
-}
-
-/* --------------------------------------------------------------------------
    CTA — the "string" button
    -------------------------------------------------------------------------- */
 
@@ -1452,10 +1356,6 @@
   transition: opacity 260ms linear;
 }
 
-.lab[data-motion="reduced"] .logoAcademy {
-  transition: opacity 260ms linear;
-}
-
 .lab[data-motion="reduced"] .wordmark {
   letter-spacing: 0.16em;
   margin-right: -0.16em;
@@ -1486,13 +1386,11 @@
   transition: none;
 }
 
-.lab[data-motion="reduced"] .logoPath,
 .lab[data-motion="reduced"] .artPath {
   stroke-dashoffset: 0;
   transition: none;
 }
 
-.lab[data-motion="reduced"] .logoString,
 .lab[data-motion="reduced"] .soundBars > span,
 .lab[data-motion="reduced"] .scrollCueBead,
 .lab[data-motion="reduced"] .bigWordInner,
