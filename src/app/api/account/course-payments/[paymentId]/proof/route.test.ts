@@ -35,6 +35,7 @@ vi.mock("@/lib/courses/submit-course-payment-proof", () => ({
 }));
 
 import { CustomerAuthenticationError } from "@/lib/customer/dal";
+import { InvalidCoursePaymentProofError } from "@/lib/courses/course-payment-proofs";
 import { CoursePaymentSubmissionError } from "@/lib/courses/submit-course-payment-proof";
 import { POST } from "./route";
 
@@ -63,6 +64,15 @@ beforeEach(() => {
 });
 
 describe("course payment proof route authorization", () => {
+  it("returns the server size validation error without submitting or uploading proof", async () => {
+    const error = "This file is too large. Maximum file size: 4 MB. Please compress it below 3.8 MB and try again.";
+    mocks.validate.mockRejectedValue(new InvalidCoursePaymentProofError(error));
+    const response = await POST(request(), { params: Promise.resolve({ paymentId: "payment-1" }) });
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error });
+    expect(mocks.submit).not.toHaveBeenCalled();
+  });
+
   it("rejects cross-site requests before authentication or parsing", async () => {
     const response = await POST(request("https://attacker.invalid"), { params: Promise.resolve({ paymentId: "payment-1" }) });
     expect(response.status).toBe(403);

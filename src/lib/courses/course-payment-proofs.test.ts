@@ -35,9 +35,24 @@ describe("course payment proof validation", () => {
     expect(result).toMatchObject({ mimeType: type, originalFileName: name });
   });
 
-  it("rejects empty, oversized, mismatched MIME/extension, and spoofed content", async () => {
+  it("accepts a proof exactly at the conservative shared byte limit", async () => {
+    expect(MAX_COURSE_PAYMENT_PROOF_BYTES).toBe(3_800_000);
+    const bytes = new Uint8Array(MAX_COURSE_PAYMENT_PROOF_BYTES);
+    bytes.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    const proof = await validateCoursePaymentProof(new File([bytes], "proof.png", { type: "image/png" }));
+    expect(proof.fileSizeBytes).toBe(MAX_COURSE_PAYMENT_PROOF_BYTES);
+  });
+
+  it.each([3_800_001, 4_000_000, 8_388_608])("rejects %i bytes before reading or uploading the file", async size => {
+    const proof = new File([new Uint8Array(size)], "proof.png", { type: "image/png" });
+    const read = vi.spyOn(proof, "arrayBuffer");
+    await expect(validateCoursePaymentProof(proof)).rejects.toThrow("This file is too large. Maximum file size: 4 MB. Please compress it below 3.8 MB and try again.");
+    expect(read).not.toHaveBeenCalled();
+    expect(mocks.upload).not.toHaveBeenCalled();
+  });
+
+  it("rejects empty, mismatched MIME/extension, and spoofed content", async () => {
     await expect(validateCoursePaymentProof(file([], "proof.png", "image/png"))).rejects.toThrow("non-empty");
-    await expect(validateCoursePaymentProof(new File([new Uint8Array(MAX_COURSE_PAYMENT_PROOF_BYTES + 1)], "proof.png", { type: "image/png" }))).rejects.toThrow("8 MB");
     await expect(validateCoursePaymentProof(file([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a], "proof.pdf", "image/png"))).rejects.toThrow("extension");
     await expect(validateCoursePaymentProof(file([1, 2, 3, 4], "proof.png", "image/png"))).rejects.toThrow("contents");
     await expect(validateCoursePaymentProof(file([1], "proof.gif", "image/gif"))).rejects.toThrow("PNG, JPEG, or PDF");

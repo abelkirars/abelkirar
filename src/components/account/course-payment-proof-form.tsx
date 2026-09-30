@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MAX_COURSE_PAYMENT_PROOF_BYTES } from "@/lib/courses/course-payment-proof-limits";
 
 type PaymentMethod = "ZELLE" | "CASH_APP";
 
@@ -25,6 +26,7 @@ export function CoursePaymentProofForm({
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -33,6 +35,13 @@ export function CoursePaymentProofForm({
     setError(null);
     try {
       const formData = new FormData(event.currentTarget);
+      const proof = formData.get("proof");
+      if (proof instanceof File && proof.size > MAX_COURSE_PAYMENT_PROOF_BYTES) {
+        setFileError(t("upload.fileTooLarge"));
+        event.currentTarget.querySelector<HTMLInputElement>("#proof")?.focus();
+        return;
+      }
+      setFileError(null);
       formData.set("method", method);
       const localSentAt = formData.get("sentAt");
       if (typeof localSentAt === "string" && localSentAt) {
@@ -126,10 +135,17 @@ export function CoursePaymentProofForm({
           name="proof"
           type="file"
           accept="image/png,image/jpeg,application/pdf,.png,.jpg,.jpeg,.pdf"
+          aria-describedby={fileError ? "proof-help proof-error" : "proof-help"}
+          aria-invalid={fileError ? true : undefined}
+          onChange={(event) => {
+            const file = event.currentTarget.files?.[0];
+            setFileError(file && file.size > MAX_COURSE_PAYMENT_PROOF_BYTES ? t("upload.fileTooLarge") : null);
+          }}
           required
           className="mt-1.5 block w-full rounded-lg border border-input bg-background text-sm text-muted-foreground file:mr-4 file:min-h-11 file:border-0 file:border-r file:border-border file:bg-muted file:px-4 file:font-medium file:text-foreground hover:file:bg-muted/80"
         />
-        <p className="mt-2 text-xs text-muted-foreground">{t("upload.fileHelp")}</p>
+        <p id="proof-help" className="mt-2 text-xs text-muted-foreground">{t("upload.fileHelp")}</p>
+        {fileError && <p id="proof-error" role="alert" className="mt-2 text-sm text-destructive">{fileError}</p>}
       </div>
 
       <div aria-live="polite" aria-atomic="true">

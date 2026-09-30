@@ -820,7 +820,9 @@
     "upload": {
       "title": "የክፍያ ማስረጃ ይስቀሉ", "method": "የተጠቀሙበት መንገድ", "selected": "ተመርጧል", "senderName": "የላኪው ስም",
       "amountSent": "የተላከው መጠን", "sentAt": "የተላከበት ቀንና ሰዓት", "referenceOptional": "የግብይት ማጣቀሻ (አማራጭ)", "proof": "የማስረጃ ፋይል",
-      "fileHelp": "PNG፣ JPG/JPEG ወይም PDF። ከፍተኛው 8 MB።", "submit": "ማስረጃውን ለግምገማ ይላኩ", "submitting": "በደህንነት በመላክ ላይ…",
+      "fileHelp": "PNG፣ JPG/JPEG ወይም PDF። ከፍተኛው የፋይል መጠን፦ 4 MB።",
+      "fileTooLarge": "ይህ ፋይል በጣም ትልቅ ነው። ከፍተኛው የፋይል መጠን፦ 4 MB። እባክዎ መጠኑን ከ3.8 MB በታች ያሳንሱና እንደገና ይሞክሩ።",
+      "submit": "ማስረጃውን ለግምገማ ይላኩ", "submitting": "በደህንነት በመላክ ላይ…",
       "genericError": "ማስረጃዎን መላክ አልቻልንም። እባክዎ እንደገና ይሞክሩ።", "notVerifiedNotice": "ማስረጃ መላክ ክፍያን አያረጋግጥም ወይም የትምህርት ፈቃድን አያነቃም።",
       "successTitle": "የክፍያ ማስረጃ ደርሷል", "successBody": "ማስረጃዎ በእጅ እንዲረጋገጥ እየጠበቀ ነው። ክፍያው ገና አልተረጋገጠም፤ የትምህርት ፈቃድም ገና አልነቃም።"
     },

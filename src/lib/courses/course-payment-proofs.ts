@@ -2,8 +2,9 @@ import "server-only";
 
 import path from "node:path";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { MAX_COURSE_PAYMENT_PROOF_BYTES } from "./course-payment-proof-limits";
 
-export const MAX_COURSE_PAYMENT_PROOF_BYTES = 8 * 1024 * 1024;
+export { MAX_COURSE_PAYMENT_PROOF_BYTES } from "./course-payment-proof-limits";
 const BUCKET = process.env.SUPABASE_PAYMENT_SCREENSHOTS_BUCKET || "payment-screenshots";
 
 const FILE_TYPES = {
@@ -57,7 +58,7 @@ function safeOriginalFileName(value: string): string {
 export async function validateCoursePaymentProof(file: File): Promise<ValidatedCoursePaymentProof> {
   if (file.size === 0) throw new InvalidCoursePaymentProofError("Choose a non-empty proof file");
   if (file.size > MAX_COURSE_PAYMENT_PROOF_BYTES) {
-    throw new InvalidCoursePaymentProofError("Proof files must be 8 MB or smaller");
+    throw new InvalidCoursePaymentProofError("This file is too large. Maximum file size: 4 MB. Please compress it below 3.8 MB and try again.");
   }
 
   const fileType = FILE_TYPES[file.type as CoursePaymentProofMimeType];
