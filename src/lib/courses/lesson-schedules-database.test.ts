@@ -41,7 +41,7 @@ describe.runIf(Boolean(process.env.COURSE_SCHEDULING_TEST_DATABASE_URL))("Postgr
   const raw=(cohortId:string,extra:Record<string,unknown>={})=>({id:randomUUID(),cohortId,ordinal:1,weekday:"TUESDAY" as const,localStartMinute:600,durationMinutes:60,timeZone:"America/Chicago",effectiveStartDate:new Date("2026-10-01T00:00:00Z"),...extra});
   async function fingerprint(){
     const result:unknown[]=[];
-    for(const name of ["CoursePlan","CourseApplication","CourseEnrollment","CourseCohort","CourseCohortSeat","CoursePayment","CoursePaymentSubmission","CoursePortalAccess","Customer","StudentProfile","CustomerStudentRelation","CoursePaymentNotification","Order","WeeklyPractice"]){
+    for(const name of ["CoursePlan","CoursePrice","CourseApplication","CourseEnrollment","CourseCohort","CourseCohortSeat","CoursePayment","CoursePaymentSubmission","CoursePortalAccess","Customer","StudentProfile","CustomerStudentRelation","CoursePaymentNotification","Order","WeeklyPractice"]){
       result.push(await db.$queryRawUnsafe(`SELECT to_jsonb(t) value FROM "${name}" t ORDER BY to_jsonb(t)::text`));
     }return result;
   }
@@ -58,6 +58,7 @@ describe.runIf(Boolean(process.env.COURSE_SCHEDULING_TEST_DATABASE_URL))("Postgr
     const o=await owner(),t=await teacher();auth.allowed=false;
     await expect(service.saveLessonScheduleDraft(o,pair(t))).rejects.toThrow("Admin authentication");
     await expect(service.publishLessonSchedule(o)).rejects.toThrow("Admin authentication");
+    await expect(service.archiveLessonSchedule(o)).rejects.toThrow("Admin authentication required");
     await expect(service.readAdminLessonSchedule(o)).rejects.toThrow("Admin authentication");
   });
   it("customer/student readers isolate enrollment ownership and preserve portal gates",async()=>{
@@ -152,6 +153,154 @@ describe.runIf(Boolean(process.env.COURSE_SCHEDULING_TEST_DATABASE_URL))("Postgr
     expect(await db.courseLessonScheduleSlot.count({where:{cohortId:o.id,archivedAt:null}})).toBe(2);
     await service.publishLessonSchedule(o);
     await expect(db.courseCohort.update({where:{id:o.id},data:{weeklyDay:"MONDAY"}})).rejects.toThrow();
+  });
+  it("an unrelated LEGACY owner does not block publication or silently acquire inferred lessons",async()=>{
+    const a=await owner(),b=await owner(),t=await teacher();
+    const legacy=await tx(t=>t.courseLessonScheduleSlot.create({data:raw(a.id,{state:"LEGACY",weekday:"SATURDAY",teacherAdminId:null})}));
+    await service.saveLessonScheduleDraft(b,pair(t));
+    expect(await service.publishLessonSchedule(b)).toHaveLength(2);
+    expect(await db.courseLessonScheduleSlot.findMany({where:{cohortId:a.id}})).toEqual([legacy]);
+    await expect(service.publishLessonSchedule(a)).rejects.toThrow("Configure both drafts explicitly before publication");
+    const drafts=await service.saveLessonScheduleDraft(a,pair(t,720));
+    expect(drafts).toHaveLength(2);
+    expect(drafts.every(s=>s.state==="DRAFT"&&s.teacherAdminId===t&&s.publishedAt===null)).toBe(true);
+    expect(drafts.map(s=>s.weekday)).toEqual(["TUESDAY","THURSDAY"]);
+    const retained=await db.courseLessonScheduleSlot.findUniqueOrThrow({where:{id:legacy.id}});
+    expect(retained).toMatchObject({...legacy,archivedAt:expect.any(Date),updatedByAdminId:auth.adminId,updatedAt:expect.any(Date)});
+  });
+  it("explicitly archives LEGACY history with no business changes and a repeat is a no-op",async()=>{
+    const o=await owner();
+    const legacy=await tx(t=>t.courseLessonScheduleSlot.create({data:raw(o.id,{state:"LEGACY"})}));
+    const before=await fingerprint();
+    const result=await service.archiveLessonSchedule(o);
+    expect(result).toEqual({archivedCount:1,archivedAt:expect.any(Date)});
+    const archived=await db.courseLessonScheduleSlot.findUniqueOrThrow({where:{id:legacy.id}});
+    expect(archived).toMatchObject({...legacy,archivedAt:result.archivedAt,updatedByAdminId:auth.adminId,updatedAt:expect.any(Date)});
+    expect(await service.archiveLessonSchedule(o)).toEqual({archivedCount:0,archivedAt:null});
+    expect(await db.courseLessonScheduleSlot.findUniqueOrThrow({where:{id:legacy.id}})).toEqual(archived);
+    expect(await fingerprint()).toEqual(before);
+  });
+  it("archives both drafts even with an inactive teacher and retains their state/history",async()=>{
+    const o=await owner("enrollment"),t=await teacher();
+    const drafts=await service.saveLessonScheduleDraft(o,pair(t));
+    await db.admin.update({where:{id:t},data:{isActive:false}});
+    const before=await fingerprint(),result=await service.archiveLessonSchedule(o);
+    expect(result.archivedCount).toBe(2);
+    const rows=await db.courseLessonScheduleSlot.findMany({where:{enrollmentId:o.id},orderBy:{ordinal:"asc"}});
+    rows.forEach((s,i)=>expect(s).toMatchObject({...drafts[i],archivedAt:result.archivedAt,updatedByAdminId:auth.adminId,updatedAt:expect.any(Date)}));
+    expect(await fingerprint()).toEqual(before);
+  });
+  it("archives a published pair together, retains publication history and releases teacher time",async()=>{
+    const a=await owner(),b=await owner("enrollment"),t=await teacher();
+    const learnerOwner=await owner("enrollment");
+    const enrollment=await db.courseEnrollment.update({where:{id:learnerOwner.id},data:{
+      coursePlanId:"plan_beginner_group",formatSnapshot:"GROUP",planCodeSnapshot:"BEGINNER_GROUP",cohortId:a.id,billingTimeZone:"America/Chicago",
+    }});
+    const customer=await db.customer.findUniqueOrThrow({where:{id:enrollment.customerId}});
+    await db.studentProfile.update({where:{id:enrollment.studentId},data:{supabaseUserId:customer.supabaseUserId,portalAccess:false}});
+    await db.customerStudentRelation.create({data:{customerId:enrollment.customerId,studentId:enrollment.studentId,type:"SELF"}});
+    await db.courseCohortSeat.update({where:{cohortId_position:{cohortId:a.id,position:1}},data:{currentEnrollmentId:enrollment.id,assignedAt:new Date(),reservedUntil:new Date(Date.now()+604800000)}});
+    const paymentCreatedAt=new Date();
+    const payment=await db.coursePayment.create({data:{enrollmentId:enrollment.id,kind:"INITIAL_ENROLLMENT",status:"PROOF_SUBMITTED",
+      periodStart:new Date("2026-10-03T00:00:00Z"),periodEnd:new Date("2026-11-03T00:00:00Z"),createdAt:paymentCreatedAt,
+      expiresAt:new Date(paymentCreatedAt.getTime()+604800000),baseAmountCents:5000,finalAmountCents:5000}});
+    await db.coursePaymentSubmission.create({data:{paymentId:payment.id,attemptNumber:1,method:"ZELLE",amountSentCents:5000,
+      proofStoragePath:"local-only/no-real-storage-object.png",mimeType:"image/png",fileSizeBytes:10}});
+    await service.saveLessonScheduleDraft(a,pair(t));const published=await service.publishLessonSchedule(a);
+    await service.saveLessonScheduleDraft(b,pair(t));
+    await expect(service.publishLessonSchedule(b)).rejects.toThrow("Teacher recurring lesson conflict");
+    const before=await fingerprint(),result=await service.archiveLessonSchedule(a);
+    expect(result.archivedCount).toBe(2);
+    const history=await db.courseLessonScheduleSlot.findMany({where:{cohortId:a.id},orderBy:{ordinal:"asc"}});
+    history.forEach((s,i)=>expect(s).toMatchObject({...published[i],archivedAt:result.archivedAt,updatedByAdminId:auth.adminId,updatedAt:expect.any(Date)}));
+    expect(await db.courseLessonScheduleSlot.count({where:{cohortId:a.id,archivedAt:null}})).toBe(0);
+    expect(await fingerprint()).toEqual(before);
+    expect(await db.coursePayment.findUniqueOrThrow({where:{id:payment.id}})).toMatchObject({status:"PROOF_SUBMITTED",verifiedAt:null,finalAmountCents:5000});
+    expect(await db.coursePortalAccess.count({where:{enrollmentId:enrollment.id}})).toBe(0);
+    expect(await db.courseCohortSeat.count({where:{cohortId:a.id,currentEnrollmentId:enrollment.id}})).toBe(1);
+    expect(await db.courseEnrollment.findUniqueOrThrow({where:{id:enrollment.id}})).toEqual(enrollment);
+    expect(await service.publishLessonSchedule(b)).toHaveLength(2);
+    expect(await service.archiveLessonSchedule(a)).toEqual({archivedCount:0,archivedAt:null});
+    expect(await db.courseLessonScheduleSlot.findMany({where:{cohortId:a.id},orderBy:{ordinal:"asc"}})).toEqual(history);
+  });
+  it.each([
+    ["cohort","COMPLETED"],["cohort","CANCELLED"],["cohort","ARCHIVED"],
+    ["enrollment","COMPLETED"],["enrollment","CANCELLED"],["enrollment","ARCHIVED"],
+  ] as const)("archives published history for terminal %s owner (%s)",async(kind,state)=>{
+    const o=await owner(kind),t=await teacher();
+    if(kind==="cohort")await db.courseCohort.update({where:{id:o.id},data:{weeklyDay:"TUESDAY",localStartTime:new Date("1970-01-01T10:00:00Z"),timeZone:"America/Chicago"}});
+    await service.saveLessonScheduleDraft(o,pair(t));await service.publishLessonSchedule(o);
+    if(kind==="cohort")await db.courseCohort.update({where:{id:o.id},data:state==="ARCHIVED"?{archivedAt:new Date()}:{status:state}});
+    else await db.courseEnrollment.update({where:{id:o.id},data:state==="ARCHIVED"?{archivedAt:new Date()}:state==="COMPLETED"?{status:state,completedAt:new Date()}:{status:state,cancelledAt:new Date(),cancellationReason:"Local terminal fixture"}});
+    expect(await db.courseLessonScheduleSlot.count({where:{...(kind==="cohort"?{cohortId:o.id}:{enrollmentId:o.id}),archivedAt:null,state:"PUBLISHED"}})).toBe(2);
+    await expect(service.publishLessonSchedule(o)).rejects.toThrow(kind==="cohort"?"Invalid group schedule owner":"Invalid private schedule owner");
+    const before=await fingerprint();
+    expect((await service.archiveLessonSchedule(o)).archivedCount).toBe(2);
+    expect(await db.courseLessonScheduleSlot.count({where:{...(kind==="cohort"?{cohortId:o.id}:{enrollmentId:o.id}),archivedAt:null}})).toBe(0);
+    expect(await fingerprint()).toEqual(before);
+  });
+  it("a late archive failure rolls back both slots and all actor/timestamp changes",async()=>{
+    const o=await owner();await service.saveLessonScheduleDraft(o,pair(await teacher()));
+    const published=await service.publishLessonSchedule(o),before=await fingerprint();
+    await db.$executeRawUnsafe(`CREATE FUNCTION local_archive_failure() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN IF (SELECT count(*) FROM archive_changes WHERE "archivedAt" IS NOT NULL)=2 THEN
+        RAISE EXCEPTION 'Injected archive failure after both slot updates' USING ERRCODE='23514';
+      END IF; RETURN NULL; END $$`);
+    await db.$executeRawUnsafe(`CREATE TRIGGER local_archive_failure AFTER UPDATE ON "CourseLessonScheduleSlot"
+      REFERENCING NEW TABLE AS archive_changes FOR EACH STATEMENT EXECUTE FUNCTION local_archive_failure()`);
+    try {
+      await expect(service.archiveLessonSchedule(o)).rejects.toThrow("Injected archive failure after both slot updates");
+      expect(await db.courseLessonScheduleSlot.findMany({where:{cohortId:o.id},orderBy:{ordinal:"asc"}})).toEqual(published);
+      expect(await fingerprint()).toEqual(before);
+    } finally {
+      await db.$executeRawUnsafe('DROP TRIGGER local_archive_failure ON "CourseLessonScheduleSlot"');
+      await db.$executeRawUnsafe('DROP FUNCTION local_archive_failure()');
+    }
+  });
+  it("the unchanged database integrity trigger rejects archiving only one published member",async()=>{
+    const o=await owner();await service.saveLessonScheduleDraft(o,pair(await teacher()));
+    const rows=await service.publishLessonSchedule(o);
+    await expect(tx(t=>t.courseLessonScheduleSlot.update({where:{id:rows[0].id},data:{archivedAt:new Date(),updatedByAdminId:auth.adminId}})))
+      .rejects.toThrow("Publish exactly two different weekdays with one teacher, timezone and date window");
+    expect(await db.courseLessonScheduleSlot.findMany({where:{cohortId:o.id},orderBy:{ordinal:"asc"}})).toEqual(rows);
+  });
+  it("concurrent archives produce one archive and one deliberate no-op",async()=>{
+    const o=await owner();await service.saveLessonScheduleDraft(o,pair(await teacher()));await service.publishLessonSchedule(o);
+    const results=await Promise.all([service.archiveLessonSchedule(o),service.archiveLessonSchedule(o)]);
+    expect(results.map(r=>r.archivedCount).sort()).toEqual([0,2]);
+    expect(await db.courseLessonScheduleSlot.count({where:{cohortId:o.id,archivedAt:null}})).toBe(0);
+  });
+  it("concurrent same-owner publication/archive preserves a complete archived pair",async()=>{
+    for(let n=0;n<3;n++){
+      const o=await owner();await service.saveLessonScheduleDraft(o,pair(await teacher()));await service.publishLessonSchedule(o);
+      const [archive,publish]=await Promise.allSettled([service.archiveLessonSchedule(o),service.publishLessonSchedule(o)]);
+      expect(archive.status).toBe("fulfilled");
+      if(publish.status==="rejected")expect(publish.reason).toMatchObject({name:"ZodError"});
+      else expect(publish.value).toHaveLength(2);
+      const rows=await db.courseLessonScheduleSlot.findMany({where:{cohortId:o.id}});
+      expect(rows).toHaveLength(2);expect(rows.every(s=>s.state==="PUBLISHED"&&s.archivedAt!==null)).toBe(true);
+      expect(rows[0].archivedAt).toEqual(rows[1].archivedAt);
+    }
+  });
+  it("conflicting publication racing an archive cannot double-book and can use released time",async()=>{
+    for(let n=0;n<3;n++){
+      const a=await owner(),b=await owner("enrollment"),t=await teacher();
+      await service.saveLessonScheduleDraft(a,pair(t));await service.publishLessonSchedule(a);await service.saveLessonScheduleDraft(b,pair(t));
+      const [archive,publish]=await Promise.allSettled([service.archiveLessonSchedule(a),service.publishLessonSchedule(b)]);
+      expect(archive.status).toBe("fulfilled");
+      if(publish.status==="rejected"){
+        expect(publish.reason).toMatchObject({message:"Teacher recurring lesson conflict"});
+        expect(await service.publishLessonSchedule(b)).toHaveLength(2);
+      }
+      expect(await db.courseLessonScheduleSlot.count({where:{teacherAdminId:t,state:"PUBLISHED",archivedAt:null}})).toBe(2);
+      expect(await db.courseLessonScheduleSlot.count({where:{cohortId:a.id,archivedAt:null}})).toBe(0);
+    }
+  });
+  it("a terminal-state transition racing archive does not strand teacher time",async()=>{
+    const o=await owner();await service.saveLessonScheduleDraft(o,pair(await teacher()));await service.publishLessonSchedule(o);
+    await Promise.all([db.courseCohort.update({where:{id:o.id},data:{status:"CANCELLED"}}),service.archiveLessonSchedule(o)]);
+    expect((await db.courseCohort.findUniqueOrThrow({where:{id:o.id}})).status).toBe("CANCELLED");
+    expect(await db.courseLessonScheduleSlot.count({where:{cohortId:o.id,archivedAt:null}})).toBe(0);
   });
   it("database validates GROUP owner and XOR even with existing parents",async()=>{
     const c=await db.courseCohort.create({data:{coursePlanId:"plan_beginner_one_to_one",code:randomUUID(),name:"Invalid local owner"}});

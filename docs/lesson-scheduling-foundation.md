@@ -14,6 +14,12 @@ identical inclusive effective-date windows. No teacher or second slot is inferre
 All six foreign keys use RESTRICT for deletion and key updates. Slot deletion is
 rejected; historical rows are archived. Published coordinates cannot be edited.
 No rescheduling/archival UI or automatic reservation release is introduced here.
+`archiveLessonSchedule` is an explicit admin-only server operation that archives
+all current LEGACY, DRAFT or PUBLISHED slots for a valid owner, including cancelled,
+completed and archived owners. Published pairs archive together in one Serializable
+transaction. Historical coordinates/publication metadata remain intact; the actor
+and archive timestamp are recorded. Repeating it returns archivedCount 0 and no
+new timestamp. It changes no payments, access, seats or owner lifecycle fields.
 
 The admin DAL authenticates every read/write. Customer/student readers derive
 identity from existing authenticated DALs, filter the enrollment owner, and return
@@ -35,7 +41,11 @@ Conflicts require the same teacher and weekday, overlapping half-open local time
 intervals, and an effective-date intersection containing that weekday. Adjacent
 lessons and intersecting date windows without that weekday do not conflict.
 Operational conflicts are between Chicago schedules. Unresolved current LEGACY
-rows block service publication for other owners until explicitly configured.
+rows prevent only their own owner's publication until explicitly configured or
+archived. They do not block unrelated owners or infer teacher commitments.
+Archive uses the same owner-before-teacher lock order as publication and permits
+inactive teachers to be released. Terminal-state changes never automatically
+archive schedules; cancellation/completion workflows may call it deliberately later.
 Unrecorded/off-platform private commitments still require teacher confirmation.
 
 Parent guards prevent changes that invalidate existing slot owner formats,
