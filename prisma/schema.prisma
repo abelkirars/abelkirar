@@ -260,9 +260,10 @@ model CoursePlan {
   @@index([active, displayOrder])
 }
 
-/// A small Group cohort. It has exactly one maintainable weekly schedule;
-/// multiple weekly meetings and calendar exceptions are intentionally out of
-/// scope. localStartTime is interpreted only together with its IANA timeZone.
+/// Small Group cohort with preserved legacy single-schedule fields. Published
+/// lessonSlots represent the new two-weekday timetable; legacy fields remain
+/// the compatibility/billing preparation source until an explicit later cutover.
+/// localStartTime is a civil time interpreted only with its IANA timeZone.
 model CourseCohort {
   id              String             @id @default(cuid())
   coursePlanId    String
@@ -281,9 +282,10 @@ model CourseCohort {
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
 
-  coursePlan  CoursePlan         @relation(fields: [coursePlanId], references: [id], onDelete: Restrict)
+  coursePlan  CoursePlan                 @relation(fields: [coursePlanId], references: [id], onDelete: Restrict)
   seats       CourseCohortSeat[]
   enrollments CourseEnrollment[]
+  lessonSlots CourseLessonScheduleSlot[]
 
   @@index([coursePlanId, status])
 }
@@ -334,20 +336,62 @@ model CourseEnrollment {
   createdAt                    DateTime               @default(now())
   updatedAt                    DateTime               @updatedAt
 
-  student           StudentProfile      @relation(fields: [studentId], references: [id], onDelete: Restrict)
-  customer          Customer            @relation("EnrollmentCustomer", fields: [customerId], references: [id], onDelete: Restrict)
-  coursePlan        CoursePlan          @relation(fields: [coursePlanId], references: [id], onDelete: Restrict)
-  application       CourseApplication?  @relation(fields: [applicationId], references: [id], onDelete: Restrict)
-  cohort            CourseCohort?       @relation(fields: [cohortId], references: [id], onDelete: Restrict)
-  overrideByAdmin   Admin?              @relation("CourseEnrollmentOverrideBy", fields: [overrideByAdminId], references: [id], onDelete: Restrict)
-  currentCohortSeat CourseCohortSeat?   @relation("CurrentCohortSeat")
+  student           StudentProfile             @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  customer          Customer                   @relation("EnrollmentCustomer", fields: [customerId], references: [id], onDelete: Restrict)
+  coursePlan        CoursePlan                 @relation(fields: [coursePlanId], references: [id], onDelete: Restrict)
+  application       CourseApplication?         @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+  cohort            CourseCohort?              @relation(fields: [cohortId], references: [id], onDelete: Restrict)
+  overrideByAdmin   Admin?                     @relation("CourseEnrollmentOverrideBy", fields: [overrideByAdminId], references: [id], onDelete: Restrict)
+  currentCohortSeat CourseCohortSeat?          @relation("CurrentCohortSeat")
   payments          CoursePayment[]
   portalAccess      CoursePortalAccess?
+  lessonSlots       CourseLessonScheduleSlot[]
 
   @@index([studentId, status])
   @@index([customerId, status])
   @@index([cohortId, status])
   @@index([status, archivedAt])
+}
+
+enum CourseLessonSlotState {
+  LEGACY
+  DRAFT
+  PUBLISHED
+}
+
+/// Local civil recurrence, independent of billing, seats and portal access.
+/// SQL enforces XOR ownership, current ordinals and atomic two-slot publication.
+model CourseLessonScheduleSlot {
+  id                 String                @id @default(cuid())
+  cohortId           String?
+  enrollmentId       String?
+  teacherAdminId     String?
+  ordinal            Int                   @db.SmallInt
+  weekday            CourseWeekday
+  localStartMinute   Int                   @db.SmallInt
+  durationMinutes    Int                   @db.SmallInt
+  timeZone           String                @db.VarChar(64)
+  effectiveStartDate DateTime              @db.Date
+  effectiveEndDate   DateTime?             @db.Date
+  state              CourseLessonSlotState @default(DRAFT)
+  publishedAt        DateTime?             @db.Timestamptz(3)
+  publishedByAdminId String?
+  archivedAt         DateTime?             @db.Timestamptz(3)
+  createdByAdminId   String?
+  updatedByAdminId   String?
+  createdAt          DateTime              @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime              @updatedAt @db.Timestamptz(3)
+
+  cohort     CourseCohort?     @relation(fields: [cohortId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  enrollment CourseEnrollment? @relation(fields: [enrollmentId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  teacher    Admin?            @relation("LessonTeacher", fields: [teacherAdminId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  publisher  Admin?            @relation("LessonPublisher", fields: [publishedByAdminId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  creator    Admin?            @relation("LessonCreator", fields: [createdByAdminId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  updater    Admin?            @relation("LessonUpdater", fields: [updatedByAdminId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([cohortId, archivedAt])
+  @@index([enrollmentId, archivedAt])
+  @@index([teacherAdminId, weekday, state, archivedAt], map: "LessonSlot_teacher_weekday_state_archive_idx")
 }
 
 /// One plan-specific promotion. PostgreSQL prevents overlapping enabled
@@ -400,13 +444,13 @@ model CoursePayment {
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @updatedAt
 
-  enrollment        CourseEnrollment          @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
-  promotion         CoursePromotion?          @relation(fields: [promotionId], references: [id], onDelete: Restrict)
-  verifiedByAdmin   Admin?                    @relation("CoursePaymentVerifiedBy", fields: [verifiedByAdminId], references: [id], onDelete: Restrict)
+  enrollment        CourseEnrollment            @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+  promotion         CoursePromotion?            @relation(fields: [promotionId], references: [id], onDelete: Restrict)
+  verifiedByAdmin   Admin?                      @relation("CoursePaymentVerifiedBy", fields: [verifiedByAdminId], references: [id], onDelete: Restrict)
   submissions       CoursePaymentSubmission[]
   notifications     CoursePaymentNotification[]
-  supersedesPayment CoursePayment?            @relation("CoursePaymentRevision", fields: [supersedesPaymentId], references: [id], onDelete: Restrict)
-  supersededBy      CoursePayment?            @relation("CoursePaymentRevision")
+  supersedesPayment CoursePayment?              @relation("CoursePaymentRevision", fields: [supersedesPaymentId], references: [id], onDelete: Restrict)
+  supersededBy      CoursePayment?              @relation("CoursePaymentRevision")
 
   @@unique([enrollmentId, periodStart, revision])
   @@index([enrollmentId, status])
@@ -435,8 +479,8 @@ model CoursePaymentSubmission {
   createdAt            DateTime                      @default(now())
   updatedAt            DateTime                      @updatedAt
 
-  payment         CoursePayment @relation(fields: [paymentId], references: [id], onDelete: Restrict)
-  reviewedByAdmin Admin?        @relation("CoursePaymentSubmissionReviewedBy", fields: [reviewedByAdminId], references: [id], onDelete: Restrict)
+  payment         CoursePayment               @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  reviewedByAdmin Admin?                      @relation("CoursePaymentSubmissionReviewedBy", fields: [reviewedByAdminId], references: [id], onDelete: Restrict)
   notifications   CoursePaymentNotification[] @relation("CoursePaymentNotificationSubmission")
 
   @@unique([paymentId, attemptNumber])
@@ -449,29 +493,29 @@ model CoursePaymentSubmission {
 /// intentionally snapshotted so every retry uses the exact same recipient and
 /// Resend request body. It contains no proof path, payment credential or token.
 model CoursePaymentNotification {
-  id                    String                          @id @default(cuid())
-  paymentId             String
-  submissionId          String?
-  kind                  CoursePaymentNotificationKind
-  deduplicationKey      String                          @db.VarChar(191)
-  status                CoursePaymentNotificationStatus @default(PENDING)
-  recipientEmailSnapshot String                         @db.VarChar(320)
-  subjectSnapshot       String                          @db.VarChar(300)
-  htmlSnapshot          String
-  senderEmailSnapshot   String?                         @db.VarChar(320)
-  attemptCount          Int                             @default(0)
-  nextAttemptAt         DateTime                        @default(now())
-  leaseToken            String?                         @db.Uuid
-  leaseExpiresAt        DateTime?
-  firstAttemptAt        DateTime?
-  lastAttemptAt         DateTime?
-  sentAt                DateTime?
-  providerMessageId     String?                         @db.VarChar(255)
-  lastErrorCode         String?                         @db.VarChar(64)
-  createdAt             DateTime                        @default(now())
-  updatedAt             DateTime                        @updatedAt
+  id                     String                          @id @default(cuid())
+  paymentId              String
+  submissionId           String?
+  kind                   CoursePaymentNotificationKind
+  deduplicationKey       String                          @db.VarChar(191)
+  status                 CoursePaymentNotificationStatus @default(PENDING)
+  recipientEmailSnapshot String                          @db.VarChar(320)
+  subjectSnapshot        String                          @db.VarChar(300)
+  htmlSnapshot           String
+  senderEmailSnapshot    String?                         @db.VarChar(320)
+  attemptCount           Int                             @default(0)
+  nextAttemptAt          DateTime                        @default(now())
+  leaseToken             String?                         @db.Uuid
+  leaseExpiresAt         DateTime?
+  firstAttemptAt         DateTime?
+  lastAttemptAt          DateTime?
+  sentAt                 DateTime?
+  providerMessageId      String?                         @db.VarChar(255)
+  lastErrorCode          String?                         @db.VarChar(64)
+  createdAt              DateTime                        @default(now())
+  updatedAt              DateTime                        @updatedAt
 
-  payment   CoursePayment            @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  payment    CoursePayment            @relation(fields: [paymentId], references: [id], onDelete: Restrict)
   submission CoursePaymentSubmission? @relation("CoursePaymentNotificationSubmission", fields: [submissionId, paymentId], references: [id, paymentId], onDelete: Restrict)
 
   @@unique([paymentId, kind, deduplicationKey])
@@ -599,12 +643,16 @@ model Order {
 }
 
 model Admin {
-  id                String    @id @default(cuid())
-  username          String    @unique
+  teachingSlots     CourseLessonScheduleSlot[] @relation("LessonTeacher")
+  publishedSlots    CourseLessonScheduleSlot[] @relation("LessonPublisher")
+  createdSlots      CourseLessonScheduleSlot[] @relation("LessonCreator")
+  updatedSlots      CourseLessonScheduleSlot[] @relation("LessonUpdater")
+  id                String                     @id @default(cuid())
+  username          String                     @unique
   passwordHash      String
   displayName       String
-  isActive          Boolean   @default(true)
-  createdAt         DateTime  @default(now())
+  isActive          Boolean                    @default(true)
+  createdAt         DateTime                   @default(now())
   lastLoginAt       DateTime?
   /// Set whenever this admin's password is changed. Compared against the
   /// session JWT's `iat` claim in verifyAdminSession() — any token issued
@@ -874,12 +922,12 @@ enum KirarModel {
 }
 
 model StudentProfile {
-  id             String @id @default(cuid())
+  id             String  @id @default(cuid())
   /// Optional learner-owned Supabase login. Never use a guardian's identity.
   supabaseUserId String? @unique
   /// Optional learner contact/login email, never inferred from a payer/application.
   email          String? @unique
-  role           Role   @default(STUDENT)
+  role           Role    @default(STUDENT)
 
   fullName          String
   phone             String?
