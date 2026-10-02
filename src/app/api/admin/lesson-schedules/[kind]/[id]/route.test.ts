@@ -71,6 +71,17 @@ it.each([
   [new Error("Configure both drafts explicitly before publication"), "incomplete", 409],
   [new Error("Explicit active teacher required"), "teacher", 409],
   [new Prisma.PrismaClientKnownRequestError("private DB detail", { code: "P2034", clientVersion: "7.8.0" }), "retry", 409],
+  [new Prisma.PrismaClientKnownRequestError("private duplicate detail", { code: "P2002", clientVersion: "7.8.0" }), "retry", 409],
+  ...["P2010", "P2004"].flatMap(prismaCode => ["40001", "40P01"].flatMap(sqlState => [
+    { code: sqlState, message: "private SQL and DB detail" },
+    { driverAdapterError: { cause: { originalCode: sqlState, originalMessage: "private SQL and DB detail" } } },
+  ].map<[Error, string, number]>(meta => [new Prisma.PrismaClientKnownRequestError("private raw query", { code: prismaCode, clientVersion: "7.8.0", meta }), "retry", 409]))),
+  ...["P2010", "P2004"].flatMap(prismaCode => [
+    undefined,
+    { code: "42P01", message: "SELECT private_column FROM private_table" },
+    { driverAdapterError: { cause: { originalCode: "23514", originalMessage: "private constraint detail" } } },
+  ].map<[Error, string, number]>(meta => [new Prisma.PrismaClientKnownRequestError("private raw query", { code: prismaCode, clientVersion: "7.8.0", meta }), "unavailable", 500])),
+  [new Error("Admin authentication required"), "unauthorized", 401],
   [new Error("private connection details"), "unavailable", 500],
 ])("returns only safe translated error codes", async (error, code, status) => {
   mocks.publish.mockRejectedValue(error);

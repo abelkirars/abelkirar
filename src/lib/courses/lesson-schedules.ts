@@ -127,11 +127,18 @@ export async function readCustomerLessonSchedule(enrollmentId: string) {
   if (!e) throw new Error("Enrollment not found");
   return readTransition(e.cohortId ? { kind: "cohort", id: e.cohortId } : { kind: "enrollment", id: e.id });
 }
+/** An owned, eligible enrollment may disappear between the dashboard's two reads. */
+export class StudentLessonEnrollmentIneligibleError extends Error {
+  constructor() {
+    super("Enrollment not found");
+    this.name = "StudentLessonEnrollmentIneligibleError";
+  }
+}
 export async function readStudentLessonSchedule(enrollmentId: string) {
   const session = await resolveStudentSession();
   if (session.kind !== "active") throw new Error("Student portal access required");
   const e = await prisma.courseEnrollment.findFirst({ where: { id: enrollmentId, studentId: session.session.studentId, status: "ACTIVE", archivedAt: null,
     portalAccess: { is: { status: "ENABLED", archivedAt: null } } } });
-  if (!e) throw new Error("Enrollment not found");
+  if (!e) throw new StudentLessonEnrollmentIneligibleError();
   return readTransition(e.cohortId ? { kind: "cohort", id: e.cohortId } : { kind: "enrollment", id: e.id });
 }

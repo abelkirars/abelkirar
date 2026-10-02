@@ -23,8 +23,12 @@ export function lessonScheduleErrorResponse(error: unknown) {
   }
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     if (["P2034", "P2002"].includes(error.code)) { code = "retry"; status = 409; }
-    // DB guards are a final safety net, including concurrent lifecycle changes.
-    if (["P2004", "P2010"].includes(error.code)) { code = "retry"; status = 409; }
+    // Match the SQLSTATE shapes used by Prisma/adapter-pg, not every DB guard failure.
+    const adapter = error.meta?.driverAdapterError as { cause?: { originalCode?: string } } | undefined;
+    const sqlState = error.meta?.code ?? adapter?.cause?.originalCode;
+    if (["P2004", "P2010"].includes(error.code) && ["40001", "40P01"].includes(String(sqlState))) {
+      code = "retry"; status = 409;
+    }
   }
   return NextResponse.json({ error: code }, { status });
 }

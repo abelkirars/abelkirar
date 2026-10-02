@@ -148,6 +148,25 @@ describe.runIf(Boolean(process.env.COURSE_SCHEDULING_TEST_DATABASE_URL))("Postgr
     await db.courseEnrollment.update({where:{id:o.id},data:{cohortId:group.id,coursePlanId:"plan_beginner_group",formatSnapshot:"GROUP",planCodeSnapshot:"BEGINNER_GROUP"}});
     expect(await views.getAdminLessonScheduleEditor(o)).toBeNull();
   });
+  it.each(["CANCELLED","PAUSED","SUSPENDED"] as const)("My Lessons safely omits a real enrollment becoming %s between its database reads",async transition=>{
+    const views=await import("./lesson-schedule-views"),o=await owner("enrollment");
+    const e=await db.courseEnrollment.update({where:{id:o.id},data:{status:"ACTIVE",portalAccess:{create:{status:"ENABLED"}}}});
+    auth.studentAllowed=true;auth.studentId=e.studentId;
+    await service.saveLessonScheduleDraft(o,pair(await teacher()));await service.publishLessonSchedule(o);
+    expect(await views.readMyLessonSchedules()).toMatchObject([{enrollmentId:e.id}]);
+    const original=service.readStudentLessonSchedule;
+    // The genuine initial query has completed when the secondary reader is called.
+    const read=vi.spyOn(service,"readStudentLessonSchedule").mockImplementationOnce(async id=>{
+      expect(id).toBe(e.id);
+      expect(await db.courseEnrollment.findUniqueOrThrow({where:{id}})).toMatchObject({status:"ACTIVE",studentId:auth.studentId});
+      if(transition==="SUSPENDED")await db.coursePortalAccess.update({where:{enrollmentId:e.id},data:{status:"SUSPENDED",changedByAdminId:auth.adminId,reason:"Local eligibility race test",changedAt:new Date()}});
+      else await db.courseEnrollment.update({where:{id:e.id},data:{status:transition,...(transition==="CANCELLED"?{cancelledAt:new Date(),cancellationReason:"Local eligibility race test"}:{})}});
+      return original(id); // Run the real authorization/eligibility query after the change.
+    });
+    try{expect(await views.readMyLessonSchedules()).toEqual([]);expect(read).toHaveBeenCalledExactlyOnceWith(e.id);}finally{read.mockRestore();}
+    await expect(service.readStudentLessonSchedule(e.id)).rejects.toBeInstanceOf(service.StudentLessonEnrollmentIneligibleError);
+    expect(await db.courseLessonScheduleSlot.count({where:{enrollmentId:e.id,state:"PUBLISHED",archivedAt:null}})).toBe(2);
+  });
   it("customer/student readers isolate enrollment ownership and preserve portal gates",async()=>{
     const o=await owner("enrollment"),e=await db.courseEnrollment.findUniqueOrThrow({where:{id:o.id}});
     await service.saveLessonScheduleDraft(o,pair(await teacher()));await service.publishLessonSchedule(o);

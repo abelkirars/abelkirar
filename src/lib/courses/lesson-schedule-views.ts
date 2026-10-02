@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { resolveStudentSession } from "@/lib/student/dal";
 import { courseAdmin } from "./admin-service";
 import { lessonOwnerSchema } from "./lesson-schedule-rules";
-import { readAdminLessonSchedule, readStudentLessonSchedule } from "./lesson-schedules";
+import { readAdminLessonSchedule, readStudentLessonSchedule, StudentLessonEnrollmentIneligibleError } from "./lesson-schedules";
 import { LESSON_TIME_ZONE, type MyLessonSchedule } from "./lesson-schedule-presentation";
 
 export async function getAdminLessonScheduleEditor(rawOwner: unknown) {
@@ -79,8 +79,12 @@ export async function readMyLessonSchedules(): Promise<MyLessonSchedule[]> {
   const today = Temporal.Now.plainDateISO(LESSON_TIME_ZONE).toString();
   const result: MyLessonSchedule[] = [];
   for (const enrollment of enrollments) {
-    const schedule = await readStudentLessonSchedule(enrollment.id);
-    if (schedule.state !== "PUBLISHED") continue;
+    const schedule = await readStudentLessonSchedule(enrollment.id).catch(error => {
+      // Skip only a confirmed eligibility miss, never an auth or unexpected DB failure.
+      if (error instanceof StudentLessonEnrollmentIneligibleError) return null;
+      throw error;
+    });
+    if (!schedule || schedule.state !== "PUBLISHED") continue;
     const first = schedule.slots[0];
     if (first.effectiveEndDate && first.effectiveEndDate < today) continue;
     result.push({ enrollmentId: enrollment.id, plan: enrollment.planCodeSnapshot, cohortName: enrollment.cohort?.name ?? null,
