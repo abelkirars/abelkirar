@@ -36,7 +36,7 @@ export function SiteHeader() {
         </nav>
 
         <div className="flex items-center gap-2">
-          <Link href="/account" className="rounded-md px-2 py-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-primary">{accountText("entry")}</Link>
+          <Link href="/account/signup" className="rounded-md px-2 py-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-primary">{accountText("entry")}</Link>
           <LanguageSwitcher className="hidden sm:flex" />
           <Button
             variant="ghost"

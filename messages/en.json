@@ -114,7 +114,7 @@
   },
   "accountArea": {
     "signOut": "Sign out", "signOutError": "Unable to sign out. Please try again.",
-    "title": "Your academy account", "entry": "Account", "courses": "Courses", "payments": "Payments", "orders": "Store orders", "profile": "Profile", "learners": "Managed learners",
+    "title": "Your academy account", "entry": "Sign up", "courses": "Courses", "payments": "Payments", "orders": "Store orders", "profile": "Profile", "learners": "Managed learners",
     "emptyCourses": "No enrollments are linked to your account yet.", "emptyLearners": "No active guardian relationships.", "emptyOrders": "No store orders are linked to this account.",
     "accessNotice": "Application approval and payment proof do not unlock lessons. Initial payment must be verified by an administrator.",
     "guardianNotice": "You can manage tuition as the payer. This does not sign you in to a learner's practice portal.",
