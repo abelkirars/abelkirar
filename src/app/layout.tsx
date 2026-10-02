@@ -24,6 +24,10 @@ const notoSansEthiopic = Noto_Sans_Ethiopic({
 });
 
 export const metadata: Metadata = {
+  // Absolute base for the link-preview image (opengraph-image.jpg /
+  // twitter-image.jpg in this folder). Without an explicit og:image, chat
+  // apps guess from the page — and broke when the homepage photo was replaced.
+  metadataBase: new URL("https://www.abelkirar.com"),
   title: {
     default: "Abelkirar — Online Kirar Lessons & Instruments",
     template: "%s — Abelkirar",
