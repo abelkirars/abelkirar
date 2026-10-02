@@ -52,6 +52,7 @@ export default async function CoursePaymentPage({
 
   const [locale, t] = await Promise.all([getLocale(), getTranslations("coursePayment")]);
   const monthly = await getTranslations("courseMonthlyPaymentEmails");
+  const lessons = await getTranslations("lessonScheduling");
   const instructions = getConfiguredCoursePaymentInstructions();
   const money = new Intl.NumberFormat(locale, { style: "currency", currency: payment.currency });
   const inputAmount = (payment.finalAmountCents / 100).toFixed(2);
@@ -118,6 +119,7 @@ export default async function CoursePaymentPage({
                 {cohort?.weeklyDay && cohort.localStartTime && cohort.timeZone && (
                   <div className="rounded-xl bg-muted/55 p-4">
                     <div className="flex items-center gap-2 font-semibold"><Users className="size-4 text-secondary" />{cohort.name}</div>
+                    <p className="mt-2 text-sm text-muted-foreground">{lessons("customerReference")}</p>
                     <p className="mt-2 flex items-center gap-2 text-sm"><Clock3 className="size-4 text-muted-foreground" />{t(`weekday.${cohort.weeklyDay}`)} · {localClassTime(locale, cohort.localStartTime)} · {cohort.timeZone}</p>
                     {cohort.courseStartDate && <p className="mt-2 flex items-center gap-2 text-sm"><CalendarDays className="size-4 text-muted-foreground" />{utcDate(locale, cohort.courseStartDate)}{cohort.courseEndDate ? ` – ${utcDate(locale, cohort.courseEndDate)}` : ""}</p>}
                   </div>

@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentAuthenticatedCustomer } from "@/lib/customer/dal";
 import { resolveStudentSession } from "@/lib/student/dal";
 import { courseAdmin, serializable } from "./admin-service";
-import { lessonOwnerSchema, lessonPairSchema, recurringLessonsConflict, type LessonOwner, type LessonRecurrence } from "./lesson-schedule-rules";
+import { lessonDraftSchema, lessonOwnerSchema, lessonPairSchema, recurringLessonsConflict, type LessonOwner, type LessonRecurrence } from "./lesson-schedule-rules";
 
 const scope = (owner: LessonOwner) => owner.kind === "cohort" ? { cohortId: owner.id } : { enrollmentId: owner.id };
 const dateOnly = (d: Date) => d.toISOString().slice(0, 10);
@@ -28,16 +28,19 @@ async function lockTeacher(tx: Prisma.TransactionClient, id: string, requireActi
   if (rows.length !== 1) throw new Error(requireActive ? "Explicit active teacher required" : "Schedule teacher not found");
 }
 
-/** Admin-only foundation; no public action/route is exposed by this phase. */
+/** Admin-only draft replacement. Omitted slots are archived, never deleted. */
 export async function saveLessonScheduleDraft(rawOwner: unknown, raw: unknown) {
   const admin = await courseAdmin();
   const owner = lessonOwnerSchema.parse(rawOwner);
-  const input = lessonPairSchema.parse(raw);
+  const input = lessonDraftSchema.parse(raw);
   return serializable(async tx => {
     await lockOwner(tx, owner);
     await lockTeacher(tx, input.teacherAdminId);
     const current = await tx.courseLessonScheduleSlot.findMany({ where: { ...scope(owner), archivedAt: null } });
     if (current.some(s => s.state === "PUBLISHED")) throw new Error("Published schedules cannot be edited in this phase");
+    for (const omitted of current.filter(s => !input.slots.some(slot => slot.ordinal === s.ordinal))) {
+      await tx.courseLessonScheduleSlot.update({ where: { id: omitted.id }, data: { archivedAt: new Date(), updatedByAdminId: admin.adminId } });
+    }
     for (const slot of input.slots) {
       const existing = current.find(s => s.ordinal === slot.ordinal);
       const data = { ...slot, teacherAdminId: input.teacherAdminId, effectiveStartDate: new Date(`${slot.effectiveStartDate}T00:00:00Z`),

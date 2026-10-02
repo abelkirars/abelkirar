@@ -30,6 +30,17 @@ export const lessonPairSchema = z.object({
 });
 export type LessonRecurrence = z.infer<typeof lessonSlotSchema>;
 
+/** Drafts may contain one complete lesson; publication still requires the pair. */
+export const lessonDraftSchema = z.object({
+  teacherAdminId: z.string().min(1),
+  slots: z.array(lessonSlotSchema).min(1).max(2),
+}).strict().superRefine((draft, ctx) => {
+  if (draft.slots.length === 2) {
+    const pair = lessonPairSchema.safeParse(draft);
+    if (!pair.success) for (const issue of pair.error.issues) ctx.addIssue({ code: "custom", path: issue.path, message: issue.message });
+  }
+});
+
 /** Inclusive date windows; no finite search horizon and no UTC-week arithmetic. */
 export function recurringLessonsConflict(a: LessonRecurrence, b: LessonRecurrence): boolean {
   if (a.weekday !== b.weekday || a.localStartMinute >= b.localStartMinute + b.durationMinutes || b.localStartMinute >= a.localStartMinute + a.durationMinutes) return false;

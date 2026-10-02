@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { requireAdminPage } from "@/lib/admin/dal";
 import { getAdminCoursePayment } from "@/lib/courses/admin-payments";
 import { formatPaymentDeadline } from "@/lib/courses/payment-deadline";
@@ -14,6 +15,7 @@ export default async function AdminCoursePaymentPage({ params }: { params: Promi
   if (!payment) notFound();
   const e = payment.enrollment;
   const cohort = e.cohort;
+  const lessons = await getTranslations("lessonScheduling");
   const current = payment.submissions.find(s => s.status === "SUBMITTED");
   const initial = e.payments.find(item => item.kind === "INITIAL_ENROLLMENT");
   const latest = e.payments[0];
@@ -43,6 +45,7 @@ export default async function AdminCoursePaymentPage({ params }: { params: Promi
   return <Container className="max-w-5xl space-y-6 py-10">
     <Link href="/admin/course-payments" className="text-primary hover:underline">← Course payments</Link>
     <h1 className="text-3xl font-semibold">Payment review · {e.student.fullName}</h1>
+    <Link href={`/admin/lesson-schedules/${cohort ? `cohort/${cohort.id}` : `enrollment/${e.id}`}`} className="inline-block min-h-11 py-3 text-secondary underline">{lessons("manage")}</Link>
     <dl className="grid gap-4 rounded-xl border border-border bg-card p-5 sm:grid-cols-2">{facts.map(([label, value]) => <div key={label}>
       <dt className="text-sm text-muted-foreground">{label}</dt><dd className="break-words font-medium">{value}</dd>
     </div>)}</dl>

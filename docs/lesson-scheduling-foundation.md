@@ -110,3 +110,79 @@ enabled only for that child process; certificate verification is never disabled.
   SiteCopy duration overrides still saying “3 lessons per week”.
 - Guided-practice delivery/week semantics and future loginless/guardian support
   remain separate decisions; WeeklyPractice is unchanged.
+
+## Phase 2 local admin and student integration
+
+Migration 29 is already applied. Phase 2 needs no schema or migration change.
+The implementation remains local/uncommitted until separately approved.
+
+- `/admin/lesson-schedules` lists GROUP cohorts and private ONE_TO_ONE enrollments
+  (bounded to 50 of each, with search). Cohort and payment detail pages link to
+  `/admin/lesson-schedules/{cohort|enrollment}/{id}`. Terminal owners remain
+  reachable for explicit archival; private learners never receive fake cohorts.
+- Page DAL plus active-admin service authorization protects all operations. The
+  JSON POST endpoint uses the existing save/publish/archive services, rejects
+  cross-origin browser requests, and never returns raw database error details.
+- Active teachers are options, not defaults. A LEGACY row never infers a teacher
+  or Lesson 2. Its original schedule remains visible as historical context.
+- A draft now accepts one or two complete slots. Saving without a previously
+  drafted slot archives that omitted slot. Replacing LEGACY preserves its history.
+  Publication still requires the unchanged reviewed two-slot validator and
+  transaction, different weekdays, active teacher, Chicago civil time and no
+  conflict. Drafts do not reserve teacher time. Published schedules must be
+  explicitly archived before replacement. The reviewed archive transaction,
+  terminal-owner support, locking and retries are unchanged.
+- Native required inputs, labelled controls, immediate same-day feedback,
+  responsive sections, a synchronous in-flight guard and explicit archive
+  confirmation support keyboard/mobile use. Unsaved edits cannot be published.
+  Durations remain configurable per slot; suggestions do not replace saved values.
+- `/student/dashboard#my-lessons` derives identity from the existing student DAL,
+  then reads only that learner's ACTIVE, unarchived enrollments with ENABLED
+  unarchived portal access. Existing schedule readers recheck ownership. Only
+  PUBLISHED pairs are displayed; expired/archived/legacy/draft schedules are not
+  confirmed lessons. Future windows are explicitly upcoming. No client-selected
+  learner/customer identity, email matching, or guardian-to-learner substitution
+  exists. Loginless learners still need the separately designed login workflow.
+- Recurring times use minutes and Temporal PlainTime/PlainDate for display,
+  explicitly Central Time / America/Chicago. No fixed offset, billing timezone,
+  inferred student timezone or dated session is introduced. Existing DST-safe
+  occurrence utilities remain unchanged. End dates are inclusive.
+- Guided practice links to the existing authorized `weekly-practice` section and
+  is explicitly asynchronous, not a third live lesson or calendar reservation.
+
+### Legacy reader/writer inventory and content cutover
+
+`cohorts.ts` and `cohort-forms.tsx` retain the original intake schedule writer and
+OPEN validation. Cohort detail now labels that form as intake/reference only.
+`prepare-enrollment.ts`, `prepare-enrollment-form.tsx`, cohort lists, payment detail,
+`customer/account.ts`, and `course-payment-access.ts` retain compatibility reads;
+customer account/payment displays explicitly distinguish the old cohort reference
+from the published timetable. They do not modify billing anchors or financial
+snapshots. New student lesson display uses CourseLessonScheduleSlot exclusively.
+
+Repository `messages/en.json` and `messages/am.json` beginner schedule defaults
+previously promised three lessons; both now say two live lessons plus guided
+practice. New scheduling copy is translated in both languages. `i18n/request.ts`
+merges SiteCopy overrides over defaults, so repository copy cannot correct live
+database overrides. The prior authorized inspection identified these English
+production keys (not re-queried or changed in this local phase):
+
+- `courseDetails.beginner.duration`: `~3 months · 3 lessons per week · no prior experience needed`
+- `courseDetails.intermediate.duration`: `~4 months · 3 lessons per week · Beginner level required`
+- `courseDetails.advanced.duration`: `Mastery-based · 3 lessons per week · Intermediate level required`
+
+Their marketing cutover needs a separate read-only refresh and explicit content
+authorization. Public promises must not imply LEGACY/draft timetables are live.
+No production teacher, second slot, publication, SiteCopy or financial state is
+changed by this local implementation.
+
+### Phase 2 verification
+
+Focused tests cover editor submission/duplicate prevention, safe errors, EN/AM
+student presentation, civil-time input, admin API authorization and strict command
+validation. Disposable PostgreSQL tests exercise one-slot drafts, draft removal,
+legacy history, terminal archive, active-teacher options, group/private learner
+isolation, suspended/pending/expired visibility and unrelated business fingerprints.
+Existing publication/archive races and financial/access/seat regression suites
+remain authoritative. Test files sharing the disposable cluster are run with one
+file worker; intentional Promise.all transaction races remain concurrent.

@@ -18,6 +18,7 @@ export default async function AccountPage() {
     throw error;
   }
   const [t, locale] = await Promise.all([getTranslations("accountArea"), getLocale()]);
+  const lessons = await getTranslations("lessonScheduling");
   return <Container className="max-w-5xl py-12">
     <h1 className="mb-6 font-heading text-3xl font-semibold">{t("title")}</h1>
     <AccountNavigation showManagedLearners={account.learners.length > 0} />
@@ -29,6 +30,7 @@ export default async function AccountPage() {
           <h3 className="font-semibold">{enrollment.student.fullName} · {enrollment.planCodeSnapshot.replaceAll("_", " ")}</h3>
           <p className="mt-2">{t(`enrollmentStatus.${enrollment.status}`)}</p>
           {enrollment.cohort && <p className="text-sm text-muted-foreground">{enrollment.cohort.name}{enrollment.cohort.weeklyDay && <> · {t(`weekday.${enrollment.cohort.weeklyDay}`)}</>} · {enrollment.cohort.localStartTime?.toISOString().slice(11, 16)} · {enrollment.cohort.timeZone}</p>}
+          <p className="mt-2 text-sm text-muted-foreground">{lessons("customerReference")}</p>
         </article>)}
         <Link className="inline-block font-medium underline underline-offset-4" href="/account/course-payments">{t("payments")}</Link>
         <p className="text-sm text-muted-foreground">{t("accessNotice")}</p>

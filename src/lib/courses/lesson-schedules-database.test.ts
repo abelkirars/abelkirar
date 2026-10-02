@@ -61,6 +61,93 @@ describe.runIf(Boolean(process.env.COURSE_SCHEDULING_TEST_DATABASE_URL))("Postgr
     await expect(service.archiveLessonSchedule(o)).rejects.toThrow("Admin authentication required");
     await expect(service.readAdminLessonSchedule(o)).rejects.toThrow("Admin authentication");
   });
+  it("saves an incomplete draft without publishing or reserving teacher time, then completes the pair",async()=>{
+    const o=await owner(),competitor=await owner(),t=await teacher(),before=await fingerprint();
+    const input=pair(t),one={...input,slots:input.slots.slice(0,1)};
+    const saved=await service.saveLessonScheduleDraft(o,one);
+    expect(saved).toHaveLength(1);expect(saved[0]).toMatchObject({state:"DRAFT",publishedAt:null,teacherAdminId:t});
+    await expect(service.publishLessonSchedule(o)).rejects.toThrow();
+    await service.saveLessonScheduleDraft(competitor,input);await service.publishLessonSchedule(competitor);
+    await service.archiveLessonSchedule(competitor);
+    input.slots[1].durationMinutes=45;
+    await service.saveLessonScheduleDraft(o,input);
+    const published=await service.publishLessonSchedule(o);
+    expect(published.map(s=>s.durationMinutes)).toEqual([60,45]);expect(published.every(s=>s.state==="PUBLISHED")).toBe(true);
+    expect(await fingerprint()).toEqual(before);
+  });
+  it("removing a draft lesson archives it rather than silently retaining or deleting it",async()=>{
+    const o=await owner(),input=pair(await teacher());const original=await service.saveLessonScheduleDraft(o,input);
+    const before=await fingerprint();
+    const remaining=await service.saveLessonScheduleDraft(o,{...input,slots:input.slots.slice(0,1)});
+    expect(remaining).toHaveLength(1);expect(remaining[0].ordinal).toBe(1);
+    const historical=await db.courseLessonScheduleSlot.findUniqueOrThrow({where:{id:original[1].id}});
+    expect(historical.archivedAt).not.toBeNull();expect(historical.state).toBe("DRAFT");
+    await expect(service.publishLessonSchedule(o)).rejects.toThrow();
+    expect(await fingerprint()).toEqual(before);
+  });
+  it("admin editor preserves a legacy lesson without inferring a teacher or second lesson",async()=>{
+    const views=await import("./lesson-schedule-views"),o=await owner();
+    const original=await tx(t=>t.courseLessonScheduleSlot.create({data:raw(o.id,{state:"LEGACY",weekday:"SATURDAY",teacherAdminId:null})}));
+    const view=await views.getAdminLessonScheduleEditor(o);
+    expect(view).toMatchObject({state:"LEGACY",slots:[{ordinal:1,weekday:"SATURDAY",teacherAdminId:null}]});
+    expect(view!.slots).toHaveLength(1);expect(view!.teachers.every(t=>t.id&&t.displayName)).toBe(true);
+    const input=pair(await teacher());await service.saveLessonScheduleDraft(o,{...input,slots:input.slots.slice(0,1)});
+    expect(await db.courseLessonScheduleSlot.findUniqueOrThrow({where:{id:original.id}})).toMatchObject({...original,archivedAt:expect.any(Date),updatedAt:expect.any(Date),updatedByAdminId:auth.adminId});
+    await expect(service.publishLessonSchedule(o)).rejects.toThrow();
+    auth.allowed=false;await expect(views.getAdminLessonScheduleEditor(o)).rejects.toThrow("Admin authentication");
+    await expect(views.listAdminLessonScheduleOwners()).rejects.toThrow("Admin authentication");
+  });
+  it.each(["cohort","enrollment"] as const)("My Lessons reads only the authorized published %s schedule and removes it after archive",async kind=>{
+    const views=await import("./lesson-schedule-views"),privateOwner=await owner("enrollment");
+    const o=kind==="cohort"?await owner():privateOwner;
+    const e=await db.courseEnrollment.update({where:{id:privateOwner.id},data:kind==="cohort"?{cohortId:o.id,coursePlanId:"plan_beginner_group",formatSnapshot:"GROUP",planCodeSnapshot:"BEGINNER_GROUP"}:{}});
+    auth.studentAllowed=true;auth.studentId=e.studentId;
+    const input=pair(await teacher());
+    await service.saveLessonScheduleDraft(o,input);
+    expect(await views.readMyLessonSchedules()).toEqual([]); // Pending payment.
+    await db.courseEnrollment.update({where:{id:e.id},data:{status:"ACTIVE",portalAccess:{create:{status:"ENABLED"}}}});
+    expect(await views.readMyLessonSchedules()).toEqual([]); // Draft is not confirmed.
+    const before=await fingerprint();
+    await service.publishLessonSchedule(o);
+    const result=await views.readMyLessonSchedules();expect(result).toHaveLength(1);expect(result[0].enrollmentId).toBe(e.id);expect(result[0].slots).toHaveLength(2);
+    expect(result[0].slots.every(s=>s.timeZone==="America/Chicago")).toBe(true);
+    auth.studentId="unrelated-learner";expect(await views.readMyLessonSchedules()).toEqual([]);
+    await expect(service.readStudentLessonSchedule(e.id)).rejects.toThrow("Enrollment not found");
+    auth.studentId=e.studentId;auth.studentAllowed=false;
+    await expect(views.readMyLessonSchedules()).rejects.toThrow("Student portal access required");
+    auth.studentAllowed=true;await service.archiveLessonSchedule(o);
+    expect(await views.readMyLessonSchedules()).toEqual([]);
+    expect((await service.archiveLessonSchedule(o)).archivedCount).toBe(0);
+    expect(await fingerprint()).toEqual(before);
+  });
+  it("My Lessons hides legacy, expired, paused and suspended schedules and labels a future window",async()=>{
+    const views=await import("./lesson-schedule-views"),o=await owner("enrollment");
+    const e=await db.courseEnrollment.update({where:{id:o.id},data:{status:"ACTIVE",portalAccess:{create:{status:"ENABLED"}}}});
+    auth.studentAllowed=true;auth.studentId=e.studentId;
+    await tx(t=>t.courseLessonScheduleSlot.create({data:{...raw("unused",{state:"LEGACY"}),cohortId:null,enrollmentId:o.id}}));
+    expect(await views.readMyLessonSchedules()).toEqual([]);
+    const input=pair(await teacher());input.slots.forEach(s=>s.effectiveStartDate="2099-01-01");
+    await service.saveLessonScheduleDraft(o,input);await service.publishLessonSchedule(o);
+    expect(await views.readMyLessonSchedules()).toMatchObject([{startsLater:true}]);
+    await db.coursePortalAccess.update({where:{enrollmentId:e.id},data:{status:"SUSPENDED",changedByAdminId:input.teacherAdminId,reason:"Isolated schedule visibility test",changedAt:new Date()}});
+    expect(await views.readMyLessonSchedules()).toEqual([]);
+    await db.coursePortalAccess.update({where:{enrollmentId:e.id},data:{status:"ENABLED"}});
+    await db.courseEnrollment.update({where:{id:e.id},data:{status:"PAUSED"}});
+    expect(await views.readMyLessonSchedules()).toEqual([]);
+    await db.courseEnrollment.update({where:{id:e.id},data:{status:"ACTIVE"}});
+    await service.archiveLessonSchedule(o);
+    const past={...input,slots:input.slots.map(s=>({...s,effectiveStartDate:"2020-01-01",effectiveEndDate:"2020-12-31"}))};
+    await service.saveLessonScheduleDraft(o,past);await service.publishLessonSchedule(o);
+    expect(await views.readMyLessonSchedules()).toEqual([]);
+  });
+  it("admin editor rejects mixed group/private owners and returns only active teacher options",async()=>{
+    const views=await import("./lesson-schedule-views"),o=await owner("enrollment"),group=await owner();
+    const inactive=await teacher();await db.admin.update({where:{id:inactive},data:{isActive:false}});
+    expect((await views.getAdminLessonScheduleEditor(o))!.teachers.some(t=>t.id===inactive)).toBe(false);
+    expect(await views.getAdminLessonScheduleEditor({kind:"enrollment",id:group.id})).toBeNull();
+    await db.courseEnrollment.update({where:{id:o.id},data:{cohortId:group.id,coursePlanId:"plan_beginner_group",formatSnapshot:"GROUP",planCodeSnapshot:"BEGINNER_GROUP"}});
+    expect(await views.getAdminLessonScheduleEditor(o)).toBeNull();
+  });
   it("customer/student readers isolate enrollment ownership and preserve portal gates",async()=>{
     const o=await owner("enrollment"),e=await db.courseEnrollment.findUniqueOrThrow({where:{id:o.id}});
     await service.saveLessonScheduleDraft(o,pair(await teacher()));await service.publishLessonSchedule(o);

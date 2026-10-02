@@ -36,6 +36,7 @@ import { StudentLogoutButton } from "@/components/student/student-logout-button"
 import { ContinuePracticeCta } from "@/components/student/continue-practice-cta";
 import { getPracticeSummary } from "@/lib/student/practice-summary";
 import { getPracticeSelfRatingMessageKey } from "@/lib/student/practice-self-ratings";
+import { MyLessons } from "@/components/student/my-lessons";
 
 export const dynamic = "force-dynamic";
 
@@ -189,6 +190,8 @@ export default async function StudentDashboardPage() {
             </div>
           </div>
         </header>
+
+        <MyLessons />
 
         {/* A motivating journey view built only from student-authorized data:
             achieved rows, the current assigned row, and one generic locked

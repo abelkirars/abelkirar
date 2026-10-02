@@ -13,6 +13,7 @@ export default async function AuthenticatedAdminLayout({
   const pricing = await getTranslations("coursePricing");
   const promotions = await getTranslations("coursePromotionAdmin");
   const customers = await getTranslations("customer360");
+  const lessons = await getTranslations("lessonScheduling");
 
   return (
     <div>
@@ -22,6 +23,7 @@ export default async function AuthenticatedAdminLayout({
             <Link href="/admin/orders">Orders</Link>
             <Link href="/admin/course-applications">Applications</Link>
             <Link href="/admin/course-cohorts">Cohorts</Link>
+            <Link href="/admin/lesson-schedules">{lessons("title")}</Link>
             <Link href="/admin/course-payments">Course payments</Link>
             <Link href="/admin/course-promotions">{promotions("title")}</Link>
             <Link href="/admin/customers">{customers("title")}</Link>
