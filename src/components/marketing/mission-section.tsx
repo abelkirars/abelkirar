@@ -1,10 +1,8 @@
 import Link from "next/link";
-import Image from "next/image";
 import type { CSSProperties } from "react";
 import { getTranslations } from "next-intl/server";
 import { cn } from "@/lib/utils";
 import { Container } from "@/components/marketing/container";
-import { CrossPattern } from "@/components/marketing/cross-pattern";
 import { MaskedWords } from "@/components/motion/masked-words";
 import { RevealOnView } from "@/components/motion/reveal-on-view";
 import motion from "@/components/motion/motion.module.css";
@@ -38,24 +36,27 @@ export async function MissionSection() {
         </RevealOnView>
 
         <RevealOnView amount={0.3}>
-          <div className={cn(motion.revealPhoto, "relative aspect-4/3 overflow-hidden rounded-2xl")}>
-            <Image
-              src="/mission-kirar.png"
-              alt="A Kirar resting in a sunlit interior"
-              fill
-              className="object-cover"
-            />
-            {/* Scrim: matches instrument-category-cards.tsx — the quote is
-                bottom-anchored and a photo can't guarantee the cream text
-                stays legible the way the solid gradient did. */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-            <CrossPattern className="text-[#f3e9d2] opacity-[0.12]" />
-            <div className="relative flex h-full flex-col justify-end p-8">
-              <p className={cn(motion.revealItem, "font-heading text-2xl text-balance text-[#f3e9d2]")} style={delay(700)}>
-                {t("quote")}
-              </p>
+          <figure>
+            {/* Deacon Abel playing two Kirars (made in the separate remotion/
+                project, 720p for this ~550px column). Plays only on request,
+                with sound, like the other published performance videos;
+                preload="none" means nothing downloads until then. */}
+            <div className={cn(motion.revealPhoto, "relative aspect-video overflow-hidden rounded-2xl bg-[#0b1d16]")}>
+              <video
+                controls
+                playsInline
+                preload="none"
+                poster="/video/two-kirar-poster.jpg"
+                aria-label={t("videoLabel")}
+                className="absolute inset-0 h-full w-full"
+              >
+                <source src="/video/two-kirar-performance.mp4" type="video/mp4" />
+              </video>
             </div>
-          </div>
+            <figcaption className={cn(motion.revealItem, "mt-4 font-heading text-xl text-balance text-foreground")} style={delay(700)}>
+              {t("quote")}
+            </figcaption>
+          </figure>
         </RevealOnView>
       </Container>
     </section>

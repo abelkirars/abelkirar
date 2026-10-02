@@ -1,4 +1,3 @@
-import Image from "next/image";
 import type { CSSProperties } from "react";
 import { getTranslations } from "next-intl/server";
 import { cn } from "@/lib/utils";
@@ -51,33 +50,23 @@ export async function AboutTitleSequence() {
 }
 
 /**
- * The three story paragraphs as an editorial column beside a photograph.
- * The text has no entrance: it is often inside the first viewport, and
- * holding it back until hydration would delay the page's main content.
- * Only the photograph opens (a crop that never hides it).
+ * The three story paragraphs as a single editorial column. Text only, at the
+ * founder's request (Oct 2026); max-w-3xl keeps a comfortable reading line
+ * rather than running across the whole container. The text has no entrance:
+ * it is often inside the first viewport, and holding it back until hydration
+ * would delay the page's main content.
  */
 export async function AboutStory() {
   const t = await getTranslations("about");
 
   return (
     <section className={cn(motion.scope, "py-14 sm:py-24")}>
-      <Container className="grid items-center gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:gap-16">
-        <div className="max-w-2xl space-y-6 text-lg text-muted-foreground text-pretty">
+      <Container>
+        <div className="max-w-3xl space-y-6 text-lg text-muted-foreground text-pretty">
           <p className={styles.lead}>{t("paragraph1")}</p>
           <p>{t("paragraph2")}</p>
           <p>{t("paragraph3")}</p>
         </div>
-        <RevealOnView amount={0.3}>
-          <div className={cn(motion.revealPhoto, "relative aspect-4/3 overflow-hidden rounded-2xl lg:aspect-4/5")}>
-            <Image
-              src="/mission-kirar.png"
-              alt="A Kirar resting in a sunlit interior"
-              fill
-              sizes="(min-width: 1024px) 26rem, calc(100vw - 2rem)"
-              className="object-cover"
-            />
-          </div>
-        </RevealOnView>
       </Container>
     </section>
   );
